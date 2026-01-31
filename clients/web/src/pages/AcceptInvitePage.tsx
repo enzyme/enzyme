@@ -22,6 +22,8 @@ export function AcceptInvitePage() {
 
     try {
       const result = await acceptInvite.mutateAsync(code);
+      // Clear pending invite now that it's been accepted
+      sessionStorage.removeItem('pendingInvite');
       navigate(`/workspaces/${result.workspace.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to accept invite');
