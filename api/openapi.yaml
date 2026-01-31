@@ -1,0 +1,1414 @@
+openapi: 3.0.3
+info:
+  title: Feather API
+  description: REST API for Feather, a self-hostable Slack alternative
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: API server
+
+tags:
+  - name: auth
+    description: Authentication endpoints
+  - name: workspaces
+    description: Workspace management
+  - name: channels
+    description: Channel management
+  - name: messages
+    description: Message operations
+  - name: files
+    description: File uploads and downloads
+  - name: sse
+    description: Server-Sent Events
+
+paths:
+  # Auth endpoints
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new user
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Log in a user
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Log out the current user
+      operationId: logout
+      responses:
+        '200':
+          description: User logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /auth/forgot-password:
+    post:
+      tags: [auth]
+      summary: Request a password reset
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Password reset email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      summary: Reset password with token
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token:
+                  type: string
+                new_password:
+                  type: string
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Get current user info
+      operationId: getMe
+      responses:
+        '200':
+          description: Current user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Workspace endpoints
+  /workspaces/create:
+    post:
+      tags: [workspaces]
+      summary: Create a new workspace
+      operationId: createWorkspace
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceInput'
+      responses:
+        '200':
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workspace:
+                    $ref: '#/components/schemas/Workspace'
+
+  /workspaces/{wid}:
+    get:
+      tags: [workspaces]
+      summary: Get workspace details
+      operationId: getWorkspace
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      responses:
+        '200':
+          description: Workspace details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workspace:
+                    $ref: '#/components/schemas/Workspace'
+
+  /workspaces/{wid}/update:
+    post:
+      tags: [workspaces]
+      summary: Update workspace
+      operationId: updateWorkspace
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkspaceInput'
+      responses:
+        '200':
+          description: Workspace updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workspace:
+                    $ref: '#/components/schemas/Workspace'
+
+  /workspaces/{wid}/members/list:
+    post:
+      tags: [workspaces]
+      summary: List workspace members
+      operationId: listWorkspaceMembers
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      responses:
+        '200':
+          description: List of members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkspaceMemberWithUser'
+
+  /workspaces/{wid}/members/remove:
+    post:
+      tags: [workspaces]
+      summary: Remove a member from workspace
+      operationId: removeWorkspaceMember
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: Member removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /workspaces/{wid}/members/update-role:
+    post:
+      tags: [workspaces]
+      summary: Update member role
+      operationId: updateWorkspaceMemberRole
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, role]
+              properties:
+                user_id:
+                  type: string
+                role:
+                  $ref: '#/components/schemas/WorkspaceRole'
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /workspaces/{wid}/invites/create:
+    post:
+      tags: [workspaces]
+      summary: Create an invite
+      operationId: createWorkspaceInvite
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInviteInput'
+      responses:
+        '200':
+          description: Invite created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invite:
+                    $ref: '#/components/schemas/Invite'
+
+  /invites/{code}/accept:
+    post:
+      tags: [workspaces]
+      summary: Accept an invite
+      operationId: acceptInvite
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invite accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workspace:
+                    $ref: '#/components/schemas/Workspace'
+
+  # Channel endpoints
+  /workspaces/{wid}/channels/create:
+    post:
+      tags: [channels]
+      summary: Create a channel
+      operationId: createChannel
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChannelInput'
+      responses:
+        '200':
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel:
+                    $ref: '#/components/schemas/Channel'
+
+  /workspaces/{wid}/channels/list:
+    post:
+      tags: [channels]
+      summary: List channels in workspace
+      operationId: listChannels
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      responses:
+        '200':
+          description: List of channels
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channels:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChannelWithMembership'
+
+  /workspaces/{wid}/channels/dm:
+    post:
+      tags: [channels]
+      summary: Create or get DM channel
+      operationId: createDM
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_ids]
+              properties:
+                user_ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: DM channel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel:
+                    $ref: '#/components/schemas/Channel'
+
+  /channels/{id}/update:
+    post:
+      tags: [channels]
+      summary: Update channel
+      operationId: updateChannel
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateChannelInput'
+      responses:
+        '200':
+          description: Channel updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel:
+                    $ref: '#/components/schemas/Channel'
+
+  /channels/{id}/archive:
+    post:
+      tags: [channels]
+      summary: Archive channel
+      operationId: archiveChannel
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      responses:
+        '200':
+          description: Channel archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /channels/{id}/members/add:
+    post:
+      tags: [channels]
+      summary: Add member to channel
+      operationId: addChannelMember
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+                role:
+                  $ref: '#/components/schemas/ChannelRole'
+      responses:
+        '200':
+          description: Member added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /channels/{id}/members/list:
+    post:
+      tags: [channels]
+      summary: List channel members
+      operationId: listChannelMembers
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      responses:
+        '200':
+          description: List of members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChannelMember'
+
+  /channels/{id}/join:
+    post:
+      tags: [channels]
+      summary: Join a channel
+      operationId: joinChannel
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      responses:
+        '200':
+          description: Joined channel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /channels/{id}/leave:
+    post:
+      tags: [channels]
+      summary: Leave a channel
+      operationId: leaveChannel
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      responses:
+        '200':
+          description: Left channel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Message endpoints
+  /channels/{id}/messages/send:
+    post:
+      tags: [messages]
+      summary: Send a message
+      operationId: sendMessage
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageInput'
+      responses:
+        '200':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: '#/components/schemas/MessageWithUser'
+
+  /channels/{id}/messages/list:
+    post:
+      tags: [messages]
+      summary: List messages in channel
+      operationId: listMessages
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListMessagesInput'
+      responses:
+        '200':
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageListResult'
+
+  /messages/{id}/update:
+    post:
+      tags: [messages]
+      summary: Update a message
+      operationId: updateMessage
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Message updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: '#/components/schemas/MessageWithUser'
+
+  /messages/{id}/delete:
+    post:
+      tags: [messages]
+      summary: Delete a message
+      operationId: deleteMessage
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      responses:
+        '200':
+          description: Message deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /messages/{id}/reactions/add:
+    post:
+      tags: [messages]
+      summary: Add reaction to message
+      operationId: addReaction
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emoji]
+              properties:
+                emoji:
+                  type: string
+      responses:
+        '200':
+          description: Reaction added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reaction:
+                    $ref: '#/components/schemas/Reaction'
+
+  /messages/{id}/reactions/remove:
+    post:
+      tags: [messages]
+      summary: Remove reaction from message
+      operationId: removeReaction
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emoji]
+              properties:
+                emoji:
+                  type: string
+      responses:
+        '200':
+          description: Reaction removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /messages/{id}/thread/list:
+    post:
+      tags: [messages]
+      summary: List thread replies
+      operationId: listThread
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListMessagesInput'
+      responses:
+        '200':
+          description: Thread messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageListResult'
+
+  # File endpoints
+  /channels/{id}/files/upload:
+    post:
+      tags: [files]
+      summary: Upload a file
+      operationId: uploadFile
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      filename:
+                        type: string
+                      size:
+                        type: integer
+                      content_type:
+                        type: string
+
+  /files/{id}/download:
+    get:
+      tags: [files]
+      summary: Download a file
+      operationId: downloadFile
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  /files/{id}/delete:
+    post:
+      tags: [files]
+      summary: Delete a file
+      operationId: deleteFile
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # SSE endpoints
+  /workspaces/{wid}/events:
+    get:
+      tags: [sse]
+      summary: SSE event stream
+      operationId: events
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      responses:
+        '200':
+          description: SSE event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /workspaces/{wid}/typing/start:
+    post:
+      tags: [sse]
+      summary: Start typing indicator
+      operationId: startTyping
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel_id]
+              properties:
+                channel_id:
+                  type: string
+      responses:
+        '200':
+          description: Typing started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /workspaces/{wid}/typing/stop:
+    post:
+      tags: [sse]
+      summary: Stop typing indicator
+      operationId: stopTyping
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel_id]
+              properties:
+                channel_id:
+                  type: string
+      responses:
+        '200':
+          description: Typing stopped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: feather_session
+
+  parameters:
+    workspaceId:
+      name: wid
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Workspace ID
+    channelId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Channel ID
+    messageId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Message ID
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+
+  schemas:
+    # User schemas
+    User:
+      type: object
+      required: [id, email, display_name, status, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        email_verified_at:
+          type: string
+          format: date-time
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # Workspace schemas
+    Workspace:
+      type: object
+      required: [id, slug, name, settings, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        icon_url:
+          type: string
+        settings:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    WorkspaceSummary:
+      type: object
+      required: [id, slug, name, role]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        icon_url:
+          type: string
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+
+    WorkspaceMembership:
+      type: object
+      required: [id, user_id, workspace_id, role, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        workspace_id:
+          type: string
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+        display_name_override:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    WorkspaceMemberWithUser:
+      allOf:
+        - $ref: '#/components/schemas/WorkspaceMembership'
+        - type: object
+          required: [email, display_name]
+          properties:
+            email:
+              type: string
+              format: email
+            display_name:
+              type: string
+            avatar_url:
+              type: string
+
+    WorkspaceRole:
+      type: string
+      enum: [owner, admin, member, guest]
+
+    Invite:
+      type: object
+      required: [id, workspace_id, code, role, use_count, created_at]
+      properties:
+        id:
+          type: string
+        workspace_id:
+          type: string
+        code:
+          type: string
+        invited_email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+        created_by:
+          type: string
+        max_uses:
+          type: integer
+        use_count:
+          type: integer
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    # Channel schemas
+    Channel:
+      type: object
+      required: [id, workspace_id, name, type, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        workspace_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/ChannelType'
+        dm_participant_hash:
+          type: string
+        archived_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ChannelWithMembership:
+      allOf:
+        - $ref: '#/components/schemas/Channel'
+        - type: object
+          required: [unread_count]
+          properties:
+            channel_role:
+              $ref: '#/components/schemas/ChannelRole'
+            last_read_message_id:
+              type: string
+            unread_count:
+              type: integer
+
+    ChannelType:
+      type: string
+      enum: [public, private, dm, group_dm]
+
+    ChannelRole:
+      type: string
+      enum: [admin, poster, viewer]
+
+    ChannelMember:
+      type: object
+      required: [user_id, email, display_name]
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+        channel_role:
+          $ref: '#/components/schemas/ChannelRole'
+
+    # Message schemas
+    Message:
+      type: object
+      required: [id, channel_id, content, reply_count, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        channel_id:
+          type: string
+        user_id:
+          type: string
+        content:
+          type: string
+        thread_parent_id:
+          type: string
+        reply_count:
+          type: integer
+        last_reply_at:
+          type: string
+          format: date-time
+        edited_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    MessageWithUser:
+      allOf:
+        - $ref: '#/components/schemas/Message'
+        - type: object
+          properties:
+            user_display_name:
+              type: string
+            user_avatar_url:
+              type: string
+            reactions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Reaction'
+
+    Reaction:
+      type: object
+      required: [id, message_id, user_id, emoji, created_at]
+      properties:
+        id:
+          type: string
+        message_id:
+          type: string
+        user_id:
+          type: string
+        emoji:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ReactionSummary:
+      type: object
+      required: [emoji, count, user_ids]
+      properties:
+        emoji:
+          type: string
+        count:
+          type: integer
+        user_ids:
+          type: array
+          items:
+            type: string
+
+    MessageListResult:
+      type: object
+      required: [messages, has_more]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageWithUser'
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+
+    # API response schemas
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    ApiErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    # SSE schemas
+    SSEEventType:
+      type: string
+      enum:
+        - connected
+        - heartbeat
+        - message.new
+        - message.updated
+        - message.deleted
+        - reaction.added
+        - reaction.removed
+        - channel.created
+        - channel.updated
+        - channel.archived
+        - channel.member_added
+        - channel.member_removed
+        - typing.start
+        - typing.stop
+        - presence.changed
+
+    SSEEvent:
+      type: object
+      required: [type]
+      properties:
+        id:
+          type: string
+        type:
+          $ref: '#/components/schemas/SSEEventType'
+        data:
+          type: object
+
+    TypingEventData:
+      type: object
+      required: [user_id, channel_id]
+      properties:
+        user_id:
+          type: string
+        channel_id:
+          type: string
+        user_display_name:
+          type: string
+
+    PresenceStatus:
+      type: string
+      enum: [online, away, offline]
+
+    PresenceData:
+      type: object
+      required: [user_id, status]
+      properties:
+        user_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/PresenceStatus'
+
+    # Input schemas
+    RegisterInput:
+      type: object
+      required: [email, password, display_name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        display_name:
+          type: string
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+
+    MeResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        workspaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceSummary'
+
+    CreateWorkspaceInput:
+      type: object
+      required: [slug, name]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+
+    UpdateWorkspaceInput:
+      type: object
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+
+    CreateInviteInput:
+      type: object
+      required: [role]
+      properties:
+        invited_email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+        max_uses:
+          type: integer
+        expires_in_hours:
+          type: integer
+
+    CreateChannelInput:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/ChannelType'
+
+    UpdateChannelInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    SendMessageInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+        thread_parent_id:
+          type: string
+
+    ListMessagesInput:
+      type: object
+      properties:
+        cursor:
+          type: string
+        limit:
+          type: integer
+        direction:
+          type: string
+          enum: [before, after]

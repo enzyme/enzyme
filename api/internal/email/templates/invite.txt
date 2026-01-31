@@ -1,0 +1,5 @@
+You've been invited to join {{.WorkspaceName}}
+
+{{if .InviterName}}{{.InviterName}} has invited you to join their workspace on Feather.{{else}}You've been invited to join a workspace on Feather.{{end}}
+
+Accept the invitation: {{.InviteURL}}

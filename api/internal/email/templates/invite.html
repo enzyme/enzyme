@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Workspace Invitation</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px;">
+    <h2>You've been invited to join {{.WorkspaceName}}</h2>
+    {{if .InviterName}}
+    <p>{{.InviterName}} has invited you to join their workspace on Feather.</p>
+    {{else}}
+    <p>You've been invited to join a workspace on Feather.</p>
+    {{end}}
+    <p>
+        <a href="{{.InviteURL}}" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px;">
+            Accept Invitation
+        </a>
+    </p>
+    <p style="color: #666; font-size: 14px;">
+        Or copy and paste this link: {{.InviteURL}}
+    </p>
+</body>
+</html>
