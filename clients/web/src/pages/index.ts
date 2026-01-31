@@ -2,5 +2,8 @@ export { LoginPage } from './LoginPage';
 export { RegisterPage } from './RegisterPage';
 export { WorkspaceListPage } from './WorkspaceListPage';
 export { WorkspaceLandingPage } from './WorkspaceLandingPage';
+export { WorkspaceSettingsPage } from './WorkspaceSettingsPage';
 export { ChannelPage } from './ChannelPage';
 export { AcceptInvitePage } from './AcceptInvitePage';
+export { InvitePage } from './InvitePage';
+export { ServerSettingsPage } from './ServerSettingsPage';

@@ -10,8 +10,11 @@ import {
   RegisterPage,
   WorkspaceListPage,
   WorkspaceLandingPage,
+  WorkspaceSettingsPage,
   ChannelPage,
   AcceptInvitePage,
+  InvitePage,
+  ServerSettingsPage,
 } from './pages';
 import { useUIStore } from './stores/uiStore';
 
@@ -67,7 +70,19 @@ function App() {
           >
             <Route index element={<WorkspaceLandingPage />} />
             <Route path="channels/:channelId" element={<ChannelPage />} />
+            <Route path="settings" element={<WorkspaceSettingsPage />} />
+            <Route path="invite" element={<InvitePage />} />
           </Route>
+
+          {/* Server settings */}
+          <Route
+            path="/settings"
+            element={
+              <RequireAuth>
+                <ServerSettingsPage />
+              </RequireAuth>
+            }
+          />
 
           {/* Redirect root to login */}
           <Route path="/" element={<Navigate to="/login" replace />} />
