@@ -10,6 +10,7 @@ import (
 	"github.com/feather/api/internal/database"
 	"github.com/feather/api/internal/email"
 	"github.com/feather/api/internal/file"
+	"github.com/feather/api/internal/handler"
 	"github.com/feather/api/internal/message"
 	"github.com/feather/api/internal/presence"
 	"github.com/feather/api/internal/server"
@@ -67,24 +68,28 @@ func New(cfg *config.Config) (*App, error) {
 	// Initialize session manager
 	sessionManager := auth.NewSessionManager(db.DB, cfg.Auth.SessionDuration, cfg.Auth.SecureCookies)
 
-	// Initialize handlers
-	authHandler := auth.NewHandler(authService, sessionManager, workspaceRepo)
-	workspaceHandler := workspace.NewHandler(workspaceRepo)
-	channelHandler := channel.NewHandler(channelRepo, workspaceRepo)
-	messageHandler := message.NewHandler(messageRepo, channelRepo, workspaceRepo, hub)
+	// Initialize SSE handler (kept separate as it requires streaming)
 	sseHandler := sse.NewHandler(hub, workspaceRepo)
-	fileHandler := file.NewHandler(fileRepo, channelRepo, workspaceRepo, cfg.Files.StoragePath, cfg.Files.MaxUploadSize)
 
-	// Create router
-	handlers := server.Handlers{
-		Auth:      authHandler,
-		Workspace: workspaceHandler,
-		Channel:   channelHandler,
-		Message:   messageHandler,
-		SSE:       sseHandler,
-		File:      fileHandler,
-	}
-	router := server.NewRouter(handlers, sessionManager)
+	// Initialize auth handler (needed for RequireAuth middleware on SSE routes)
+	authHandler := auth.NewHandler(authService, sessionManager, workspaceRepo)
+
+	// Initialize main handler implementing StrictServerInterface
+	h := handler.New(handler.Dependencies{
+		AuthService:    authService,
+		SessionManager: sessionManager,
+		UserRepo:       userRepo,
+		WorkspaceRepo:  workspaceRepo,
+		ChannelRepo:    channelRepo,
+		MessageRepo:    messageRepo,
+		FileRepo:       fileRepo,
+		Hub:            hub,
+		StoragePath:    cfg.Files.StoragePath,
+		MaxUploadSize:  cfg.Files.MaxUploadSize,
+	})
+
+	// Create router with generated handlers
+	router := server.NewRouter(h, sseHandler, authHandler, sessionManager)
 
 	// Create server
 	srv := server.New(cfg.Server.Host, cfg.Server.Port, router)

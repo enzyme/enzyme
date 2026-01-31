@@ -1,13 +1,15 @@
-.PHONY: build run test clean dev generate-types
+.PHONY: build run test clean dev generate generate-types
 
 BINARY_NAME=feather
 BUILD_DIR=./bin
 
-generate-types:
+generate:
 	@mkdir -p internal/api
-	oapi-codegen --config=oapi-codegen.yaml openapi.yaml
+	go generate ./internal/api/...
 
-build:
+generate-types: generate
+
+build: generate
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/feather
 
 run: build

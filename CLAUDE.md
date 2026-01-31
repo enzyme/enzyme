@@ -22,18 +22,30 @@ pnpm --filter @feather/web dev  # React on :3000
 feather/
 ├── api/                        # Go backend server
 │   ├── openapi.yaml            # API specification (source of truth)
+│   ├── oapi-codegen.yaml       # Code generation config
 │   ├── cmd/feather/main.go     # Entry point, CLI flags, graceful shutdown
 │   ├── internal/
+│   │   ├── api/                # Generated code (DO NOT EDIT)
+│   │   │   ├── generate.go     # go:generate directive
+│   │   │   └── server.gen.go   # Generated types, interfaces, handlers
+│   │   ├── handler/            # Handler implementations
+│   │   │   ├── handler.go      # Main Handler struct (implements StrictServerInterface)
+│   │   │   ├── auth.go         # Auth endpoint implementations
+│   │   │   ├── workspace.go    # Workspace endpoint implementations
+│   │   │   ├── channel.go      # Channel endpoint implementations
+│   │   │   ├── message.go      # Message endpoint implementations
+│   │   │   ├── file.go         # File endpoint implementations
+│   │   │   └── errors.go       # Shared error helpers
 │   │   ├── app/app.go          # Dependency wiring, startup sequence
 │   │   ├── config/             # Configuration loading and validation
 │   │   ├── database/           # SQLite connection, migrations
-│   │   ├── auth/               # Authentication (handlers, sessions, middleware)
-│   │   ├── user/               # User domain
-│   │   ├── workspace/          # Workspace domain
-│   │   ├── channel/            # Channel domain
-│   │   ├── message/            # Message domain
-│   │   ├── file/               # File uploads
-│   │   ├── sse/                # Server-Sent Events (hub, handlers)
+│   │   ├── auth/               # Authentication (sessions, middleware)
+│   │   ├── user/               # User domain (model, repository)
+│   │   ├── workspace/          # Workspace domain (model, repository)
+│   │   ├── channel/            # Channel domain (model, repository)
+│   │   ├── message/            # Message domain (model, repository)
+│   │   ├── file/               # File uploads (model, repository)
+│   │   ├── sse/                # Server-Sent Events (hub, handlers - manual)
 │   │   ├── presence/           # Online/away/offline tracking
 │   │   ├── email/              # Email service + templates
 │   │   └── server/             # HTTP server, router (chi)
@@ -72,13 +84,20 @@ feather/
 ## Type Generation
 
 Types flow from `api/openapi.yaml`:
-1. **Go types**: `oapi-codegen` generates `api/internal/api/types.gen.go`
+1. **Go server**: `oapi-codegen` generates `api/internal/api/server.gen.go` (types + strict server interface)
 2. **TypeScript types**: `openapi-typescript` generates `packages/api-client/generated/schema.ts`
 
 Regenerate after API changes:
 ```bash
-make generate-types
+make generate-types    # Regenerate both Go and TypeScript
+cd api && make generate  # Regenerate Go only
 ```
+
+The Go server uses spec-first development:
+- `api/openapi.yaml` is the single source of truth
+- `oapi-codegen` generates `StrictServerInterface` with typed request/response objects
+- Handler implementations in `api/internal/handler/` must satisfy the interface (compiler enforces)
+- SSE endpoints are excluded from generation (require streaming)
 
 Usage in web client:
 ```typescript
@@ -92,10 +111,16 @@ import { get, post, ApiError } from '@feather/api-client';
 
 ### Architecture Patterns
 
+**Spec-First OpenAPI** - The Go server uses generated code from OpenAPI:
+- `api/openapi.yaml` defines all endpoints, request/response schemas
+- `oapi-codegen` generates `StrictServerInterface` with typed wrappers
+- `api/internal/handler/` contains implementations (one file per domain)
+- Compiler enforces the contract - drift is impossible
+
 **Domain Structure** - Each domain (user, workspace, channel, message, file) follows:
 - `model.go` - Data structures and constants
 - `repository.go` - Database operations
-- `handler.go` - HTTP handlers
+- Handler implementations in `api/internal/handler/<domain>.go`
 
 **Dependency Injection** - Wired in `api/internal/app/app.go`. The App struct owns all components.
 
@@ -122,14 +147,21 @@ import { get, post, ApiError } from '@feather/api-client';
 
 | File | Purpose |
 |------|---------|
+| `api/openapi.yaml` | API specification (source of truth) |
+| `api/internal/api/server.gen.go` | Generated types and interfaces |
+| `api/internal/handler/handler.go` | Main handler implementing StrictServerInterface |
 | `api/internal/app/app.go` | Dependency wiring |
-| `api/internal/server/router.go` | All API routes |
-| `api/internal/auth/middleware.go` | Auth middleware |
+| `api/internal/server/router.go` | Router setup, mounts generated handlers |
+| `api/internal/auth/middleware.go` | Auth middleware (used for SSE routes) |
 | `api/internal/sse/hub.go` | Real-time broadcasting |
 
 ### Common API Tasks
 
-**Add endpoint**: Add handler in `handler.go`, register in `server/router.go`
+**Add endpoint**:
+1. Add endpoint to `api/openapi.yaml` with request/response schemas
+2. Run `cd api && make generate` to regenerate `server.gen.go`
+3. Implement the new method in the appropriate `api/internal/handler/<domain>.go`
+4. The compiler will error if the implementation is missing or has wrong signature
 
 **Add migration**: Create `api/internal/database/migrations/NNN_description.sql` with `-- +goose Up/Down`
 

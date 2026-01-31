@@ -1,28 +1,20 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
+	"github.com/feather/api/internal/api"
 	"github.com/feather/api/internal/auth"
-	"github.com/feather/api/internal/channel"
-	"github.com/feather/api/internal/file"
-	"github.com/feather/api/internal/message"
+	"github.com/feather/api/internal/handler"
 	"github.com/feather/api/internal/sse"
-	"github.com/feather/api/internal/workspace"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 )
 
-type Handlers struct {
-	Auth      *auth.Handler
-	Workspace *workspace.Handler
-	Channel   *channel.Handler
-	Message   *message.Handler
-	SSE       *sse.Handler
-	File      *file.Handler
-}
-
-func NewRouter(handlers Handlers, sessionManager *auth.SessionManager) http.Handler {
+// NewRouter creates a new HTTP router with all routes registered
+func NewRouter(h *handler.Handler, sseHandler *sse.Handler, authHandler *auth.Handler, sessionManager *auth.SessionManager) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -37,75 +29,39 @@ func NewRouter(handlers Handlers, sessionManager *auth.SessionManager) http.Hand
 		w.Write([]byte("OK"))
 	})
 
-	// API routes
+	// Create strict middleware that adds request to context
+	strictMiddleware := func(f strictnethttp.StrictHTTPHandlerFunc, operationID string) strictnethttp.StrictHTTPHandlerFunc {
+		return func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+			// Add the http.Request to context so handlers can access session
+			ctx = handler.WithRequest(ctx, r)
+			return f(ctx, w, r, request)
+		}
+	}
+
+	// Create the strict handler with middleware
+	strictHandler := api.NewStrictHandlerWithOptions(h, []api.StrictMiddlewareFunc{strictMiddleware}, api.StrictHTTPServerOptions{
+		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"error":{"code":"BAD_REQUEST","message":"` + err.Error() + `"}}`))
+		},
+		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":{"code":"INTERNAL_ERROR","message":"` + err.Error() + `"}}`))
+		},
+	})
+
+	// Mount generated API routes with /api base URL
+	api.HandlerFromMuxWithBaseURL(strictHandler, r, "/api")
+
+	// Mount SSE routes separately (not generated - requires streaming)
 	r.Route("/api", func(r chi.Router) {
-		// Auth routes (no auth required)
-		r.Route("/auth", func(r chi.Router) {
-			r.Post("/register", handlers.Auth.Register)
-			r.Post("/login", handlers.Auth.Login)
-			r.Post("/logout", handlers.Auth.Logout)
-			r.Post("/forgot-password", handlers.Auth.ForgotPassword)
-			r.Post("/reset-password", handlers.Auth.ResetPassword)
-			r.Get("/me", handlers.Auth.Me)
-		})
-
-		// Protected routes
 		r.Group(func(r chi.Router) {
-			r.Use(handlers.Auth.RequireAuth)
-
-			// Workspaces
-			r.Post("/workspaces/create", handlers.Workspace.Create)
-			r.Route("/workspaces/{wid}", func(r chi.Router) {
-				r.Post("/update", handlers.Workspace.Update)
-				r.Get("/", handlers.Workspace.Get)
-				r.Post("/members/list", handlers.Workspace.ListMembers)
-				r.Post("/members/remove", handlers.Workspace.RemoveMember)
-				r.Post("/members/update-role", handlers.Workspace.UpdateMemberRole)
-				r.Post("/invites/create", handlers.Workspace.CreateInvite)
-
-				// Channels within workspace
-				r.Post("/channels/create", handlers.Channel.Create)
-				r.Post("/channels/list", handlers.Channel.List)
-				r.Post("/channels/dm", handlers.Channel.CreateDM)
-
-				// SSE events
-				r.Get("/events", handlers.SSE.Events)
-				r.Post("/typing/start", handlers.SSE.StartTyping)
-				r.Post("/typing/stop", handlers.SSE.StopTyping)
-			})
-
-			// Invites
-			r.Post("/invites/{code}/accept", handlers.Workspace.AcceptInvite)
-
-			// Channels
-			r.Route("/channels/{id}", func(r chi.Router) {
-				r.Post("/update", handlers.Channel.Update)
-				r.Post("/archive", handlers.Channel.Archive)
-				r.Post("/members/add", handlers.Channel.AddMember)
-				r.Post("/members/list", handlers.Channel.ListMembers)
-				r.Post("/join", handlers.Channel.Join)
-				r.Post("/leave", handlers.Channel.Leave)
-
-				// Messages
-				r.Post("/messages/send", handlers.Message.Send)
-				r.Post("/messages/list", handlers.Message.List)
-
-				// File uploads
-				r.Post("/files/upload", handlers.File.Upload)
-			})
-
-			// Messages
-			r.Route("/messages/{id}", func(r chi.Router) {
-				r.Post("/update", handlers.Message.Update)
-				r.Post("/delete", handlers.Message.Delete)
-				r.Post("/reactions/add", handlers.Message.AddReaction)
-				r.Post("/reactions/remove", handlers.Message.RemoveReaction)
-				r.Post("/thread/list", handlers.Message.ListThread)
-			})
-
-			// Files
-			r.Get("/files/{id}/download", handlers.File.Download)
-			r.Post("/files/{id}/delete", handlers.File.Delete)
+			r.Use(authHandler.RequireAuth)
+			r.Get("/workspaces/{wid}/events", sseHandler.Events)
+			r.Post("/workspaces/{wid}/typing/start", sseHandler.StartTyping)
+			r.Post("/workspaces/{wid}/typing/stop", sseHandler.StopTyping)
 		})
 	})
 
