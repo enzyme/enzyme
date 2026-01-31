@@ -41,6 +41,10 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 				}
 				// Auto-join public channel
 				_, _ = h.channelRepo.AddMember(ctx, userID, string(request.Id), nil)
+				// Update SSE hub cache
+				if h.hub != nil {
+					h.hub.AddChannelMember(string(request.Id), userID)
+				}
 			} else {
 				return nil, errors.New("not a member of this channel")
 			}

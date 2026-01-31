@@ -42,11 +42,18 @@ export function useSendMessage(channelId: string) {
   return useMutation({
     mutationFn: (input: SendMessageInput) => messagesApi.send(channelId, input),
     onSuccess: (data) => {
-      // Optimistically add message to cache
+      // Add message to cache (SSE may have already added it)
       queryClient.setQueryData(
         ['messages', channelId],
         (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
           if (!old) return old;
+
+          // Check if message already exists (SSE might have added it first)
+          const exists = old.pages.some((page) =>
+            page.messages.some((m) => m.id === data.message.id)
+          );
+          if (exists) return old;
+
           const newPages = [...old.pages];
           if (newPages[0]) {
             newPages[0] = {
@@ -190,6 +197,10 @@ export function useAddReaction(channelId: string) {
               messages: page.messages.map((msg) => {
                 if (msg.id !== messageId) return msg;
                 const reactions = msg.reactions || [];
+                // Check if reaction already exists (by user + emoji)
+                if (reactions.some((r) => r.user_id === userId && r.emoji === emoji)) {
+                  return msg;
+                }
                 return {
                   ...msg,
                   reactions: [

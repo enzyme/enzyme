@@ -56,6 +56,11 @@ func (h *Handler) CreateChannel(ctx context.Context, request openapi.CreateChann
 		return nil, err
 	}
 
+	// Update SSE hub cache with creator as first member
+	if h.hub != nil {
+		h.hub.AddChannelMember(ch.ID, userID)
+	}
+
 	apiCh := channelToAPI(ch)
 	return openapi.CreateChannel200JSONResponse{
 		Channel: &apiCh,
@@ -121,6 +126,13 @@ func (h *Handler) CreateDM(ctx context.Context, request openapi.CreateDMRequestO
 	ch, err := h.channelRepo.CreateDM(ctx, string(request.Wid), deduped)
 	if err != nil {
 		return nil, err
+	}
+
+	// Update SSE hub cache with all DM participants
+	if h.hub != nil {
+		for _, uid := range deduped {
+			h.hub.AddChannelMember(ch.ID, uid)
+		}
 	}
 
 	apiCh := channelToAPI(ch)
@@ -261,6 +273,11 @@ func (h *Handler) AddChannelMember(ctx context.Context, request openapi.AddChann
 		return nil, err
 	}
 
+	// Update SSE hub cache for channel membership
+	if h.hub != nil {
+		h.hub.AddChannelMember(string(request.Id), request.Body.UserId)
+	}
+
 	return openapi.AddChannelMember200JSONResponse{
 		Success: true,
 	}, nil
@@ -335,6 +352,11 @@ func (h *Handler) JoinChannel(ctx context.Context, request openapi.JoinChannelRe
 		return nil, err
 	}
 
+	// Update SSE hub cache for channel membership
+	if h.hub != nil {
+		h.hub.AddChannelMember(string(request.Id), userID)
+	}
+
 	return openapi.JoinChannel200JSONResponse{
 		Success: true,
 	}, nil
@@ -350,6 +372,11 @@ func (h *Handler) LeaveChannel(ctx context.Context, request openapi.LeaveChannel
 	err := h.channelRepo.RemoveMember(ctx, userID, string(request.Id))
 	if err != nil {
 		return nil, err
+	}
+
+	// Update SSE hub cache for channel membership
+	if h.hub != nil {
+		h.hub.RemoveChannelMember(string(request.Id), userID)
 	}
 
 	return openapi.LeaveChannel200JSONResponse{

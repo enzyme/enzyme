@@ -133,8 +133,16 @@ export function useSSE(workspaceId: string | undefined) {
               messages: page.messages.map((m) => {
                 if (m.id !== reaction.message_id) return m;
                 const reactions = m.reactions || [];
-                // Avoid duplicates
-                if (reactions.some((r) => r.id === reaction.id)) return m;
+                // Avoid duplicates (check by user + emoji, not just ID, to handle optimistic updates)
+                if (reactions.some((r) => r.user_id === reaction.user_id && r.emoji === reaction.emoji)) {
+                  // Replace temp reaction with real one
+                  return {
+                    ...m,
+                    reactions: reactions.map((r) =>
+                      r.user_id === reaction.user_id && r.emoji === reaction.emoji ? reaction : r
+                    ),
+                  };
+                }
                 return { ...m, reactions: [...reactions, reaction] };
               }),
             })),

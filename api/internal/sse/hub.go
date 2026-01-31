@@ -202,11 +202,14 @@ func (h *Hub) RemoveChannelMember(channelID, userID string) {
 }
 
 func (h *Hub) getChannelMembers(channelID string) map[string]bool {
+	// Check cache first (safe under RLock)
 	if members, ok := h.channelMembers[channelID]; ok {
 		return members
 	}
 
 	// Load from database if not cached
+	// Note: We don't cache the result here because we may only hold RLock.
+	// Caching happens via AddChannelMember/UpdateChannelMembers when membership changes.
 	members := make(map[string]bool)
 	if h.db != nil {
 		rows, err := h.db.Query(`
@@ -223,7 +226,6 @@ func (h *Hub) getChannelMembers(channelID string) map[string]bool {
 		}
 	}
 
-	h.channelMembers[channelID] = members
 	return members
 }
 
