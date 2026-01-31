@@ -104,13 +104,16 @@ type ChannelWithMembership struct {
 	CreatedBy         *string      `json:"created_by,omitempty"`
 	Description       *string      `json:"description,omitempty"`
 	DmParticipantHash *string      `json:"dm_participant_hash,omitempty"`
-	Id                string       `json:"id"`
-	LastReadMessageId *string      `json:"last_read_message_id,omitempty"`
-	Name              string       `json:"name"`
-	Type              ChannelType  `json:"type"`
-	UnreadCount       int          `json:"unread_count"`
-	UpdatedAt         time.Time    `json:"updated_at"`
-	WorkspaceId       string       `json:"workspace_id"`
+
+	// DmParticipants For DM channels, the other participants (excluding current user)
+	DmParticipants    *[]ChannelMember `json:"dm_participants,omitempty"`
+	Id                string           `json:"id"`
+	LastReadMessageId *string          `json:"last_read_message_id,omitempty"`
+	Name              string           `json:"name"`
+	Type              ChannelType      `json:"type"`
+	UnreadCount       int              `json:"unread_count"`
+	UpdatedAt         time.Time        `json:"updated_at"`
+	WorkspaceId       string           `json:"workspace_id"`
 }
 
 // CreateChannelInput defines model for CreateChannelInput.

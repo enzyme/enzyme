@@ -1253,6 +1253,11 @@ components:
               type: string
             unread_count:
               type: integer
+            dm_participants:
+              type: array
+              items:
+                $ref: '#/components/schemas/ChannelMember'
+              description: For DM channels, the other participants (excluding current user)
 
     ChannelType:
       type: string

@@ -191,6 +191,9 @@ func (r *Repository) ListForWorkspace(ctx context.Context, workspaceID, userID s
 	defer rows.Close()
 
 	var channels []ChannelWithMembership
+	var dmChannelIDs []string
+	channelIndex := make(map[string]int)
+
 	for rows.Next() {
 		var c ChannelWithMembership
 		var description, dmHash, archivedAt, createdBy, channelRole, lastReadID sql.NullString
@@ -226,10 +229,81 @@ func (r *Repository) ListForWorkspace(ctx context.Context, workspaceID, userID s
 		c.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
 		c.UnreadCount = unreadCount
 
+		// Track DM channels for participant lookup
+		if c.Type == TypeDM || c.Type == TypeGroupDM {
+			channelIndex[c.ID] = len(channels)
+			dmChannelIDs = append(dmChannelIDs, c.ID)
+		}
+
 		channels = append(channels, c)
 	}
 
-	return channels, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Fetch DM participants for DM channels
+	if len(dmChannelIDs) > 0 {
+		if err := r.fetchDMParticipants(ctx, channels, dmChannelIDs, channelIndex, userID); err != nil {
+			return nil, err
+		}
+	}
+
+	return channels, nil
+}
+
+// fetchDMParticipants loads participant info for DM channels, excluding the current user
+func (r *Repository) fetchDMParticipants(ctx context.Context, channels []ChannelWithMembership, dmChannelIDs []string, channelIndex map[string]int, currentUserID string) error {
+	if len(dmChannelIDs) == 0 {
+		return nil
+	}
+
+	// Build placeholders for IN clause
+	placeholders := make([]string, len(dmChannelIDs))
+	args := make([]interface{}, 0, len(dmChannelIDs)+1)
+	for i, id := range dmChannelIDs {
+		placeholders[i] = "?"
+		args = append(args, id)
+	}
+	args = append(args, currentUserID)
+
+	query := `
+		SELECT cm.channel_id, u.id, u.email, u.display_name, u.avatar_url, cm.channel_role
+		FROM channel_memberships cm
+		JOIN users u ON u.id = cm.user_id
+		WHERE cm.channel_id IN (` + strings.Join(placeholders, ",") + `)
+		  AND cm.user_id != ?
+		ORDER BY u.display_name
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var channelID string
+		var member MemberInfo
+		var avatarURL, channelRole sql.NullString
+
+		if err := rows.Scan(&channelID, &member.UserID, &member.Email, &member.DisplayName, &avatarURL, &channelRole); err != nil {
+			return err
+		}
+
+		if avatarURL.Valid {
+			member.AvatarURL = &avatarURL.String
+		}
+		if channelRole.Valid {
+			member.ChannelRole = &channelRole.String
+		}
+
+		if idx, ok := channelIndex[channelID]; ok {
+			channels[idx].DMParticipants = append(channels[idx].DMParticipants, member)
+		}
+	}
+
+	return rows.Err()
 }
 
 func (r *Repository) GetMembership(ctx context.Context, userID, channelID string) (*ChannelMembership, error) {

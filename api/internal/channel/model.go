@@ -29,9 +29,10 @@ type ChannelMembership struct {
 
 type ChannelWithMembership struct {
 	Channel
-	ChannelRole       *string `json:"channel_role,omitempty"`
-	LastReadMessageID *string `json:"last_read_message_id,omitempty"`
-	UnreadCount       int     `json:"unread_count"`
+	ChannelRole       *string      `json:"channel_role,omitempty"`
+	LastReadMessageID *string      `json:"last_read_message_id,omitempty"`
+	UnreadCount       int          `json:"unread_count"`
+	DMParticipants    []MemberInfo `json:"dm_participants,omitempty"`
 }
 
 type MemberInfo struct {

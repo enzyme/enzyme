@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { useChannels, useWorkspace } from '../../hooks';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useChannels, useWorkspace, useAuth } from '../../hooks';
+import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
 import { useUIStore } from '../../stores/uiStore';
 import { ChannelListSkeleton, Modal, Button, Input, toast } from '../ui';
-import { useCreateChannel, useMarkAllChannelsAsRead } from '../../hooks/useChannels';
+import { useCreateChannel, useMarkAllChannelsAsRead, useCreateDM } from '../../hooks/useChannels';
 import { cn, getChannelIcon } from '../../lib/utils';
 import type { ChannelWithMembership, ChannelType } from '@feather/api-client';
 
@@ -17,6 +18,7 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
   const { data, isLoading } = useChannels(workspaceId);
   const { toggleSidebar } = useUIStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isNewDMModalOpen, setIsNewDMModalOpen] = useState(false);
   const markAllAsRead = useMarkAllChannelsAsRead(workspaceId || '');
 
   const channels = data?.channels || [];
@@ -101,24 +103,30 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
               />
             )}
 
-            {groupedChannels.dm.length > 0 && (
-              <ChannelSection
+            <ChannelSection
                 title="Direct Messages"
                 channels={groupedChannels.dm}
                 workspaceId={workspaceId}
                 activeChannelId={channelId}
+                onAddClick={() => setIsNewDMModalOpen(true)}
               />
-            )}
           </>
         )}
       </div>
 
       {workspaceId && (
-        <CreateChannelModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          workspaceId={workspaceId}
-        />
+        <>
+          <CreateChannelModal
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            workspaceId={workspaceId}
+          />
+          <NewDMModal
+            isOpen={isNewDMModalOpen}
+            onClose={() => setIsNewDMModalOpen(false)}
+            workspaceId={workspaceId}
+          />
+        </>
       )}
     </div>
   );
@@ -197,6 +205,13 @@ interface ChannelItemProps {
 function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
   const icon = getChannelIcon(channel.type);
   const hasUnread = channel.unread_count > 0;
+  const isDM = channel.type === 'dm' || channel.type === 'group_dm';
+  const dmParticipant = isDM && channel.dm_participants?.[0];
+
+  // For DMs, show participant name; for group DMs, show all names
+  const displayName = isDM
+    ? channel.dm_participants?.map((p) => p.display_name).join(', ') || channel.name
+    : channel.name;
 
   return (
     <Link
@@ -209,8 +224,22 @@ function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
           : 'text-gray-700 dark:text-gray-300'
       )}
     >
-      {icon && <span className="text-gray-500 dark:text-gray-400">{icon}</span>}
-      <span className={cn('truncate', hasUnread && 'font-semibold')}>{channel.name}</span>
+      {isDM && dmParticipant ? (
+        dmParticipant.avatar_url ? (
+          <img
+            src={dmParticipant.avatar_url}
+            alt={dmParticipant.display_name}
+            className="w-5 h-5 rounded-full"
+          />
+        ) : (
+          <div className="w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-300">
+            {dmParticipant.display_name.charAt(0).toUpperCase()}
+          </div>
+        )
+      ) : (
+        icon && <span className="text-gray-500 dark:text-gray-400">{icon}</span>
+      )}
+      <span className={cn('truncate', hasUnread && 'font-semibold')}>{displayName}</span>
       {hasUnread && (
         <span className="ml-auto bg-primary-600 text-white text-xs px-1.5 py-0.5 rounded-full">
           {channel.unread_count}
@@ -315,6 +344,100 @@ function CreateChannelModal({
           </Button>
           <Button type="submit" isLoading={createChannel.isPending}>
             Create
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function NewDMModal({
+  isOpen,
+  onClose,
+  workspaceId,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  workspaceId: string;
+}) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data: membersData } = useWorkspaceMembers(workspaceId);
+  const createDM = useCreateDM(workspaceId);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const otherMembers = useMemo(() => {
+    if (!membersData?.members || !user) return [];
+    return membersData.members.filter((m) => m.user_id !== user.id);
+  }, [membersData?.members, user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserId) return;
+
+    try {
+      const result = await createDM.mutateAsync({ user_ids: [selectedUserId] });
+      onClose();
+      setSelectedUserId(null);
+      navigate(`/workspaces/${workspaceId}/channels/${result.channel.id}`);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to start conversation', 'error');
+    }
+  };
+
+  const handleClose = () => {
+    onClose();
+    setSelectedUserId(null);
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} title="New Message">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="max-h-64 overflow-y-auto space-y-1">
+          {otherMembers.map((member) => {
+            const displayName = member.display_name_override || member.display_name;
+            const isSelected = selectedUserId === member.user_id;
+
+            return (
+              <button
+                key={member.user_id}
+                type="button"
+                onClick={() => setSelectedUserId(member.user_id)}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 rounded text-left',
+                  isSelected
+                    ? 'bg-primary-100 dark:bg-primary-900/30'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                )}
+              >
+                {member.avatar_url ? (
+                  <img
+                    src={member.avatar_url}
+                    alt={displayName}
+                    className="w-8 h-8 rounded-full"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="text-gray-900 dark:text-white">{displayName}</span>
+              </button>
+            );
+          })}
+          {otherMembers.length === 0 && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+              No other members in this workspace
+            </p>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={handleClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={!selectedUserId} isLoading={createDM.isPending}>
+            Start Conversation
           </Button>
         </div>
       </form>

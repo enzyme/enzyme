@@ -421,6 +421,13 @@ func channelWithMembershipToAPI(ch channel.ChannelWithMembership) openapi.Channe
 		role := openapi.ChannelRole(*ch.ChannelRole)
 		apiCh.ChannelRole = &role
 	}
+	if len(ch.DMParticipants) > 0 {
+		participants := make([]openapi.ChannelMember, len(ch.DMParticipants))
+		for i, p := range ch.DMParticipants {
+			participants[i] = channelMemberToAPI(p)
+		}
+		apiCh.DmParticipants = &participants
+	}
 	return apiCh
 }
 

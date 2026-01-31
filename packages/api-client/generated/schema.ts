@@ -802,6 +802,8 @@ export interface components {
             channel_role?: components["schemas"]["ChannelRole"];
             last_read_message_id?: string;
             unread_count: number;
+            /** @description For DM channels, the other participants (excluding current user) */
+            dm_participants?: components["schemas"]["ChannelMember"][];
         };
         /** @enum {string} */
         ChannelType: "public" | "private" | "dm" | "group_dm";
