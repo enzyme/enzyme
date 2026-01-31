@@ -1,4 +1,4 @@
-import { post, type Channel, type ChannelWithMembership, type ChannelMember, type ChannelType } from '@feather/api-client';
+import { post, type Channel, type ChannelWithMembership, type ChannelMember, type ChannelType, type MarkReadResponse } from '@feather/api-client';
 
 export interface CreateChannelInput {
   name: string;
@@ -42,4 +42,10 @@ export const channelsApi = {
 
   leave: (channelId: string) =>
     post<{ success: boolean }>(`/channels/${channelId}/leave`),
+
+  markAsRead: (channelId: string, messageId?: string) =>
+    post<MarkReadResponse>(`/channels/${channelId}/mark-read`, messageId ? { message_id: messageId } : {}),
+
+  markAllAsRead: (workspaceId: string) =>
+    post<{ success: boolean }>(`/workspaces/${workspaceId}/channels/mark-all-read`),
 };

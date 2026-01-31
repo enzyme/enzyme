@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { Avatar } from '../ui';
 import { ReactionPicker } from './ReactionPicker';
 import { useAuth, useAddReaction, useRemoveReaction } from '../../hooks';
+import { useMarkMessageUnread } from '../../hooks/useMessages';
 import { useUIStore } from '../../stores/uiStore';
 import { formatTime, formatRelativeTime, cn } from '../../lib/utils';
 import type { MessageWithUser } from '@feather/api-client';
@@ -30,12 +32,14 @@ interface MessageItemProps {
 }
 
 export function MessageItem({ message, channelId }: MessageItemProps) {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
   const [showActions, setShowActions] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const { user } = useAuth();
   const { openThread, openProfile } = useUIStore();
   const addReaction = useAddReaction(channelId);
   const removeReaction = useRemoveReaction(channelId);
+  const markUnread = useMarkMessageUnread(workspaceId || '');
 
   const isDeleted = !!message.deleted_at;
   const isEdited = !!message.edited_at;
@@ -192,6 +196,16 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
           >
             <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+          </button>
+
+          <button
+            onClick={() => markUnread.mutate(message.id)}
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
+            title="Mark unread"
+          >
+            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </button>
 

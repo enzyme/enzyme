@@ -1,11 +1,59 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { channelsApi, type CreateChannelInput, type CreateDMInput } from '../api/channels';
+import type { ChannelWithMembership } from '@feather/api-client';
 
 export function useChannels(workspaceId: string | undefined) {
   return useQuery({
     queryKey: ['channels', workspaceId],
     queryFn: () => channelsApi.list(workspaceId!),
     enabled: !!workspaceId,
+  });
+}
+
+export function useMarkChannelAsRead(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ channelId, messageId }: { channelId: string; messageId?: string }) =>
+      channelsApi.markAsRead(channelId, messageId),
+    onSuccess: (data, { channelId }) => {
+      // Update the channel's unread_count and last_read_message_id
+      queryClient.setQueryData(
+        ['channels', workspaceId],
+        (old: { channels: ChannelWithMembership[] } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            channels: old.channels.map((c) =>
+              c.id === channelId
+                ? { ...c, unread_count: 0, last_read_message_id: data.last_read_message_id }
+                : c
+            ),
+          };
+        }
+      );
+    },
+  });
+}
+
+export function useMarkAllChannelsAsRead(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => channelsApi.markAllAsRead(workspaceId),
+    onSuccess: () => {
+      // Set all unread_count to 0
+      queryClient.setQueryData(
+        ['channels', workspaceId],
+        (old: { channels: ChannelWithMembership[] } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            channels: old.channels.map((c) => ({ ...c, unread_count: 0 })),
+          };
+        }
+      );
+    },
   });
 }
 

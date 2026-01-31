@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useChannels, useArchiveChannel } from '../hooks';
+import { useMarkChannelAsRead } from '../hooks/useChannels';
 import { MessageList, MessageComposer } from '../components/message';
 import { Spinner, Modal, Button, toast } from '../components/ui';
 import { getChannelIcon } from '../lib/utils';
@@ -15,10 +16,45 @@ export function ChannelPage() {
   const { data: channelsData, isLoading } = useChannels(workspaceId);
   const channel = channelsData?.channels.find((c) => c.id === channelId);
   const archiveChannel = useArchiveChannel(workspaceId || '');
+  const markAsRead = useMarkChannelAsRead(workspaceId || '');
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
+  const markAsReadTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto mark-as-read when user is at bottom for 2 seconds
+  useEffect(() => {
+    if (!channelId || !isAtBottom || !channel || channel.unread_count === 0) {
+      if (markAsReadTimerRef.current) {
+        clearTimeout(markAsReadTimerRef.current);
+        markAsReadTimerRef.current = null;
+      }
+      return;
+    }
+
+    const currentChannelId = channelId;
+    markAsReadTimerRef.current = setTimeout(() => {
+      markAsRead.mutate({ channelId: currentChannelId });
+    }, 2000);
+
+    return () => {
+      if (markAsReadTimerRef.current) {
+        clearTimeout(markAsReadTimerRef.current);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelId, isAtBottom, channel?.unread_count]);
+
+  // Reset state when changing channels
+  useEffect(() => {
+    setIsAtBottom(true);
+  }, [channelId]);
+
+  const handleAtBottomChange = useCallback((atBottom: boolean) => {
+    setIsAtBottom(atBottom);
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -142,7 +178,12 @@ export function ChannelPage() {
       </Modal>
 
       {/* Messages */}
-      <MessageList channelId={channelId} />
+      <MessageList
+        channelId={channelId}
+        lastReadMessageId={channel.last_read_message_id}
+        unreadCount={channel.unread_count}
+        onAtBottomChange={handleAtBottomChange}
+      />
 
       {/* Composer */}
       <MessageComposer

@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useChannels, useWorkspace } from '../../hooks';
 import { useUIStore } from '../../stores/uiStore';
 import { ChannelListSkeleton, Modal, Button, Input, toast } from '../ui';
-import { useCreateChannel } from '../../hooks/useChannels';
+import { useCreateChannel, useMarkAllChannelsAsRead } from '../../hooks/useChannels';
 import { cn, getChannelIcon } from '../../lib/utils';
 import type { ChannelWithMembership, ChannelType } from '@feather/api-client';
 
@@ -17,8 +17,10 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
   const { data, isLoading } = useChannels(workspaceId);
   const { toggleSidebar } = useUIStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const markAllAsRead = useMarkAllChannelsAsRead(workspaceId || '');
 
   const channels = data?.channels || [];
+  const hasUnread = channels.some((c) => c.unread_count > 0);
 
   const groupedChannels = useMemo(() => {
     const groups = {
@@ -52,14 +54,27 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
           <h2 className="font-bold text-gray-900 dark:text-white truncate">
             {workspaceData?.workspace.name || 'Loading...'}
           </h2>
-          <button
-            onClick={toggleSidebar}
-            className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 lg:hidden"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-1">
+            {hasUnread && (
+              <button
+                onClick={() => markAllAsRead.mutate()}
+                className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                title="Mark all as read"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+            )}
+            <button
+              onClick={toggleSidebar}
+              className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 lg:hidden"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -181,6 +196,7 @@ interface ChannelItemProps {
 
 function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
   const icon = getChannelIcon(channel.type);
+  const hasUnread = channel.unread_count > 0;
 
   return (
     <Link
@@ -194,8 +210,8 @@ function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
       )}
     >
       {icon && <span className="text-gray-500 dark:text-gray-400">{icon}</span>}
-      <span className="truncate">{channel.name}</span>
-      {channel.unread_count > 0 && (
+      <span className={cn('truncate', hasUnread && 'font-semibold')}>{channel.name}</span>
+      {hasUnread && (
         <span className="ml-auto bg-primary-600 text-white text-xs px-1.5 py-0.5 rounded-full">
           {channel.unread_count}
         </span>

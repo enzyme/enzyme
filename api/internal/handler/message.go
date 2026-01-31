@@ -477,3 +477,67 @@ func messageListResultToAPI(result *message.ListResult) openapi.MessageListResul
 	}
 	return apiResult
 }
+
+// MarkMessageUnread marks a message as unread by setting last_read to the previous message
+func (h *Handler) MarkMessageUnread(ctx context.Context, request openapi.MarkMessageUnreadRequestObject) (openapi.MarkMessageUnreadResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return nil, errors.New("not authenticated")
+	}
+
+	// Get the message
+	msg, err := h.messageRepo.GetByID(ctx, string(request.Id))
+	if err != nil {
+		return nil, err
+	}
+
+	// Check channel membership
+	ch, err := h.channelRepo.GetByID(ctx, msg.ChannelID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = h.channelRepo.GetMembership(ctx, userID, msg.ChannelID)
+	if err != nil {
+		if errors.Is(err, channel.ErrNotChannelMember) {
+			if ch.Type != channel.TypePublic {
+				return nil, errors.New("not a member of this channel")
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	// Get the message before this one
+	prevMessageID, err := h.channelRepo.GetPreviousMessageID(ctx, string(request.Id))
+	if err != nil {
+		return nil, err
+	}
+
+	// Update last read to the previous message (or empty if no previous)
+	if prevMessageID != "" {
+		if err := h.channelRepo.UpdateLastRead(ctx, userID, msg.ChannelID, prevMessageID); err != nil {
+			return nil, err
+		}
+	} else {
+		// No previous message - clear last_read_message_id to mark all as unread
+		if err := h.channelRepo.UpdateLastRead(ctx, userID, msg.ChannelID, ""); err != nil {
+			return nil, err
+		}
+	}
+
+	// Broadcast to user's other clients
+	if h.hub != nil {
+		h.hub.BroadcastToUser(ch.WorkspaceID, userID, sse.Event{
+			Type: sse.EventChannelRead,
+			Data: map[string]string{
+				"channel_id":           msg.ChannelID,
+				"last_read_message_id": prevMessageID,
+			},
+		})
+	}
+
+	return openapi.MarkMessageUnread200JSONResponse{
+		Success: true,
+	}, nil
+}

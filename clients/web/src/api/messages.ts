@@ -32,4 +32,7 @@ export const messagesApi = {
 
   listThread: (messageId: string, input?: ListMessagesInput) =>
     post<MessageListResult>(`/messages/${messageId}/thread/list`, input || {}),
+
+  markUnread: (messageId: string) =>
+    post<{ success: boolean }>(`/messages/${messageId}/mark-unread`),
 };

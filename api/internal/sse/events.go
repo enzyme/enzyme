@@ -13,6 +13,7 @@ const (
 	EventChannelArchived = "channel.archived"
 	EventMemberAdded     = "channel.member_added"
 	EventMemberRemoved   = "channel.member_removed"
+	EventChannelRead     = "channel.read"
 	EventTypingStart     = "typing.start"
 	EventTypingStop      = "typing.stop"
 	EventPresenceChanged = "presence.changed"

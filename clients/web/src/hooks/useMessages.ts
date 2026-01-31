@@ -290,3 +290,15 @@ export function updateMessageInCache(
     }
   );
 }
+
+export function useMarkMessageUnread(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (messageId: string) => messagesApi.markUnread(messageId),
+    onSuccess: () => {
+      // Invalidate channels to refresh unread counts
+      queryClient.invalidateQueries({ queryKey: ['channels', workspaceId] });
+    },
+  });
+}

@@ -164,6 +164,11 @@ type LoginInput struct {
 	Password string              `json:"password"`
 }
 
+// MarkReadResponse defines model for MarkReadResponse.
+type MarkReadResponse struct {
+	LastReadMessageId string `json:"last_read_message_id"`
+}
+
 // MeResponse defines model for MeResponse.
 type MeResponse struct {
 	User       User                `json:"user"`
@@ -366,6 +371,12 @@ type UploadFileMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// MarkChannelReadJSONBody defines parameters for MarkChannelRead.
+type MarkChannelReadJSONBody struct {
+	// MessageId Message ID to mark as last read (defaults to latest message)
+	MessageId *string `json:"message_id,omitempty"`
+}
+
 // AddChannelMemberJSONBody defines parameters for AddChannelMember.
 type AddChannelMemberJSONBody struct {
 	Role   *ChannelRole `json:"role,omitempty"`
@@ -417,6 +428,9 @@ type ResetPasswordJSONRequestBody ResetPasswordJSONBody
 
 // UploadFileMultipartRequestBody defines body for UploadFile for multipart/form-data ContentType.
 type UploadFileMultipartRequestBody UploadFileMultipartBody
+
+// MarkChannelReadJSONRequestBody defines body for MarkChannelRead for application/json ContentType.
+type MarkChannelReadJSONRequestBody MarkChannelReadJSONBody
 
 // AddChannelMemberJSONRequestBody defines body for AddChannelMember for application/json ContentType.
 type AddChannelMemberJSONRequestBody AddChannelMemberJSONBody
@@ -498,6 +512,9 @@ type ServerInterface interface {
 	// Leave a channel
 	// (POST /channels/{id}/leave)
 	LeaveChannel(w http.ResponseWriter, r *http.Request, id ChannelId)
+	// Mark channel as read
+	// (POST /channels/{id}/mark-read)
+	MarkChannelRead(w http.ResponseWriter, r *http.Request, id ChannelId)
 	// Add member to channel
 	// (POST /channels/{id}/members/add)
 	AddChannelMember(w http.ResponseWriter, r *http.Request, id ChannelId)
@@ -525,6 +542,9 @@ type ServerInterface interface {
 	// Delete a message
 	// (POST /messages/{id}/delete)
 	DeleteMessage(w http.ResponseWriter, r *http.Request, id MessageId)
+	// Mark message as unread
+	// (POST /messages/{id}/mark-unread)
+	MarkMessageUnread(w http.ResponseWriter, r *http.Request, id MessageId)
 	// Add reaction to message
 	// (POST /messages/{id}/reactions/add)
 	AddReaction(w http.ResponseWriter, r *http.Request, id MessageId)
@@ -558,6 +578,9 @@ type ServerInterface interface {
 	// List channels in workspace
 	// (POST /workspaces/{wid}/channels/list)
 	ListChannels(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// Mark all channels as read
+	// (POST /workspaces/{wid}/channels/mark-all-read)
+	MarkAllChannelsRead(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
 	// Create an invite
 	// (POST /workspaces/{wid}/invites/create)
 	CreateWorkspaceInvite(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
@@ -639,6 +662,12 @@ func (_ Unimplemented) LeaveChannel(w http.ResponseWriter, r *http.Request, id C
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Mark channel as read
+// (POST /channels/{id}/mark-read)
+func (_ Unimplemented) MarkChannelRead(w http.ResponseWriter, r *http.Request, id ChannelId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Add member to channel
 // (POST /channels/{id}/members/add)
 func (_ Unimplemented) AddChannelMember(w http.ResponseWriter, r *http.Request, id ChannelId) {
@@ -690,6 +719,12 @@ func (_ Unimplemented) AcceptInvite(w http.ResponseWriter, r *http.Request, code
 // Delete a message
 // (POST /messages/{id}/delete)
 func (_ Unimplemented) DeleteMessage(w http.ResponseWriter, r *http.Request, id MessageId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mark message as unread
+// (POST /messages/{id}/mark-unread)
+func (_ Unimplemented) MarkMessageUnread(w http.ResponseWriter, r *http.Request, id MessageId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -756,6 +791,12 @@ func (_ Unimplemented) CreateDM(w http.ResponseWriter, r *http.Request, wid Work
 // List channels in workspace
 // (POST /workspaces/{wid}/channels/list)
 func (_ Unimplemented) ListChannels(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mark all channels as read
+// (POST /workspaces/{wid}/channels/mark-all-read)
+func (_ Unimplemented) MarkAllChannelsRead(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -997,6 +1038,37 @@ func (siw *ServerInterfaceWrapper) LeaveChannel(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.LeaveChannel(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MarkChannelRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkChannelRead(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id ChannelId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkChannelRead(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1276,6 +1348,37 @@ func (siw *ServerInterfaceWrapper) DeleteMessage(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteMessage(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MarkMessageUnread operation middleware
+func (siw *ServerInterfaceWrapper) MarkMessageUnread(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id MessageId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkMessageUnread(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1604,6 +1707,37 @@ func (siw *ServerInterfaceWrapper) ListChannels(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// MarkAllChannelsRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkAllChannelsRead(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkAllChannelsRead(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateWorkspaceInvite operation middleware
 func (siw *ServerInterfaceWrapper) CreateWorkspaceInvite(w http.ResponseWriter, r *http.Request) {
 
@@ -1903,6 +2037,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/channels/{id}/leave", wrapper.LeaveChannel)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channels/{id}/mark-read", wrapper.MarkChannelRead)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channels/{id}/members/add", wrapper.AddChannelMember)
 	})
 	r.Group(func(r chi.Router) {
@@ -1928,6 +2065,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/messages/{id}/delete", wrapper.DeleteMessage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/messages/{id}/mark-unread", wrapper.MarkMessageUnread)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/messages/{id}/reactions/add", wrapper.AddReaction)
@@ -1961,6 +2101,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/{wid}/channels/list", wrapper.ListChannels)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/channels/mark-all-read", wrapper.MarkAllChannelsRead)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/{wid}/invites/create", wrapper.CreateWorkspaceInvite)
@@ -2193,6 +2336,24 @@ func (response LeaveChannel200JSONResponse) VisitLeaveChannelResponse(w http.Res
 	return json.NewEncoder(w).Encode(response)
 }
 
+type MarkChannelReadRequestObject struct {
+	Id   ChannelId `json:"id"`
+	Body *MarkChannelReadJSONRequestBody
+}
+
+type MarkChannelReadResponseObject interface {
+	VisitMarkChannelReadResponse(w http.ResponseWriter) error
+}
+
+type MarkChannelRead200JSONResponse MarkReadResponse
+
+func (response MarkChannelRead200JSONResponse) VisitMarkChannelReadResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type AddChannelMemberRequestObject struct {
 	Id   ChannelId `json:"id"`
 	Body *AddChannelMemberJSONRequestBody
@@ -2362,6 +2523,23 @@ type DeleteMessageResponseObject interface {
 type DeleteMessage200JSONResponse SuccessResponse
 
 func (response DeleteMessage200JSONResponse) VisitDeleteMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type MarkMessageUnreadRequestObject struct {
+	Id MessageId `json:"id"`
+}
+
+type MarkMessageUnreadResponseObject interface {
+	VisitMarkMessageUnreadResponse(w http.ResponseWriter) error
+}
+
+type MarkMessageUnread200JSONResponse SuccessResponse
+
+func (response MarkMessageUnread200JSONResponse) VisitMarkMessageUnreadResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -2615,6 +2793,23 @@ func (response ListChannels200JSONResponse) VisitListChannelsResponse(w http.Res
 	return json.NewEncoder(w).Encode(response)
 }
 
+type MarkAllChannelsReadRequestObject struct {
+	Wid WorkspaceId `json:"wid"`
+}
+
+type MarkAllChannelsReadResponseObject interface {
+	VisitMarkAllChannelsReadResponse(w http.ResponseWriter) error
+}
+
+type MarkAllChannelsRead200JSONResponse SuccessResponse
+
+func (response MarkAllChannelsRead200JSONResponse) VisitMarkAllChannelsReadResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type CreateWorkspaceInviteRequestObject struct {
 	Wid  WorkspaceId `json:"wid"`
 	Body *CreateWorkspaceInviteJSONRequestBody
@@ -2742,6 +2937,9 @@ type StrictServerInterface interface {
 	// Leave a channel
 	// (POST /channels/{id}/leave)
 	LeaveChannel(ctx context.Context, request LeaveChannelRequestObject) (LeaveChannelResponseObject, error)
+	// Mark channel as read
+	// (POST /channels/{id}/mark-read)
+	MarkChannelRead(ctx context.Context, request MarkChannelReadRequestObject) (MarkChannelReadResponseObject, error)
 	// Add member to channel
 	// (POST /channels/{id}/members/add)
 	AddChannelMember(ctx context.Context, request AddChannelMemberRequestObject) (AddChannelMemberResponseObject, error)
@@ -2769,6 +2967,9 @@ type StrictServerInterface interface {
 	// Delete a message
 	// (POST /messages/{id}/delete)
 	DeleteMessage(ctx context.Context, request DeleteMessageRequestObject) (DeleteMessageResponseObject, error)
+	// Mark message as unread
+	// (POST /messages/{id}/mark-unread)
+	MarkMessageUnread(ctx context.Context, request MarkMessageUnreadRequestObject) (MarkMessageUnreadResponseObject, error)
 	// Add reaction to message
 	// (POST /messages/{id}/reactions/add)
 	AddReaction(ctx context.Context, request AddReactionRequestObject) (AddReactionResponseObject, error)
@@ -2802,6 +3003,9 @@ type StrictServerInterface interface {
 	// List channels in workspace
 	// (POST /workspaces/{wid}/channels/list)
 	ListChannels(ctx context.Context, request ListChannelsRequestObject) (ListChannelsResponseObject, error)
+	// Mark all channels as read
+	// (POST /workspaces/{wid}/channels/mark-all-read)
+	MarkAllChannelsRead(ctx context.Context, request MarkAllChannelsReadRequestObject) (MarkAllChannelsReadResponseObject, error)
 	// Create an invite
 	// (POST /workspaces/{wid}/invites/create)
 	CreateWorkspaceInvite(ctx context.Context, request CreateWorkspaceInviteRequestObject) (CreateWorkspaceInviteResponseObject, error)
@@ -3131,6 +3335,39 @@ func (sh *strictHandler) LeaveChannel(w http.ResponseWriter, r *http.Request, id
 	}
 }
 
+// MarkChannelRead operation middleware
+func (sh *strictHandler) MarkChannelRead(w http.ResponseWriter, r *http.Request, id ChannelId) {
+	var request MarkChannelReadRequestObject
+
+	request.Id = id
+
+	var body MarkChannelReadJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.MarkChannelRead(ctx, request.(MarkChannelReadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MarkChannelRead")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MarkChannelReadResponseObject); ok {
+		if err := validResponse.VisitMarkChannelReadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // AddChannelMember operation middleware
 func (sh *strictHandler) AddChannelMember(w http.ResponseWriter, r *http.Request, id ChannelId) {
 	var request AddChannelMemberRequestObject
@@ -3386,6 +3623,32 @@ func (sh *strictHandler) DeleteMessage(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DeleteMessageResponseObject); ok {
 		if err := validResponse.VisitDeleteMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// MarkMessageUnread operation middleware
+func (sh *strictHandler) MarkMessageUnread(w http.ResponseWriter, r *http.Request, id MessageId) {
+	var request MarkMessageUnreadRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.MarkMessageUnread(ctx, request.(MarkMessageUnreadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MarkMessageUnread")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MarkMessageUnreadResponseObject); ok {
+		if err := validResponse.VisitMarkMessageUnreadResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3724,6 +3987,32 @@ func (sh *strictHandler) ListChannels(w http.ResponseWriter, r *http.Request, wi
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListChannelsResponseObject); ok {
 		if err := validResponse.VisitListChannelsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// MarkAllChannelsRead operation middleware
+func (sh *strictHandler) MarkAllChannelsRead(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request MarkAllChannelsReadRequestObject
+
+	request.Wid = wid
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.MarkAllChannelsRead(ctx, request.(MarkAllChannelsReadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MarkAllChannelsRead")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MarkAllChannelsReadResponseObject); ok {
+		if err := validResponse.VisitMarkAllChannelsReadResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

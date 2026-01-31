@@ -6,8 +6,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/feather/api/internal/openapi"
 	"github.com/feather/api/internal/channel"
+	"github.com/feather/api/internal/openapi"
+	"github.com/feather/api/internal/sse"
 	"github.com/feather/api/internal/workspace"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -436,4 +437,106 @@ func channelMemberToAPI(m channel.MemberInfo) openapi.ChannelMember {
 		apiMember.ChannelRole = &role
 	}
 	return apiMember
+}
+
+// MarkChannelRead marks a channel as read for the current user
+func (h *Handler) MarkChannelRead(ctx context.Context, request openapi.MarkChannelReadRequestObject) (openapi.MarkChannelReadResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return nil, errors.New("not authenticated")
+	}
+
+	ch, err := h.channelRepo.GetByID(ctx, string(request.Id))
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine which message ID to use
+	var messageID string
+	if request.Body != nil && request.Body.MessageId != nil {
+		messageID = *request.Body.MessageId
+	} else {
+		// Get latest message in channel
+		messageID, err = h.channelRepo.GetLatestMessageID(ctx, string(request.Id))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// No messages to mark as read
+	if messageID == "" {
+		return openapi.MarkChannelRead200JSONResponse{
+			LastReadMessageId: "",
+		}, nil
+	}
+
+	// Update last read
+	if err := h.channelRepo.UpdateLastRead(ctx, userID, string(request.Id), messageID); err != nil {
+		return nil, err
+	}
+
+	// Broadcast to user's other clients
+	if h.hub != nil {
+		h.hub.BroadcastToUser(ch.WorkspaceID, userID, sse.Event{
+			Type: sse.EventChannelRead,
+			Data: map[string]string{
+				"channel_id":           string(request.Id),
+				"last_read_message_id": messageID,
+			},
+		})
+	}
+
+	return openapi.MarkChannelRead200JSONResponse{
+		LastReadMessageId: messageID,
+	}, nil
+}
+
+// MarkAllChannelsRead marks all channels in a workspace as read
+func (h *Handler) MarkAllChannelsRead(ctx context.Context, request openapi.MarkAllChannelsReadRequestObject) (openapi.MarkAllChannelsReadResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return nil, errors.New("not authenticated")
+	}
+
+	// Check workspace membership
+	_, err := h.workspaceRepo.GetMembership(ctx, userID, string(request.Wid))
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all channels user is a member of
+	channelIDs, err := h.channelRepo.ListMemberChannelIDs(ctx, string(request.Wid), userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Mark each channel as read
+	for _, channelID := range channelIDs {
+		messageID, err := h.channelRepo.GetLatestMessageID(ctx, channelID)
+		if err != nil {
+			continue
+		}
+		if messageID == "" {
+			continue
+		}
+
+		if err := h.channelRepo.UpdateLastRead(ctx, userID, channelID, messageID); err != nil {
+			continue
+		}
+
+		// Broadcast to user's other clients
+		if h.hub != nil {
+			h.hub.BroadcastToUser(string(request.Wid), userID, sse.Event{
+				Type: sse.EventChannelRead,
+				Data: map[string]string{
+					"channel_id":           channelID,
+					"last_read_message_id": messageID,
+				},
+			})
+		}
+	}
+
+	return openapi.MarkAllChannelsRead200JSONResponse{
+		Success: true,
+	}, nil
 }

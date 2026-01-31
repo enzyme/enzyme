@@ -19,6 +19,8 @@ export type ChannelWithMembership = components['schemas']['ChannelWithMembership
 export type ChannelType = components['schemas']['ChannelType'];
 export type ChannelRole = components['schemas']['ChannelRole'];
 export type ChannelMember = components['schemas']['ChannelMember'];
+export type MarkReadResponse = components['schemas']['MarkReadResponse'];
+export type ChannelReadEventData = components['schemas']['ChannelReadEventData'];
 
 // Message types
 export type Message = components['schemas']['Message'];

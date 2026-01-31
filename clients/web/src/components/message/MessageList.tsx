@@ -7,9 +7,12 @@ import type { MessageWithUser } from '@feather/api-client';
 
 interface MessageListProps {
   channelId: string;
+  lastReadMessageId?: string;
+  unreadCount?: number;
+  onAtBottomChange?: (isAtBottom: boolean) => void;
 }
 
-export function MessageList({ channelId }: MessageListProps) {
+export function MessageList({ channelId, lastReadMessageId, unreadCount = 0, onAtBottomChange }: MessageListProps) {
   const {
     data,
     isLoading,
@@ -23,11 +26,17 @@ export function MessageList({ channelId }: MessageListProps) {
   const prevScrollHeightRef = useRef(0);
   const isAtBottomRef = useRef(true);
 
+
   // Flatten messages from all pages (they come newest-first)
   const allMessages = data?.pages.flatMap((page) => page.messages) || [];
 
   // Reverse for display (oldest at top)
   const messages = [...allMessages].reverse();
+
+  // Find the index of the last read message in the flat list
+  const lastReadIndex = lastReadMessageId
+    ? messages.findIndex((m) => m.id === lastReadMessageId)
+    : -1;
 
   // Group messages by date
   const messagesByDate = messages.reduce((acc, msg) => {
@@ -52,14 +61,16 @@ export function MessageList({ channelId }: MessageListProps) {
     const container = containerRef.current;
     if (!container) return;
 
-    isAtBottomRef.current = checkIfAtBottom();
+    const atBottom = checkIfAtBottom();
+    isAtBottomRef.current = atBottom;
+    onAtBottomChange?.(atBottom);
 
     // Load more when scrolled near top
     if (container.scrollTop < 100 && hasNextPage && !isFetchingNextPage) {
       prevScrollHeightRef.current = container.scrollHeight;
       fetchNextPage();
     }
-  }, [checkIfAtBottom, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [checkIfAtBottom, hasNextPage, isFetchingNextPage, fetchNextPage, onAtBottomChange]);
 
   // Preserve scroll position when prepending older messages
   useEffect(() => {
@@ -150,13 +161,32 @@ export function MessageList({ channelId }: MessageListProps) {
             </div>
 
             {/* Messages */}
-            {msgs.map((message) => (
-              <MessageItem
-                key={message.id}
-                message={message}
-                channelId={channelId}
-              />
-            ))}
+            {msgs.map((message) => {
+              // Check if we should show the unread divider after this message
+              // Show divider after the last read message if there are unread messages after it
+              const messageIndex = messages.findIndex((m) => m.id === message.id);
+              const showUnreadDivider =
+                unreadCount > 0 &&
+                lastReadIndex !== -1 &&
+                messageIndex === lastReadIndex &&
+                messageIndex < messages.length - 1; // There are messages after this one
+
+              return (
+                <div key={message.id}>
+                  <MessageItem
+                    message={message}
+                    channelId={channelId}
+                  />
+                  {showUnreadDivider && (
+                    <div className="flex items-center gap-4 px-4 py-2">
+                      <div className="flex-1 h-px bg-red-500" />
+                      <span className="text-xs font-medium text-red-500">New messages</span>
+                      <div className="flex-1 h-px bg-red-500" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ))
       )}

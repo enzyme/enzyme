@@ -558,6 +558,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
+  /channels/{id}/mark-read:
+    post:
+      tags: [channels]
+      summary: Mark channel as read
+      operationId: markChannelRead
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message_id:
+                  type: string
+                  description: Message ID to mark as last read (defaults to latest message)
+      responses:
+        '200':
+          description: Channel marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarkReadResponse'
+
+  /workspaces/{wid}/channels/mark-all-read:
+    post:
+      tags: [channels]
+      summary: Mark all channels as read
+      operationId: markAllChannelsRead
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      responses:
+        '200':
+          description: All channels marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
   # Message endpoints
   /channels/{id}/messages/send:
     post:
@@ -706,6 +749,23 @@ paths:
       responses:
         '200':
           description: Reaction removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /messages/{id}/mark-unread:
+    post:
+      tags: [messages]
+      summary: Mark message as unread
+      operationId: markMessageUnread
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      responses:
+        '200':
+          description: Message marked as unread
           content:
             application/json:
               schema:
@@ -1346,6 +1406,22 @@ components:
         success:
           type: boolean
 
+    MarkReadResponse:
+      type: object
+      required: [last_read_message_id]
+      properties:
+        last_read_message_id:
+          type: string
+
+    ChannelReadEventData:
+      type: object
+      required: [channel_id, last_read_message_id]
+      properties:
+        channel_id:
+          type: string
+        last_read_message_id:
+          type: string
+
     # SSE schemas
     SSEEventType:
       type: string
@@ -1362,6 +1438,7 @@ components:
         - channel.archived
         - channel.member_added
         - channel.member_removed
+        - channel.read
         - typing.start
         - typing.stop
         - presence.changed

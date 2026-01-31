@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { SSEConnection } from '../lib/sse';
 import { usePresenceStore } from '../stores/presenceStore';
-import type { MessageWithUser, Reaction, Channel, TypingEventData, PresenceData, MessageListResult } from '@feather/api-client';
+import type { MessageWithUser, Reaction, Channel, TypingEventData, PresenceData, MessageListResult, ChannelWithMembership, ChannelReadEventData } from '@feather/api-client';
 
 export function useSSE(workspaceId: string | undefined) {
   const [isConnected, setIsConnected] = useState(false);
@@ -75,6 +75,30 @@ export function useSSE(workspaceId: string | undefined) {
             return { ...old, pages: newPages };
           }
         );
+      }
+
+      // Increment unread count for channels (only for non-thread messages from other users)
+      if (!message.thread_parent_id) {
+        const authData = queryClient.getQueryData<{ user?: { id: string } }>(['auth', 'me']);
+        const currentUserId = authData?.user?.id;
+
+        // Don't increment unread for our own messages
+        if (message.user_id !== currentUserId) {
+          queryClient.setQueryData(
+            ['channels', workspaceId],
+            (old: { channels: ChannelWithMembership[] } | undefined) => {
+              if (!old) return old;
+              return {
+                ...old,
+                channels: old.channels.map((c) =>
+                  c.id === message.channel_id
+                    ? { ...c, unread_count: c.unread_count + 1 }
+                    : c
+                ),
+              };
+            }
+          );
+        }
       }
     });
 
@@ -214,6 +238,25 @@ export function useSSE(workspaceId: string | undefined) {
 
     connection.on('channel.member_removed', () => {
       queryClient.invalidateQueries({ queryKey: ['channels', workspaceId] });
+    });
+
+    // Handle channel read events (for syncing across tabs/devices)
+    connection.on('channel.read', (event) => {
+      const data = event.data as ChannelReadEventData;
+      queryClient.setQueryData(
+        ['channels', workspaceId],
+        (old: { channels: ChannelWithMembership[] } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            channels: old.channels.map((c) =>
+              c.id === data.channel_id
+                ? { ...c, unread_count: 0, last_read_message_id: data.last_read_message_id }
+                : c
+            ),
+          };
+        }
+      );
     });
 
     // Handle typing events
