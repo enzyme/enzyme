@@ -204,6 +204,8 @@ function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
   );
 }
 
+const CHANNEL_NAME_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
 function CreateChannelModal({
   isOpen,
   onClose,
@@ -217,8 +219,24 @@ function CreateChannelModal({
   const [type, setType] = useState<ChannelType>('public');
   const createChannel = useCreateChannel(workspaceId);
 
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Auto-format: lowercase, replace spaces with dashes, remove invalid chars
+    const formatted = e.target.value
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+    setName(formatted);
+  };
+
+  const isValidName = name.length > 0 && CHANNEL_NAME_REGEX.test(name);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isValidName) {
+      toast('Channel name must contain only lowercase letters, numbers, and dashes', 'error');
+      return;
+    }
 
     try {
       await createChannel.mutateAsync({ name, type });
@@ -234,13 +252,18 @@ function CreateChannelModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create Channel">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Channel Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="general"
-          required
-        />
+        <div>
+          <Input
+            label="Channel Name"
+            value={name}
+            onChange={handleNameChange}
+            placeholder="general"
+            required
+          />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Lowercase letters, numbers, and dashes only
+          </p>
+        </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

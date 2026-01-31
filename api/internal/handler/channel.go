@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"regexp"
 	"strings"
 
 	"github.com/feather/api/internal/openapi"
@@ -10,6 +11,8 @@ import (
 	"github.com/feather/api/internal/workspace"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+var validChannelName = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
 // CreateChannel creates a new channel
 func (h *Handler) CreateChannel(ctx context.Context, request openapi.CreateChannelRequestObject) (openapi.CreateChannelResponseObject, error) {
@@ -28,8 +31,12 @@ func (h *Handler) CreateChannel(ctx context.Context, request openapi.CreateChann
 		return nil, errors.New("permission denied")
 	}
 
-	if strings.TrimSpace(request.Body.Name) == "" {
+	name := strings.TrimSpace(request.Body.Name)
+	if name == "" {
 		return nil, errors.New("channel name is required")
+	}
+	if !validChannelName.MatchString(name) {
+		return nil, errors.New("channel name must contain only lowercase letters, numbers, and dashes")
 	}
 
 	// Validate type
@@ -40,7 +47,7 @@ func (h *Handler) CreateChannel(ctx context.Context, request openapi.CreateChann
 
 	ch := &channel.Channel{
 		WorkspaceID: string(request.Wid),
-		Name:        request.Body.Name,
+		Name:        name,
 		Description: request.Body.Description,
 		Type:        channelType,
 	}
@@ -153,10 +160,14 @@ func (h *Handler) UpdateChannel(ctx context.Context, request openapi.UpdateChann
 	}
 
 	if request.Body.Name != nil {
-		if strings.TrimSpace(*request.Body.Name) == "" {
+		name := strings.TrimSpace(*request.Body.Name)
+		if name == "" {
 			return nil, errors.New("channel name cannot be empty")
 		}
-		ch.Name = *request.Body.Name
+		if !validChannelName.MatchString(name) {
+			return nil, errors.New("channel name must contain only lowercase letters, numbers, and dashes")
+		}
+		ch.Name = name
 	}
 	if request.Body.Description != nil {
 		ch.Description = request.Body.Description
