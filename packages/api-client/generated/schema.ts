@@ -786,6 +786,12 @@ export interface components {
             user_display_name?: string;
             user_avatar_url?: string;
             reactions?: components["schemas"]["Reaction"][];
+            thread_participants?: components["schemas"]["ThreadParticipant"][];
+        };
+        ThreadParticipant: {
+            user_id: string;
+            display_name?: string;
+            avatar_url?: string;
         };
         Reaction: {
             id: string;

@@ -20,9 +20,16 @@ type Message struct {
 
 type MessageWithUser struct {
 	Message
-	UserDisplayName string     `json:"user_display_name,omitempty"`
-	UserAvatarURL   *string    `json:"user_avatar_url,omitempty"`
-	Reactions       []Reaction `json:"reactions,omitempty"`
+	UserDisplayName    string              `json:"user_display_name,omitempty"`
+	UserAvatarURL      *string             `json:"user_avatar_url,omitempty"`
+	Reactions          []Reaction          `json:"reactions,omitempty"`
+	ThreadParticipants []ThreadParticipant `json:"thread_participants,omitempty"`
+}
+
+type ThreadParticipant struct {
+	UserID      string  `json:"user_id"`
+	DisplayName string  `json:"display_name,omitempty"`
+	AvatarURL   *string `json:"avatar_url,omitempty"`
 }
 
 type Reaction struct {

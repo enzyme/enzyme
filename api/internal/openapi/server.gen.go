@@ -194,20 +194,21 @@ type MessageListResult struct {
 
 // MessageWithUser defines model for MessageWithUser.
 type MessageWithUser struct {
-	ChannelId       string      `json:"channel_id"`
-	Content         string      `json:"content"`
-	CreatedAt       time.Time   `json:"created_at"`
-	DeletedAt       *time.Time  `json:"deleted_at,omitempty"`
-	EditedAt        *time.Time  `json:"edited_at,omitempty"`
-	Id              string      `json:"id"`
-	LastReplyAt     *time.Time  `json:"last_reply_at,omitempty"`
-	Reactions       *[]Reaction `json:"reactions,omitempty"`
-	ReplyCount      int         `json:"reply_count"`
-	ThreadParentId  *string     `json:"thread_parent_id,omitempty"`
-	UpdatedAt       time.Time   `json:"updated_at"`
-	UserAvatarUrl   *string     `json:"user_avatar_url,omitempty"`
-	UserDisplayName *string     `json:"user_display_name,omitempty"`
-	UserId          *string     `json:"user_id,omitempty"`
+	ChannelId          string               `json:"channel_id"`
+	Content            string               `json:"content"`
+	CreatedAt          time.Time            `json:"created_at"`
+	DeletedAt          *time.Time           `json:"deleted_at,omitempty"`
+	EditedAt           *time.Time           `json:"edited_at,omitempty"`
+	Id                 string               `json:"id"`
+	LastReplyAt        *time.Time           `json:"last_reply_at,omitempty"`
+	Reactions          *[]Reaction          `json:"reactions,omitempty"`
+	ReplyCount         int                  `json:"reply_count"`
+	ThreadParentId     *string              `json:"thread_parent_id,omitempty"`
+	ThreadParticipants *[]ThreadParticipant `json:"thread_participants,omitempty"`
+	UpdatedAt          time.Time            `json:"updated_at"`
+	UserAvatarUrl      *string              `json:"user_avatar_url,omitempty"`
+	UserDisplayName    *string              `json:"user_display_name,omitempty"`
+	UserId             *string              `json:"user_id,omitempty"`
 }
 
 // Reaction defines model for Reaction.
@@ -235,6 +236,13 @@ type SendMessageInput struct {
 // SuccessResponse defines model for SuccessResponse.
 type SuccessResponse struct {
 	Success bool `json:"success"`
+}
+
+// ThreadParticipant defines model for ThreadParticipant.
+type ThreadParticipant struct {
+	AvatarUrl   *string `json:"avatar_url,omitempty"`
+	DisplayName *string `json:"display_name,omitempty"`
+	UserId      string  `json:"user_id"`
 }
 
 // UpdateChannelInput defines model for UpdateChannelInput.

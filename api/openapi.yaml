@@ -1264,6 +1264,21 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Reaction'
+            thread_participants:
+              type: array
+              items:
+                $ref: '#/components/schemas/ThreadParticipant'
+
+    ThreadParticipant:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: string
+        display_name:
+          type: string
+        avatar_url:
+          type: string
 
     Reaction:
       type: object

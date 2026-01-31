@@ -422,7 +422,28 @@ func messageWithUserToAPI(m *message.MessageWithUser) openapi.MessageWithUser {
 		}
 		apiMsg.Reactions = &reactions
 	}
+	if len(m.ThreadParticipants) > 0 {
+		participants := make([]openapi.ThreadParticipant, len(m.ThreadParticipants))
+		for i, p := range m.ThreadParticipants {
+			participants[i] = threadParticipantToAPI(&p)
+		}
+		apiMsg.ThreadParticipants = &participants
+	}
 	return apiMsg
+}
+
+// threadParticipantToAPI converts a message.ThreadParticipant to openapi.ThreadParticipant
+func threadParticipantToAPI(p *message.ThreadParticipant) openapi.ThreadParticipant {
+	participant := openapi.ThreadParticipant{
+		UserId: p.UserID,
+	}
+	if p.DisplayName != "" {
+		participant.DisplayName = &p.DisplayName
+	}
+	if p.AvatarURL != nil {
+		participant.AvatarUrl = p.AvatarURL
+	}
+	return participant
 }
 
 // reactionToAPI converts a message.Reaction to openapi.Reaction

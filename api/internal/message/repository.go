@@ -187,11 +187,15 @@ func (r *Repository) List(ctx context.Context, channelID string, opts ListOption
 		nextCursor = messages[len(messages)-1].ID
 	}
 
-	// Load reactions for all messages
+	// Load reactions and thread participants for all messages
 	if len(messages) > 0 {
 		messageIDs := make([]string, len(messages))
+		threadParentIDs := make([]string, 0)
 		for i, m := range messages {
 			messageIDs[i] = m.ID
+			if m.ReplyCount > 0 {
+				threadParentIDs = append(threadParentIDs, m.ID)
+			}
 		}
 		reactions, err := r.getReactionsForMessages(ctx, messageIDs)
 		if err != nil {
@@ -200,6 +204,19 @@ func (r *Repository) List(ctx context.Context, channelID string, opts ListOption
 		for i := range messages {
 			if r, ok := reactions[messages[i].ID]; ok {
 				messages[i].Reactions = r
+			}
+		}
+
+		// Load thread participants for messages with replies
+		if len(threadParentIDs) > 0 {
+			participants, err := r.getThreadParticipantsForMessages(ctx, threadParentIDs)
+			if err != nil {
+				return nil, err
+			}
+			for i := range messages {
+				if p, ok := participants[messages[i].ID]; ok {
+					messages[i].ThreadParticipants = p
+				}
 			}
 		}
 	}
@@ -340,6 +357,60 @@ func (r *Repository) RemoveReaction(ctx context.Context, messageID, userID, emoj
 		return ErrReactionNotFound
 	}
 	return nil
+}
+
+func (r *Repository) getThreadParticipantsForMessages(ctx context.Context, messageIDs []string) (map[string][]ThreadParticipant, error) {
+	if len(messageIDs) == 0 {
+		return nil, nil
+	}
+
+	placeholders := make([]string, len(messageIDs))
+	args := make([]interface{}, len(messageIDs))
+	for i, id := range messageIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	// Get distinct users who replied to each thread, ordered by first reply, limited to 3
+	query := `
+		SELECT m.thread_parent_id, m.user_id, COALESCE(u.display_name, '') as display_name, u.avatar_url
+		FROM (
+			SELECT thread_parent_id, user_id, MIN(id) as first_reply_id
+			FROM messages
+			WHERE thread_parent_id IN (` + strings.Join(placeholders, ",") + `) AND user_id IS NOT NULL
+			GROUP BY thread_parent_id, user_id
+		) m
+		LEFT JOIN users u ON u.id = m.user_id
+		ORDER BY m.thread_parent_id, m.first_reply_id
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	participants := make(map[string][]ThreadParticipant)
+	for rows.Next() {
+		var parentID, userID, displayName string
+		var avatarURL sql.NullString
+		if err := rows.Scan(&parentID, &userID, &displayName, &avatarURL); err != nil {
+			return nil, err
+		}
+		// Limit to 3 participants per thread
+		if len(participants[parentID]) < 3 {
+			p := ThreadParticipant{
+				UserID:      userID,
+				DisplayName: displayName,
+			}
+			if avatarURL.Valid {
+				p.AvatarURL = &avatarURL.String
+			}
+			participants[parentID] = append(participants[parentID], p)
+		}
+	}
+
+	return participants, rows.Err()
 }
 
 func (r *Repository) getReactionsForMessages(ctx context.Context, messageIDs []string) (map[string][]Reaction, error) {

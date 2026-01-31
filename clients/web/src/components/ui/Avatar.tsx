@@ -4,7 +4,7 @@ import type { PresenceStatus } from '@feather/api-client';
 interface AvatarProps {
   src?: string | null;
   name: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   status?: PresenceStatus;
   className?: string;
   onClick?: () => void;
@@ -12,6 +12,7 @@ interface AvatarProps {
 
 export function Avatar({ src, name, size = 'md', status, className, onClick }: AvatarProps) {
   const sizes = {
+    xs: 'w-5 h-5 text-[10px]',
     sm: 'w-6 h-6 text-xs',
     md: 'w-8 h-8 text-sm',
     lg: 'w-10 h-10 text-base',
@@ -24,6 +25,7 @@ export function Avatar({ src, name, size = 'md', status, className, onClick }: A
   };
 
   const statusSizes = {
+    xs: 'w-1.5 h-1.5 right-0 bottom-0',
     sm: 'w-2 h-2 right-0 bottom-0',
     md: 'w-2.5 h-2.5 right-0 bottom-0',
     lg: 'w-3 h-3 right-0 bottom-0',

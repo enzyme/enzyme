@@ -3,7 +3,7 @@ import { Avatar } from '../ui';
 import { ReactionPicker } from './ReactionPicker';
 import { useAuth, useAddReaction, useRemoveReaction } from '../../hooks';
 import { useUIStore } from '../../stores/uiStore';
-import { formatTime, cn } from '../../lib/utils';
+import { formatTime, formatRelativeTime, cn } from '../../lib/utils';
 import type { MessageWithUser } from '@feather/api-client';
 
 function ClickableName({ userId, displayName }: { userId?: string; displayName: string }) {
@@ -143,12 +143,30 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
           {message.reply_count > 0 && (
             <button
               onClick={() => openThread(message.id)}
-              className="mt-1 text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
+              className="mt-2 flex items-center gap-2 group/thread hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded px-1 -mx-1 py-0.5"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-              </svg>
-              {message.reply_count} {message.reply_count === 1 ? 'reply' : 'replies'}
+              {/* Avatar stack */}
+              {message.thread_participants && message.thread_participants.length > 0 && (
+                <div className="flex -space-x-1.5">
+                  {message.thread_participants.map((participant) => (
+                    <Avatar
+                      key={participant.user_id}
+                      src={participant.avatar_url}
+                      name={participant.display_name || 'User'}
+                      size="xs"
+                      className="ring-2 ring-white dark:ring-gray-900"
+                    />
+                  ))}
+                </div>
+              )}
+              <span className="text-sm text-primary-600 dark:text-primary-400 group-hover/thread:underline">
+                {message.reply_count} {message.reply_count === 1 ? 'reply' : 'replies'}
+              </span>
+              {message.last_reply_at && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Last reply {formatRelativeTime(message.last_reply_at)}
+                </span>
+              )}
             </button>
           )}
         </div>
