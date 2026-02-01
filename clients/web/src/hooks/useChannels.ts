@@ -119,3 +119,15 @@ export function useArchiveChannel(workspaceId: string) {
     },
   });
 }
+
+export function useAddChannelMember(channelId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role?: string }) =>
+      channelsApi.addMember(channelId, userId, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['channel', channelId, 'members'] });
+    },
+  });
+}

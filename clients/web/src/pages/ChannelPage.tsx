@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useChannels, useArchiveChannel, useLeaveChannel, useJoinChannel } from '../hooks';
+import { useChannels, useArchiveChannel, useLeaveChannel, useJoinChannel, useAuth } from '../hooks';
 import { useMarkChannelAsRead } from '../hooks/useChannels';
 import { MessageList, MessageComposer } from '../components/message';
+import { ChannelMembersButton } from '../components/channel/ChannelMembersButton';
 import { Spinner, Modal, Button, toast } from '../components/ui';
 import { getChannelIcon } from '../lib/utils';
 
@@ -15,12 +16,20 @@ export function ChannelPage() {
   const navigate = useNavigate();
 
   const queryClient = useQueryClient();
+  const { workspaces } = useAuth();
   const { data: channelsData, isLoading } = useChannels(workspaceId);
   const channel = channelsData?.channels.find((c) => c.id === channelId);
   const archiveChannel = useArchiveChannel(workspaceId || '');
   const leaveChannel = useLeaveChannel(workspaceId || '');
   const joinChannel = useJoinChannel(workspaceId || '');
   const markAsRead = useMarkChannelAsRead(workspaceId || '');
+
+  // Get user's role in this workspace
+  const workspaceMembership = workspaces?.find((w) => w.id === workspaceId);
+  const canAddMembers =
+    workspaceMembership?.role === 'admin' ||
+    workspaceMembership?.role === 'owner' ||
+    channel?.channel_role !== undefined; // User is channel member
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
@@ -159,46 +168,56 @@ export function ChannelPage() {
             </h1>
           </div>
 
-          {/* Settings menu */}
-          {(canArchive || canLeave) && (
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                </svg>
-              </button>
+          <div className="flex items-center gap-1">
+            {/* Channel members */}
+            <ChannelMembersButton
+              channelId={channelId}
+              workspaceId={workspaceId}
+              channelType={channel.type}
+              canAddMembers={canAddMembers}
+            />
 
-              {isMenuOpen && (
-                <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
-                  {canLeave && (
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        setIsLeaveModalOpen(true);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      Leave channel
-                    </button>
-                  )}
-                  {canArchive && (
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        setIsArchiveModalOpen(true);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      Archive channel
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+            {/* Settings menu */}
+            {(canArchive || canLeave) && (
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                  </svg>
+                </button>
+
+                {isMenuOpen && (
+                  <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
+                    {canLeave && (
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setIsLeaveModalOpen(true);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        Leave channel
+                      </button>
+                    )}
+                    {canArchive && (
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setIsArchiveModalOpen(true);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        Archive channel
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         {channel.description && (
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">

@@ -7,10 +7,11 @@ interface AvatarProps {
   size?: 'xs' | 'sm' | 'md' | 'lg';
   status?: PresenceStatus;
   className?: string;
+  style?: React.CSSProperties;
   onClick?: () => void;
 }
 
-export function Avatar({ src, name, size = 'md', status, className, onClick }: AvatarProps) {
+export function Avatar({ src, name, size = 'md', status, className, style, onClick }: AvatarProps) {
   const sizes = {
     xs: 'w-5 h-5 text-[10px]',
     sm: 'w-6 h-6 text-xs',
@@ -59,7 +60,8 @@ export function Avatar({ src, name, size = 'md', status, className, onClick }: A
       <button
         type="button"
         onClick={onClick}
-        className={cn('relative inline-block cursor-pointer', className)}
+        className={cn('relative inline-block rounded-full cursor-pointer', className)}
+        style={style}
       >
         {content}
       </button>
@@ -67,7 +69,7 @@ export function Avatar({ src, name, size = 'md', status, className, onClick }: A
   }
 
   return (
-    <div className={cn('relative inline-block', className)}>
+    <div className={cn('relative inline-block rounded-full', className)} style={style}>
       {content}
     </div>
   );

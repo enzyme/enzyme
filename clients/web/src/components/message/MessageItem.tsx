@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button as AriaButton } from 'react-aria-components';
-import { Avatar, Menu, MenuItem, Modal, Button } from '../ui';
+import { Avatar, AvatarStack, Menu, MenuItem, Modal, Button } from '../ui';
 import { ReactionPicker } from './ReactionPicker';
 import { useAuth, useAddReaction, useRemoveReaction } from '../../hooks';
 import { useMarkMessageUnread, useUpdateMessage, useDeleteMessage } from '../../hooks/useMessages';
@@ -238,17 +238,7 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
             >
               {/* Avatar stack */}
               {message.thread_participants && message.thread_participants.length > 0 && (
-                <div className="flex -space-x-1.5">
-                  {message.thread_participants.map((participant) => (
-                    <Avatar
-                      key={participant.user_id}
-                      src={participant.avatar_url}
-                      name={participant.display_name || 'User'}
-                      size="xs"
-                      className="ring-2 ring-white dark:ring-gray-900"
-                    />
-                  ))}
-                </div>
+                <AvatarStack users={message.thread_participants} showCount={false} />
               )}
               <span className="text-sm text-primary-600 dark:text-primary-400 group-hover/thread:underline">
                 {message.reply_count} {message.reply_count === 1 ? 'reply' : 'replies'}
