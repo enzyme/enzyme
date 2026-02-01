@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
-import { useUserProfile, useUpdateProfile, useAuth } from '../../hooks';
-import { useUIStore } from '../../stores/uiStore';
-import { Avatar, Button, Input, Spinner, toast } from '../ui';
-import { cn } from '../../lib/utils';
+import { useState } from "react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import { useUserProfile, useUpdateProfile, useAuth } from "../../hooks";
+import { useUIStore } from "../../stores/uiStore";
+import { Avatar, Button, Input, Spinner, toast } from "../ui";
+import { cn } from "../../lib/utils";
 
 interface ProfilePaneProps {
   userId: string;
@@ -25,9 +25,9 @@ export function ProfilePane({ userId }: ProfilePaneProps) {
         <h3 className="font-semibold text-gray-900 dark:text-white">Profile</h3>
         <button
           onClick={closeProfile}
-          className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded"
+          className="p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
         >
-          <XMarkIcon className="w-5 h-5" />
+          <XMarkIcon className="w-4 h-4" />
         </button>
       </div>
 
@@ -74,9 +74,9 @@ interface ViewProfileProps {
 }
 
 function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
-  const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
+  const memberSince = new Date(profile.created_at).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
   });
 
   return (
@@ -92,15 +92,21 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
         <h4 className="mt-4 text-xl font-semibold text-gray-900 dark:text-white">
           {profile.display_name}
         </h4>
-        <span className={cn(
-          'mt-1 inline-flex items-center gap-1.5 text-sm',
-          profile.status === 'active' ? 'text-green-600 dark:text-green-400' : 'text-gray-500'
-        )}>
-          <span className={cn(
-            'w-2 h-2 rounded-full',
-            profile.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
-          )} />
-          {profile.status === 'active' ? 'Active' : profile.status}
+        <span
+          className={cn(
+            "mt-1 inline-flex items-center gap-1.5 text-sm",
+            profile.status === "active"
+              ? "text-green-600 dark:text-green-400"
+              : "text-gray-500",
+          )}
+        >
+          <span
+            className={cn(
+              "w-2 h-2 rounded-full",
+              profile.status === "active" ? "bg-green-500" : "bg-gray-400",
+            )}
+          />
+          {profile.status === "active" ? "Active" : profile.status}
         </span>
       </div>
 
@@ -118,11 +124,7 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
 
       {/* Edit button (only for own profile) */}
       {isOwnProfile && (
-        <Button
-          variant="secondary"
-          className="w-full"
-          onPress={onEdit}
-        >
+        <Button variant="secondary" className="w-full" onPress={onEdit}>
           Edit Profile
         </Button>
       )}
@@ -139,9 +141,13 @@ interface EditProfileFormProps {
   onSuccess: () => void;
 }
 
-function EditProfileForm({ profile, onCancel, onSuccess }: EditProfileFormProps) {
+function EditProfileForm({
+  profile,
+  onCancel,
+  onSuccess,
+}: EditProfileFormProps) {
   const [displayName, setDisplayName] = useState(profile.display_name);
-  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || "");
   const updateProfile = useUpdateProfile();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,7 +155,7 @@ function EditProfileForm({ profile, onCancel, onSuccess }: EditProfileFormProps)
 
     const trimmedName = displayName.trim();
     if (!trimmedName) {
-      toast('Display name is required', 'error');
+      toast("Display name is required", "error");
       return;
     }
 
@@ -158,10 +164,10 @@ function EditProfileForm({ profile, onCancel, onSuccess }: EditProfileFormProps)
         display_name: trimmedName,
         avatar_url: avatarUrl.trim() || undefined,
       });
-      toast('Profile updated', 'success');
+      toast("Profile updated", "success");
       onSuccess();
     } catch {
-      toast('Failed to update profile', 'error');
+      toast("Failed to update profile", "error");
     }
   };
 
@@ -171,7 +177,7 @@ function EditProfileForm({ profile, onCancel, onSuccess }: EditProfileFormProps)
       <div className="flex flex-col items-center">
         <Avatar
           src={avatarUrl || undefined}
-          name={displayName || 'User'}
+          name={displayName || "User"}
           size="lg"
           className="w-24 h-24 text-3xl"
         />

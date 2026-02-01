@@ -23,7 +23,7 @@ export function WorkspaceSwitcher() {
   const { darkMode, toggleDarkMode } = useUIStore();
 
   return (
-    <div className="w-16 bg-sidebar-light dark:bg-sidebar-dark flex flex-col items-center py-3 gap-3">
+    <div className="w-16 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center py-3 gap-3">
       {/* Workspaces */}
       <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto">
         {workspaces?.map((ws) => (
@@ -55,7 +55,7 @@ export function WorkspaceSwitcher() {
         {/* Add Workspace Button */}
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="w-10 h-10 rounded-lg flex items-center justify-center bg-transparent border-2 border-dashed border-gray-500 text-gray-400 hover:border-gray-400 hover:text-gray-300 transition-colors"
+          className="w-10 h-10 rounded-lg flex items-center justify-center bg-transparent border-2 border-dashed border-gray-300 dark:border-gray-500 text-gray-400 hover:border-gray-400 dark:hover:border-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
           title="Create workspace"
         >
           <PlusIcon className="w-5 h-5" />
@@ -67,7 +67,7 @@ export function WorkspaceSwitcher() {
         {/* Dark mode toggle */}
         <button
           onClick={toggleDarkMode}
-          className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors"
+          className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           title={darkMode ? 'Light mode' : 'Dark mode'}
         >
           {darkMode ? (
@@ -147,7 +147,7 @@ function UserMenu() {
                 if (user?.id) openProfile(user.id);
                 setIsOpen(false);
               }}
-              className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              className="w-full px-3 py-1.5 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
             >
               <UserIcon className="w-4 h-4" />
               View Profile
@@ -158,7 +158,7 @@ function UserMenu() {
                 <Link
                   to={`/workspaces/${workspaceId}/settings`}
                   onClick={() => setIsOpen(false)}
-                  className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  className="w-full px-3 py-1.5 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                 >
                   <Cog6ToothIcon className="w-4 h-4" />
                   Workspace Settings
@@ -167,7 +167,7 @@ function UserMenu() {
                 <Link
                   to={`/workspaces/${workspaceId}/invite`}
                   onClick={() => setIsOpen(false)}
-                  className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  className="w-full px-3 py-1.5 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                 >
                   <UserPlusIcon className="w-4 h-4" />
                   Invite People
@@ -178,7 +178,7 @@ function UserMenu() {
             <Link
               to="/settings"
               onClick={() => setIsOpen(false)}
-              className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              className="w-full px-3 py-1.5 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
             >
               <ServerStackIcon className="w-4 h-4" />
               Server Settings
@@ -189,7 +189,7 @@ function UserMenu() {
           <div className="border-t border-gray-200 dark:border-gray-700 py-1">
             <button
               onClick={handleLogout}
-              className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              className="w-full px-3 py-1.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
             >
               <ArrowRightStartOnRectangleIcon className="w-4 h-4" />
               Log Out

@@ -1,9 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { CheckCircleIcon, XMarkIcon, ChevronRightIcon, PlusIcon, LockClosedIcon, HashtagIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, ChevronRightIcon, PlusIcon, LockClosedIcon, HashtagIcon } from '@heroicons/react/24/outline';
 import { useChannels, useWorkspace, useAuth } from '../../hooks';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
-import { useUIStore } from '../../stores/uiStore';
 import { ChannelListSkeleton, Modal, Button, Input, toast, Tabs, TabList, Tab, TabPanel, RadioGroup, Radio } from '../ui';
 import { useCreateChannel, useMarkAllChannelsAsRead, useCreateDM, useJoinChannel } from '../../hooks/useChannels';
 import { cn } from '../../lib/utils';
@@ -27,7 +26,6 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
   const { channelId } = useParams<{ channelId: string }>();
   const { data: workspaceData } = useWorkspace(workspaceId);
   const { data, isLoading } = useChannels(workspaceId);
-  const { toggleSidebar } = useUIStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isNewDMModalOpen, setIsNewDMModalOpen] = useState(false);
   const markAllAsRead = useMarkAllChannelsAsRead(workspaceId || '');
@@ -66,30 +64,22 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-800">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-900">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-gray-900 dark:text-white truncate">
             {workspaceData?.workspace.name || 'Loading...'}
           </h2>
-          <div className="flex items-center gap-1">
-            {hasUnread && (
-              <button
-                onClick={() => markAllAsRead.mutate()}
-                className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                title="Mark all as read"
-              >
-                <CheckCircleIcon className="w-5 h-5" />
-              </button>
-            )}
+          {hasUnread && (
             <button
-              onClick={toggleSidebar}
-              className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 lg:hidden"
+              onClick={() => markAllAsRead.mutate()}
+              className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              title="Mark all as read"
             >
-              <XMarkIcon className="w-5 h-5" />
+              <CheckCircleIcon className="w-5 h-5" />
             </button>
-          </div>
+          )}
         </div>
       </div>
 
@@ -221,7 +211,7 @@ function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
     <Link
       to={`/workspaces/${workspaceId}/channels/${channel.id}`}
       className={cn(
-        'flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-gray-200 dark:hover:bg-gray-700',
+        'flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800/50',
         isActive
           ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
           : 'text-gray-700 dark:text-gray-300'

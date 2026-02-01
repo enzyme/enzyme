@@ -207,7 +207,7 @@ export function ChannelPage() {
                           setIsMenuOpen(false);
                           setIsLeaveModalOpen(true);
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="w-full px-3 py-1.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         Leave channel
                       </button>
@@ -218,7 +218,7 @@ export function ChannelPage() {
                           setIsMenuOpen(false);
                           setIsArchiveModalOpen(true);
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="w-full px-3 py-1.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         Archive channel
                       </button>
