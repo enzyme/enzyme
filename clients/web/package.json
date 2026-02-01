@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@feather/api-client": "workspace:*",
+    "@heroicons/react": "^2.2.0",
     "@tanstack/react-query": "^5.90.20",
     "react": "^19.2.0",
     "react-aria-components": "^1.14.0",

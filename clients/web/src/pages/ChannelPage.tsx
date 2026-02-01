@@ -1,12 +1,26 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { EllipsisVerticalIcon, LockClosedIcon, HashtagIcon } from '@heroicons/react/24/outline';
 import { useChannels, useArchiveChannel, useLeaveChannel, useJoinChannel, useAuth } from '../hooks';
 import { useMarkChannelAsRead } from '../hooks/useChannels';
 import { MessageList, MessageComposer } from '../components/message';
 import { ChannelMembersButton } from '../components/channel/ChannelMembersButton';
 import { Spinner, Modal, Button, toast } from '../components/ui';
-import { getChannelIcon } from '../lib/utils';
+
+function ChannelIcon({ type, className }: { type: string; className?: string }) {
+  if (type === 'private') {
+    return <LockClosedIcon className={className} />;
+  }
+  if (type === 'public') {
+    return <HashtagIcon className={className} />;
+  }
+  return null;
+}
+
+function getChannelPrefix(type: string): string {
+  return type === 'private' ? '' : '#';
+}
 
 export function ChannelPage() {
   const { workspaceId, channelId } = useParams<{
@@ -160,9 +174,7 @@ export function ChannelPage() {
       <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-gray-500 dark:text-gray-400">
-              {getChannelIcon(channel.type)}
-            </span>
+            <ChannelIcon type={channel.type} className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             <h1 className="font-semibold text-gray-900 dark:text-white">
               {channel.name}
             </h1>
@@ -184,9 +196,7 @@ export function ChannelPage() {
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
                   className="p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                  </svg>
+                  <EllipsisVerticalIcon className="w-5 h-5" />
                 </button>
 
                 {isMenuOpen && (
@@ -302,7 +312,7 @@ export function ChannelPage() {
         <MessageComposer
           channelId={channelId}
           workspaceId={workspaceId}
-          placeholder={`Message ${getChannelIcon(channel.type)}${channel.name}`}
+          placeholder={`Message ${getChannelPrefix(channel.type)}${channel.name}`}
         />
       )}
     </div>

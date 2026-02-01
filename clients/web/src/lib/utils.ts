@@ -45,20 +45,6 @@ export function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function getChannelIcon(type: string): string {
-  switch (type) {
-    case 'public':
-      return '#';
-    case 'private':
-      return '🔒';
-    case 'dm':
-    case 'group_dm':
-      return '';
-    default:
-      return '#';
-  }
-}
-
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number

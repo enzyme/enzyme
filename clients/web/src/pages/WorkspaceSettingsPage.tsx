@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useWorkspace, useWorkspaceMembers, useUpdateMemberRole, useRemoveMember } from '../hooks/useWorkspaces';
 import { useAuth } from '../hooks';
 import { Avatar, Button, Spinner, toast } from '../components/ui';
@@ -57,9 +58,7 @@ export function WorkspaceSettingsPage() {
             to={`/workspaces/${workspaceId}`}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <XMarkIcon className="w-6 h-6" />
           </Link>
         </div>
 

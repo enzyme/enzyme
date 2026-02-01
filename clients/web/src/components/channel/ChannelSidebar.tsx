@@ -1,12 +1,23 @@
 import { useState, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { CheckCircleIcon, XMarkIcon, ChevronRightIcon, PlusIcon, LockClosedIcon, HashtagIcon } from '@heroicons/react/24/outline';
 import { useChannels, useWorkspace, useAuth } from '../../hooks';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
 import { useUIStore } from '../../stores/uiStore';
 import { ChannelListSkeleton, Modal, Button, Input, toast, Tabs, TabList, Tab, TabPanel, RadioGroup, Radio } from '../ui';
 import { useCreateChannel, useMarkAllChannelsAsRead, useCreateDM, useJoinChannel } from '../../hooks/useChannels';
-import { cn, getChannelIcon } from '../../lib/utils';
+import { cn } from '../../lib/utils';
 import type { ChannelWithMembership, ChannelType } from '@feather/api-client';
+
+function ChannelIcon({ type, className }: { type: string; className?: string }) {
+  if (type === 'private') {
+    return <LockClosedIcon className={cn('w-4 h-4', className)} />;
+  }
+  if (type === 'public') {
+    return <HashtagIcon className={cn('w-4 h-4', className)} />;
+  }
+  return null;
+}
 
 interface ChannelSidebarProps {
   workspaceId: string | undefined;
@@ -69,18 +80,14 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
                 className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 title="Mark all as read"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <CheckCircleIcon className="w-5 h-5" />
               </button>
             )}
             <button
               onClick={toggleSidebar}
               className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 lg:hidden"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <XMarkIcon className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -163,13 +170,9 @@ function ChannelSection({
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-300"
         >
-          <svg
+          <ChevronRightIcon
             className={cn('w-3 h-3 transition-transform', isExpanded && 'rotate-90')}
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path d="M6 6L14 10L6 14V6Z" />
-          </svg>
+          />
           <span>{title}</span>
         </button>
         {onAddClick && (
@@ -177,9 +180,7 @@ function ChannelSection({
             onClick={onAddClick}
             className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded hover:text-gray-700 dark:hover:text-gray-300"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
+            <PlusIcon className="w-4 h-4" />
           </button>
         )}
       </div>
@@ -207,7 +208,6 @@ interface ChannelItemProps {
 }
 
 function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
-  const icon = getChannelIcon(channel.type);
   const hasUnread = channel.unread_count > 0;
   const isDM = channel.type === 'dm' || channel.type === 'group_dm';
   const dmParticipant = isDM && channel.dm_participants?.[0];
@@ -240,7 +240,7 @@ function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
           </div>
         )
       ) : (
-        icon && <span className="text-gray-500 dark:text-gray-400">{icon}</span>
+        <ChannelIcon type={channel.type} className="text-gray-500 dark:text-gray-400" />
       )}
       <span className={cn('truncate', hasUnread && 'font-semibold')}>{displayName}</span>
       {hasUnread && (

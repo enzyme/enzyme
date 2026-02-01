@@ -7,6 +7,7 @@ import {
   Heading,
 } from 'react-aria-components';
 import { tv, type VariantProps } from 'tailwind-variants';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 
 const modal = tv({
   slots: {
@@ -71,9 +72,7 @@ export function Modal({ isOpen, onClose, title, children, size }: ModalProps) {
                     className={styles.closeButton()}
                     aria-label="Close"
                   >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <XMarkIcon className="w-5 h-5" />
                   </button>
                 </div>
               )}

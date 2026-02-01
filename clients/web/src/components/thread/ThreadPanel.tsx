@@ -1,6 +1,13 @@
 import { useState, useRef, useCallback, type KeyboardEvent, type FormEvent } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Button as AriaButton, DropZone, FileTrigger } from 'react-aria-components';
+import {
+  XMarkIcon,
+  FaceSmileIcon,
+  DocumentIcon,
+  PaperClipIcon,
+  PaperAirplaneIcon,
+} from '@heroicons/react/24/outline';
 import { useThreadMessages, useSendThreadReply, useAuth, useUploadFile } from '../../hooks';
 import { useUIStore } from '../../stores/uiStore';
 import { Avatar, MessageSkeleton } from '../ui';
@@ -52,9 +59,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
           onClick={closeThread}
           className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <XMarkIcon className="w-5 h-5" />
         </button>
       </div>
 
@@ -268,9 +273,7 @@ function ParentMessage({ message }: { message: MessageWithUser }) {
           className="absolute right-3 top-3 p-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600"
           title="Add reaction"
         >
-          <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <FaceSmileIcon className="w-4 h-4 text-gray-500" />
         </button>
       )}
 
@@ -443,9 +446,7 @@ function ThreadMessage({ message, parentMessageId }: ThreadMessageProps) {
           className="absolute right-2 top-1 p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700"
           title="Add reaction"
         >
-          <svg className="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <FaceSmileIcon className="w-3.5 h-3.5 text-gray-500" />
         </button>
       )}
 
@@ -595,9 +596,7 @@ function ThreadComposer({ parentMessageId, channelId }: ThreadComposerProps) {
                 <img src={attachment.previewUrl} alt={attachment.file.name} className="w-12 h-12 object-cover" />
               ) : (
                 <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
+                  <DocumentIcon className="w-5 h-5 text-gray-400" />
                 </div>
               )}
               {attachment.status === 'uploading' && (
@@ -610,9 +609,7 @@ function ThreadComposer({ parentMessageId, channelId }: ThreadComposerProps) {
                 onClick={() => removeAttachment(attachment.id)}
                 className="absolute top-0 right-0 p-0.5 bg-black/50 text-white rounded-bl opacity-0 group-hover:opacity-100"
               >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <XMarkIcon className="w-3 h-3" />
               </button>
             </div>
           ))}
@@ -652,9 +649,7 @@ function ThreadComposer({ parentMessageId, channelId }: ThreadComposerProps) {
                   className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                   aria-label="Attach files"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                  </svg>
+                  <PaperClipIcon className="w-4 h-4" />
                 </AriaButton>
               </FileTrigger>
               <button
@@ -667,9 +662,7 @@ function ThreadComposer({ parentMessageId, channelId }: ThreadComposerProps) {
                     : 'text-gray-400 cursor-not-allowed'
                 )}
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+                <PaperAirplaneIcon className="w-4 h-4" />
               </button>
             </div>
           </div>

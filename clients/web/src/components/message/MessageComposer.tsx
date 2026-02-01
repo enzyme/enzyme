@@ -1,5 +1,12 @@
 import { useState, useRef, useMemo, useCallback, type KeyboardEvent, type FormEvent } from 'react';
 import { Button as AriaButton, DropZone, FileTrigger } from 'react-aria-components';
+import {
+  DocumentIcon,
+  ExclamationCircleIcon,
+  XMarkIcon,
+  PaperClipIcon,
+  PaperAirplaneIcon,
+} from '@heroicons/react/24/outline';
 import { useSendMessage, useTyping, useUploadFile } from '../../hooks';
 import { usePresenceStore } from '../../stores/presenceStore';
 import { cn } from '../../lib/utils';
@@ -198,9 +205,7 @@ export function MessageComposer({
                 />
               ) : (
                 <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
+                  <DocumentIcon className="w-8 h-8 text-gray-400" />
                 </div>
               )}
 
@@ -213,9 +218,7 @@ export function MessageComposer({
 
               {attachment.status === 'error' && (
                 <div className="absolute inset-0 bg-red-500/50 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <ExclamationCircleIcon className="w-6 h-6 text-white" />
                 </div>
               )}
 
@@ -226,9 +229,7 @@ export function MessageComposer({
                 className="absolute top-0.5 right-0.5 p-0.5 bg-black/50 hover:bg-black/70 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
                 title="Remove"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <XMarkIcon className="w-4 h-4" />
               </button>
 
               {/* File name tooltip */}
@@ -291,9 +292,7 @@ export function MessageComposer({
                   className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                   aria-label="Attach files"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                  </svg>
+                  <PaperClipIcon className="w-4 h-4" />
                 </AriaButton>
               </FileTrigger>
 
@@ -308,9 +307,7 @@ export function MessageComposer({
                     : 'text-gray-400 cursor-not-allowed'
                 )}
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+                <PaperAirplaneIcon className="w-4 h-4" />
               </button>
             </div>
           </div>

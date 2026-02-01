@@ -1,6 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button as AriaButton } from 'react-aria-components';
+import {
+  FaceSmileIcon,
+  ArrowUturnLeftIcon,
+  EnvelopeIcon,
+  EllipsisVerticalIcon,
+  PencilSquareIcon,
+  TrashIcon,
+} from '@heroicons/react/24/outline';
 import { Avatar, AvatarStack, Menu, MenuItem, Modal, Button } from '../ui';
 import { ReactionPicker } from './ReactionPicker';
 import { AttachmentDisplay } from './AttachmentDisplay';
@@ -269,9 +277,7 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
             className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg"
             title="Add reaction"
           >
-            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <FaceSmileIcon className="w-4 h-4 text-gray-500" />
           </button>
 
           <button
@@ -279,9 +285,7 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
             className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
             title="Reply in thread"
           >
-            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-            </svg>
+            <ArrowUturnLeftIcon className="w-4 h-4 text-gray-500" />
           </button>
 
           <button
@@ -289,9 +293,7 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
             className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
             title="Mark unread"
           >
-            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
+            <EnvelopeIcon className="w-4 h-4 text-gray-500" />
           </button>
 
           {isOwnMessage && (
@@ -307,30 +309,20 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
                   )}
                   aria-label="More actions"
                 >
-                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                  </svg>
+                  <EllipsisVerticalIcon className="w-4 h-4 text-gray-500" />
                 </AriaButton>
               }
             >
               <MenuItem
                 onAction={handleStartEdit}
-                icon={
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                }
+                icon={<PencilSquareIcon className="w-4 h-4" />}
               >
                 Edit message
               </MenuItem>
               <MenuItem
                 onAction={handleDeleteClick}
                 variant="danger"
-                icon={
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                }
+                icon={<TrashIcon className="w-4 h-4" />}
               >
                 Delete message
               </MenuItem>
