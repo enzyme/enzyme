@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { EllipsisVerticalIcon, LockClosedIcon, HashtagIcon } from '@heroicons/react/24/outline';
 import { useChannels, useArchiveChannel, useLeaveChannel, useJoinChannel, useAuth } from '../hooks';
+import { useThreadPanel } from '../hooks/usePanel';
 import { useMarkChannelAsRead } from '../hooks/useChannels';
 import { MessageList, MessageComposer } from '../components/message';
 import { ChannelMembersButton } from '../components/channel/ChannelMembersButton';
@@ -32,6 +33,8 @@ export function ChannelPage() {
   const queryClient = useQueryClient();
   const { workspaces } = useAuth();
   const { data: channelsData, isLoading } = useChannels(workspaceId);
+  const { closeThread } = useThreadPanel();
+
   const channel = channelsData?.channels.find((c) => c.id === channelId);
   const archiveChannel = useArchiveChannel(workspaceId || '');
   const leaveChannel = useLeaveChannel(workspaceId || '');
@@ -50,7 +53,7 @@ export function ChannelPage() {
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
-  const markAsReadTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const markAsReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto mark-as-read when user is at bottom for 2 seconds
   useEffect(() => {
@@ -76,8 +79,12 @@ export function ChannelPage() {
   }, [channelId, isAtBottom, channel?.unread_count]);
 
   // Reset state when changing channels
+  // Note: closeThread intentionally omitted from deps - we only want to run
+  // this when channelId changes, not when the callback reference changes
   useEffect(() => {
     setIsAtBottom(true);
+    closeThread();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
 
   const handleAtBottomChange = useCallback((atBottom: boolean) => {
