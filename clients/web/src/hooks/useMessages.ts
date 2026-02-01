@@ -99,7 +99,7 @@ export function useSendThreadReply(parentMessageId: string, channelId: string) {
         }
       );
 
-      // Update reply count on parent message
+      // Update parent message: reply_count, last_reply_at, and thread_participants
       queryClient.setQueryData(
         ['messages', channelId],
         (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
@@ -108,11 +108,31 @@ export function useSendThreadReply(parentMessageId: string, channelId: string) {
             ...old,
             pages: old.pages.map((page) => ({
               ...page,
-              messages: page.messages.map((msg) =>
-                msg.id === parentMessageId
-                  ? { ...msg, reply_count: msg.reply_count + 1 }
-                  : msg
-              ),
+              messages: page.messages.map((msg) => {
+                if (msg.id !== parentMessageId) return msg;
+
+                // Check if user should be added to thread_participants
+                const participants = msg.thread_participants || [];
+                const shouldAddParticipant = data.message.user_id && !participants.some(
+                  (p) => p.user_id === data.message.user_id
+                );
+
+                return {
+                  ...msg,
+                  reply_count: msg.reply_count + 1,
+                  last_reply_at: data.message.created_at,
+                  thread_participants: shouldAddParticipant
+                    ? [
+                        ...participants,
+                        {
+                          user_id: data.message.user_id!,
+                          display_name: data.message.user_display_name,
+                          avatar_url: data.message.user_avatar_url,
+                        },
+                      ]
+                    : participants,
+                };
+              }),
             })),
           };
         }
