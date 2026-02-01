@@ -1,22 +1,14 @@
-interface Toast {
-  id: string;
+import { UNSTABLE_ToastQueue as ToastQueue } from 'react-aria-components';
+
+export interface ToastContent {
   message: string;
   type: 'success' | 'error' | 'info';
 }
 
-let toastId = 0;
-const listeners: Set<(toast: Toast) => void> = new Set();
+export const toastQueue = new ToastQueue<ToastContent>({
+  maxVisibleToasts: 5,
+});
 
-export function toast(message: string, type: Toast['type'] = 'info') {
-  const id = String(++toastId);
-  listeners.forEach((listener) => listener({ id, message, type }));
+export function toast(message: string, type: ToastContent['type'] = 'info') {
+  toastQueue.add({ message, type }, { timeout: 5000 });
 }
-
-export function subscribe(listener: (toast: Toast) => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-export type { Toast };

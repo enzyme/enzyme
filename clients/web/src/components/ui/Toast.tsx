@@ -1,48 +1,42 @@
-import { useEffect, useState } from 'react';
+import {
+  Button,
+  UNSTABLE_Toast as AriaToast,
+  UNSTABLE_ToastContent as ToastContent,
+  UNSTABLE_ToastRegion as ToastRegion,
+} from 'react-aria-components';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { cn } from '../../lib/utils';
-import { subscribe, type Toast } from './toast-store';
+import { toastQueue, type ToastContent as ToastData } from './toast-store';
+
+const typeStyles = {
+  success: 'bg-green-600',
+  error: 'bg-red-600',
+  info: 'bg-gray-800',
+};
 
 export function Toaster() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  useEffect(() => {
-    return subscribe((toast) => {
-      setToasts((prev) => [...prev, toast]);
-
-      // Auto-remove after 5 seconds
-      setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== toast.id));
-      }, 5000);
-    });
-  }, []);
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  const typeStyles = {
-    success: 'bg-green-600',
-    error: 'bg-red-600',
-    info: 'bg-gray-800',
-  };
-
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-      {toasts.map((t) => (
-        <div
-          key={t.id}
-          className={cn('flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white animate-in slide-in-from-right fade-in duration-200', typeStyles[t.type])}
+    <ToastRegion
+      queue={toastQueue}
+      className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 outline-none"
+    >
+      {({ toast }) => (
+        <AriaToast<ToastData>
+          toast={toast}
+          className={({ isFocusVisible }) =>
+            `flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white animate-in slide-in-from-right fade-in duration-200 ${typeStyles[toast.content.type]}${isFocusVisible ? ' ring-2 ring-white ring-offset-2 ring-offset-transparent' : ''}`
+          }
         >
-          <span>{t.message}</span>
-          <button
-            onClick={() => removeToast(t.id)}
-            className="ml-2 hover:opacity-80"
+          <ToastContent className="flex-1">
+            <span>{toast.content.message}</span>
+          </ToastContent>
+          <Button
+            slot="close"
+            className="ml-2 hover:opacity-80 outline-none rounded focus-visible:ring-2 focus-visible:ring-white"
           >
             <XMarkIcon className="w-4 h-4" />
-          </button>
-        </div>
-      ))}
-    </div>
+          </Button>
+        </AriaToast>
+      )}
+    </ToastRegion>
   );
 }
