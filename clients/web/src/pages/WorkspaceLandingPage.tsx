@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useChannels } from '../hooks';
 import { Spinner } from '../components/ui';
@@ -8,7 +8,7 @@ export function WorkspaceLandingPage() {
   const navigate = useNavigate();
   const { data, isLoading } = useChannels(workspaceId);
 
-  const channels = data?.channels ?? [];
+  const channels = useMemo(() => data?.channels ?? [], [data?.channels]);
 
   useEffect(() => {
     if (!isLoading && channels.length > 0) {

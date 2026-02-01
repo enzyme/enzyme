@@ -32,7 +32,7 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
   const [isNewDMModalOpen, setIsNewDMModalOpen] = useState(false);
   const markAllAsRead = useMarkAllChannelsAsRead(workspaceId || '');
 
-  const channels = data?.channels || [];
+  const channels = useMemo(() => data?.channels || [], [data?.channels]);
   const hasUnread = channels.some((c) => c.unread_count > 0);
 
   const groupedChannels = useMemo(() => {
@@ -423,10 +423,11 @@ function NewDMModal({
   const createDM = useCreateDM(workspaceId);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
+  const members = membersData?.members;
   const otherMembers = useMemo(() => {
-    if (!membersData?.members || !user) return [];
-    return membersData.members.filter((m) => m.user_id !== user.id);
-  }, [membersData?.members, user]);
+    if (!members || !user) return [];
+    return members.filter((m) => m.user_id !== user.id);
+  }, [members, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, type KeyboardEvent, type FormEvent } from 'react';
+import { useState, useRef, useCallback, useEffect, type KeyboardEvent, type FormEvent } from 'react';
 import { Button as AriaButton, DropZone, FileTrigger } from 'react-aria-components';
 import {
   DocumentIcon,
@@ -44,11 +44,17 @@ export function MessageComposer({
   const { onTyping, onStopTyping } = useTyping(workspaceId, channelId);
 
   const typingUsersMap = usePresenceStore((state) => state.typingUsers);
-  const typingUsers = useMemo(() => {
-    const now = Date.now();
-    const typers = typingUsersMap.get(channelId) || [];
-    return typers.filter((t) => t.expiresAt > now);
-  }, [typingUsersMap, channelId]);
+  const typers = typingUsersMap.get(channelId) || [];
+  const [now, setNow] = useState(() => Date.now());
+
+  // Update timestamp periodically to filter expired typing indicators
+  useEffect(() => {
+    if (typers.length === 0) return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [typers.length]);
+
+  const typingUsers = typers.filter((t) => t.expiresAt > now);
 
   const uploadAttachment = useCallback(async (attachment: PendingAttachment) => {
     setPendingAttachments((prev) =>

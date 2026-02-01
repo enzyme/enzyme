@@ -5,7 +5,7 @@ import { ApiError, type User, type WorkspaceSummary } from '@feather/api-client'
 export function useAuth() {
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error, isFetched } = useQuery({
+  const { data, error, isFetched } = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: authApi.me,
     retry: false,

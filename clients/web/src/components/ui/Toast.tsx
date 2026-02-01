@@ -1,38 +1,20 @@
 import { useEffect, useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { cn } from '../../lib/utils';
-
-interface Toast {
-  id: string;
-  message: string;
-  type: 'success' | 'error' | 'info';
-}
-
-let toastId = 0;
-const listeners: Set<(toast: Toast) => void> = new Set();
-
-export function toast(message: string, type: Toast['type'] = 'info') {
-  const id = String(++toastId);
-  listeners.forEach((listener) => listener({ id, message, type }));
-}
+import { subscribe, type Toast } from './toast-store';
 
 export function Toaster() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   useEffect(() => {
-    const listener = (toast: Toast) => {
+    return subscribe((toast) => {
       setToasts((prev) => [...prev, toast]);
 
       // Auto-remove after 5 seconds
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== toast.id));
       }, 5000);
-    };
-
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
+    });
   }, []);
 
   const removeToast = (id: string) => {
