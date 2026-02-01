@@ -40,8 +40,8 @@ export function useSSE(workspaceId: string | undefined) {
           page.messages.some((m) => m.id === message.id)
         );
 
+        // Add to thread cache if not already there
         if (!alreadyProcessed) {
-          // Add to thread cache
           queryClient.setQueryData(
             ['thread', message.thread_parent_id],
             (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
@@ -59,47 +59,49 @@ export function useSSE(workspaceId: string | undefined) {
               return { ...old, pages: newPages };
             }
           );
-
-          // Update the parent message's reply_count and thread_participants
-          queryClient.setQueryData(
-            ['messages', message.channel_id],
-            (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
-              if (!old) return old;
-
-              return {
-                ...old,
-                pages: old.pages.map((page) => ({
-                  ...page,
-                  messages: page.messages.map((m) => {
-                    if (m.id !== message.thread_parent_id) return m;
-
-                    // Check if user should be added to thread_participants
-                    const participants = m.thread_participants || [];
-                    const shouldAddParticipant = message.user_id && !participants.some(
-                      (p) => p.user_id === message.user_id
-                    );
-
-                    return {
-                      ...m,
-                      reply_count: (m.reply_count || 0) + 1,
-                      last_reply_at: message.created_at,
-                      thread_participants: shouldAddParticipant
-                        ? [
-                            ...participants,
-                            {
-                              user_id: message.user_id!,
-                              display_name: message.user_display_name,
-                              avatar_url: message.user_avatar_url,
-                            },
-                          ]
-                        : participants,
-                    };
-                  }),
-                })),
-              };
-            }
-          );
         }
+
+        // Always update thread_participants, but only increment reply_count if we added the message
+        // (useSendThreadReply already increments reply_count for the sender's own messages)
+        queryClient.setQueryData(
+          ['messages', message.channel_id],
+          (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
+            if (!old) return old;
+
+            return {
+              ...old,
+              pages: old.pages.map((page) => ({
+                ...page,
+                messages: page.messages.map((m) => {
+                  if (m.id !== message.thread_parent_id) return m;
+
+                  // Check if user should be added to thread_participants
+                  const participants = m.thread_participants || [];
+                  const shouldAddParticipant = message.user_id && !participants.some(
+                    (p) => p.user_id === message.user_id
+                  );
+
+                  return {
+                    ...m,
+                    // Only increment reply_count if the message wasn't already processed
+                    reply_count: alreadyProcessed ? m.reply_count : (m.reply_count || 0) + 1,
+                    last_reply_at: message.created_at,
+                    thread_participants: shouldAddParticipant
+                      ? [
+                          ...participants,
+                          {
+                            user_id: message.user_id!,
+                            display_name: message.user_display_name,
+                            avatar_url: message.user_avatar_url,
+                          },
+                        ]
+                      : participants,
+                  };
+                }),
+              })),
+            };
+          }
+        );
       } else {
         // Regular channel message - add to channel messages
         queryClient.setQueryData(

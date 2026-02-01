@@ -91,31 +91,36 @@ export function useSendThreadReply(parentMessageId: string, channelId: string) {
       return messagesApi.send(channelId, { ...params, thread_parent_id: parentMessageId });
     },
     onSuccess: (data) => {
-      // Add to thread cache (threads are ordered ASC, so append to end)
-      queryClient.setQueryData(
-        ['thread', parentMessageId],
-        (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
-          if (!old) return old;
+      // Invalidate thread subscription - user may have been auto-subscribed
+      queryClient.invalidateQueries({ queryKey: ['thread-subscription', parentMessageId] });
 
-          // Check if message already exists (SSE might have added it first)
-          const exists = old.pages.some((page) =>
-            page.messages.some((m) => m.id === data.message.id)
-          );
-          if (exists) return old;
+      // Check if message already exists in thread cache (SSE might have added it first)
+      const threadData = queryClient.getQueryData<{ pages: MessageListResult[]; pageParams: (string | undefined)[] }>(['thread', parentMessageId]);
+      const alreadyInCache = threadData?.pages.some((page) =>
+        page.messages.some((m) => m.id === data.message.id)
+      ) ?? false;
 
-          const newPages = [...old.pages];
-          const lastPageIndex = newPages.length - 1;
-          if (newPages[lastPageIndex]) {
-            newPages[lastPageIndex] = {
-              ...newPages[lastPageIndex],
-              messages: [...newPages[lastPageIndex].messages, data.message],
-            };
+      // Add to thread cache if not already there (threads are ordered ASC, so append to end)
+      if (!alreadyInCache) {
+        queryClient.setQueryData(
+          ['thread', parentMessageId],
+          (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
+            if (!old) return old;
+
+            const newPages = [...old.pages];
+            const lastPageIndex = newPages.length - 1;
+            if (newPages[lastPageIndex]) {
+              newPages[lastPageIndex] = {
+                ...newPages[lastPageIndex],
+                messages: [...newPages[lastPageIndex].messages, data.message],
+              };
+            }
+            return { ...old, pages: newPages };
           }
-          return { ...old, pages: newPages };
-        }
-      );
+        );
+      }
 
-      // Update parent message: reply_count, last_reply_at, and thread_participants
+      // Update parent message: reply_count (only if we added the message), last_reply_at, and thread_participants
       queryClient.setQueryData(
         ['messages', channelId],
         (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
@@ -135,7 +140,8 @@ export function useSendThreadReply(parentMessageId: string, channelId: string) {
 
                 return {
                   ...msg,
-                  reply_count: msg.reply_count + 1,
+                  // Only increment if SSE hasn't already done it
+                  reply_count: alreadyInCache ? msg.reply_count : msg.reply_count + 1,
                   last_reply_at: data.message.created_at,
                   thread_participants: shouldAddParticipant
                     ? [
