@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/feather/api/internal/message"
 	"github.com/feather/api/internal/openapi"
 	"github.com/feather/api/internal/workspace"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -343,4 +344,93 @@ func inviteToAPI(invite *workspace.Invite) openapi.Invite {
 		apiInvite.InvitedEmail = &email
 	}
 	return apiInvite
+}
+
+// ListAllUnreads lists all unread messages across channels in a workspace
+func (h *Handler) ListAllUnreads(ctx context.Context, request openapi.ListAllUnreadsRequestObject) (openapi.ListAllUnreadsResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return nil, errors.New("not authenticated")
+	}
+
+	// Check workspace membership
+	_, err := h.workspaceRepo.GetMembership(ctx, userID, string(request.Wid))
+	if err != nil {
+		return nil, err
+	}
+
+	opts := message.ListOptions{
+		Limit: 50,
+	}
+	if request.Body != nil {
+		if request.Body.Limit != nil {
+			opts.Limit = *request.Body.Limit
+		}
+		if request.Body.Cursor != nil {
+			opts.Cursor = *request.Body.Cursor
+		}
+	}
+
+	result, err := h.messageRepo.ListAllUnreads(ctx, string(request.Wid), userID, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return openapi.ListAllUnreads200JSONResponse(unreadListResultToAPI(result)), nil
+}
+
+// unreadMessageToAPI converts a message.UnreadMessage to openapi.UnreadMessage
+func unreadMessageToAPI(m *message.UnreadMessage) openapi.UnreadMessage {
+	apiMsg := openapi.UnreadMessage{
+		Id:             m.ID,
+		ChannelId:      m.ChannelID,
+		UserId:         m.UserID,
+		Content:        m.Content,
+		ThreadParentId: m.ThreadParentID,
+		ReplyCount:     m.ReplyCount,
+		LastReplyAt:    m.LastReplyAt,
+		EditedAt:       m.EditedAt,
+		DeletedAt:      m.DeletedAt,
+		CreatedAt:      m.CreatedAt,
+		UpdatedAt:      m.UpdatedAt,
+		ChannelName:    m.ChannelName,
+		ChannelType:    openapi.ChannelType(m.ChannelType),
+	}
+	if m.UserDisplayName != "" {
+		apiMsg.UserDisplayName = &m.UserDisplayName
+	}
+	if m.UserAvatarURL != nil {
+		apiMsg.UserAvatarUrl = m.UserAvatarURL
+	}
+	if len(m.Reactions) > 0 {
+		reactions := make([]openapi.Reaction, len(m.Reactions))
+		for i, r := range m.Reactions {
+			reactions[i] = openapi.Reaction{
+				Id:        r.ID,
+				MessageId: r.MessageID,
+				UserId:    r.UserID,
+				Emoji:     r.Emoji,
+				CreatedAt: r.CreatedAt,
+			}
+		}
+		apiMsg.Reactions = &reactions
+	}
+	return apiMsg
+}
+
+// unreadListResultToAPI converts a message.UnreadListResult to openapi.UnreadMessagesResult
+func unreadListResultToAPI(result *message.UnreadListResult) openapi.UnreadMessagesResult {
+	messages := make([]openapi.UnreadMessage, len(result.Messages))
+	for i, m := range result.Messages {
+		messages[i] = unreadMessageToAPI(&m)
+	}
+
+	apiResult := openapi.UnreadMessagesResult{
+		Messages: messages,
+		HasMore:  result.HasMore,
+	}
+	if result.NextCursor != "" {
+		apiResult.NextCursor = &result.NextCursor
+	}
+	return apiResult
 }

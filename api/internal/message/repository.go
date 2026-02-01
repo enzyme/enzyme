@@ -3,6 +3,7 @@ package message
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -31,6 +32,15 @@ func (r *Repository) Create(ctx context.Context, msg *Message) error {
 	msg.CreatedAt = now
 	msg.UpdatedAt = now
 
+	// Serialize mentions to JSON
+	mentionsJSON := "[]"
+	if len(msg.Mentions) > 0 {
+		data, err := json.Marshal(msg.Mentions)
+		if err == nil {
+			mentionsJSON = string(data)
+		}
+	}
+
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -38,9 +48,9 @@ func (r *Repository) Create(ctx context.Context, msg *Message) error {
 	defer tx.Rollback()
 
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO messages (id, channel_id, user_id, content, thread_parent_id, reply_count, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, 0, ?, ?)
-	`, msg.ID, msg.ChannelID, msg.UserID, msg.Content, msg.ThreadParentID, now.Format(time.RFC3339), now.Format(time.RFC3339))
+		INSERT INTO messages (id, channel_id, user_id, content, mentions, thread_parent_id, reply_count, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)
+	`, msg.ID, msg.ChannelID, msg.UserID, msg.Content, mentionsJSON, msg.ThreadParentID, now.Format(time.RFC3339), now.Format(time.RFC3339))
 	if err != nil {
 		return err
 	}
@@ -552,4 +562,148 @@ func (r *Repository) scanMessageWithUser(row rowScanner) (*MessageWithUser, erro
 
 func isUniqueConstraintError(err error) bool {
 	return err != nil && (strings.Contains(err.Error(), "UNIQUE constraint failed") || strings.Contains(err.Error(), "duplicate key"))
+}
+
+// ListAllUnreads lists all unread messages across channels the user is a member of
+func (r *Repository) ListAllUnreads(ctx context.Context, workspaceID, userID string, opts ListOptions) (*UnreadListResult, error) {
+	if opts.Limit <= 0 || opts.Limit > 100 {
+		opts.Limit = 50
+	}
+
+	var query string
+	var args []interface{}
+
+	// Get messages from channels user is a member of that are newer than last_read_message_id
+	if opts.Cursor == "" {
+		query = `
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.thread_parent_id, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url,
+			       c.name as channel_name, c.type as channel_type
+			FROM messages m
+			LEFT JOIN users u ON u.id = m.user_id
+			JOIN channels c ON c.id = m.channel_id
+			JOIN channel_memberships cm ON cm.channel_id = c.id AND cm.user_id = ?
+			WHERE c.workspace_id = ?
+			  AND m.thread_parent_id IS NULL
+			  AND m.deleted_at IS NULL
+			  AND (cm.last_read_message_id IS NULL OR m.id > cm.last_read_message_id)
+			ORDER BY m.id DESC
+			LIMIT ?
+		`
+		args = []interface{}{userID, workspaceID, opts.Limit + 1}
+	} else {
+		query = `
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.thread_parent_id, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url,
+			       c.name as channel_name, c.type as channel_type
+			FROM messages m
+			LEFT JOIN users u ON u.id = m.user_id
+			JOIN channels c ON c.id = m.channel_id
+			JOIN channel_memberships cm ON cm.channel_id = c.id AND cm.user_id = ?
+			WHERE c.workspace_id = ?
+			  AND m.thread_parent_id IS NULL
+			  AND m.deleted_at IS NULL
+			  AND (cm.last_read_message_id IS NULL OR m.id > cm.last_read_message_id)
+			  AND m.id < ?
+			ORDER BY m.id DESC
+			LIMIT ?
+		`
+		args = []interface{}{userID, workspaceID, opts.Cursor, opts.Limit + 1}
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []UnreadMessage
+	for rows.Next() {
+		msg, channelName, channelType, err := r.scanUnreadMessage(rows)
+		if err != nil {
+			return nil, err
+		}
+		msg.ChannelName = channelName
+		msg.ChannelType = channelType
+		messages = append(messages, *msg)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	hasMore := len(messages) > opts.Limit
+	if hasMore {
+		messages = messages[:opts.Limit]
+	}
+
+	var nextCursor string
+	if hasMore && len(messages) > 0 {
+		nextCursor = messages[len(messages)-1].ID
+	}
+
+	// Load reactions for all messages
+	if len(messages) > 0 {
+		messageIDs := make([]string, len(messages))
+		for i, m := range messages {
+			messageIDs[i] = m.ID
+		}
+		reactions, err := r.getReactionsForMessages(ctx, messageIDs)
+		if err != nil {
+			return nil, err
+		}
+		for i := range messages {
+			if r, ok := reactions[messages[i].ID]; ok {
+				messages[i].Reactions = r
+			}
+		}
+	}
+
+	if messages == nil {
+		messages = []UnreadMessage{}
+	}
+
+	return &UnreadListResult{
+		Messages:   messages,
+		HasMore:    hasMore,
+		NextCursor: nextCursor,
+	}, nil
+}
+
+func (r *Repository) scanUnreadMessage(row rowScanner) (*UnreadMessage, string, string, error) {
+	var msg UnreadMessage
+	var userID, threadParentID, lastReplyAt, editedAt, deletedAt, avatarURL sql.NullString
+	var createdAt, updatedAt, channelName, channelType string
+
+	err := row.Scan(&msg.ID, &msg.ChannelID, &userID, &msg.Content, &threadParentID, &msg.ReplyCount, &lastReplyAt, &editedAt, &deletedAt, &createdAt, &updatedAt,
+		&msg.UserDisplayName, &avatarURL, &channelName, &channelType)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	if userID.Valid {
+		msg.UserID = &userID.String
+	}
+	if threadParentID.Valid {
+		msg.ThreadParentID = &threadParentID.String
+	}
+	if lastReplyAt.Valid {
+		t, _ := time.Parse(time.RFC3339, lastReplyAt.String)
+		msg.LastReplyAt = &t
+	}
+	if editedAt.Valid {
+		t, _ := time.Parse(time.RFC3339, editedAt.String)
+		msg.EditedAt = &t
+	}
+	if deletedAt.Valid {
+		t, _ := time.Parse(time.RFC3339, deletedAt.String)
+		msg.DeletedAt = &t
+	}
+	if avatarURL.Valid {
+		msg.UserAvatarURL = &avatarURL.String
+	}
+	msg.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+	msg.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+
+	return &msg, channelName, channelType, nil
 }

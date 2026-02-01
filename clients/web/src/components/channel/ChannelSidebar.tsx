@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import { CheckCircleIcon, ChevronRightIcon, PlusIcon, LockClosedIcon, HashtagIcon } from '@heroicons/react/24/outline';
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { CheckCircleIcon, ChevronRightIcon, PlusIcon, LockClosedIcon, HashtagIcon, InboxIcon } from '@heroicons/react/24/outline';
 import { useChannels, useWorkspace, useAuth } from '../../hooks';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
 import { ChannelListSkeleton, Modal, Button, Input, toast, Tabs, TabList, Tab, TabPanel, RadioGroup, Radio } from '../ui';
@@ -24,6 +24,7 @@ interface ChannelSidebarProps {
 
 export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
   const { channelId } = useParams<{ channelId: string }>();
+  const location = useLocation();
   const { data: workspaceData } = useWorkspace(workspaceId);
   const { data, isLoading } = useChannels(workspaceId);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -31,7 +32,9 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
   const markAllAsRead = useMarkAllChannelsAsRead(workspaceId || '');
 
   const channels = useMemo(() => data?.channels || [], [data?.channels]);
-  const hasUnread = channels.some((c) => c.unread_count > 0);
+  const totalUnreadCount = useMemo(() => channels.reduce((sum, c) => sum + c.unread_count, 0), [channels]);
+  const hasUnread = totalUnreadCount > 0;
+  const isUnreadsPage = location.pathname.includes('/unreads');
 
   const groupedChannels = useMemo(() => {
     const groups = {
@@ -85,6 +88,27 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
 
       {/* Channel List */}
       <div className="flex-1 overflow-y-auto">
+        {/* All Unreads link */}
+        <div className="px-2 pt-2">
+          <Link
+            to={`/workspaces/${workspaceId}/unreads`}
+            className={cn(
+              'flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800/50',
+              isUnreadsPage
+                ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                : 'text-gray-700 dark:text-gray-300'
+            )}
+          >
+            <InboxIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            <span className={cn('truncate', hasUnread && 'font-semibold')}>All Unreads</span>
+            {hasUnread && (
+              <span className="ml-auto bg-primary-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+                {totalUnreadCount}
+              </span>
+            )}
+          </Link>
+        </div>
+
         {isLoading ? (
           <ChannelListSkeleton />
         ) : (

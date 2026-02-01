@@ -7,3 +7,4 @@ export { ChannelPage } from './ChannelPage';
 export { AcceptInvitePage } from './AcceptInvitePage';
 export { InvitePage } from './InvitePage';
 export { ServerSettingsPage } from './ServerSettingsPage';
+export { AllUnreadsPage } from './AllUnreadsPage';
