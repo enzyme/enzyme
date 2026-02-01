@@ -412,6 +412,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/channels/{id}/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get channel notification preferences */
+        get: operations["getChannelNotifications"];
+        put?: never;
+        /** Update channel notification preferences */
+        post: operations["updateChannelNotifications"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{wid}/channels/mark-all-read": {
         parameters: {
             query?: never;
@@ -423,6 +441,40 @@ export interface paths {
         put?: never;
         /** Mark all channels as read */
         post: operations["markAllChannelsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{wid}/unreads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** List all unread messages across channels */
+        post: operations["listAllUnreads"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single message */
+        get: operations["getMessage"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -559,6 +611,57 @@ export interface paths {
         put?: never;
         /** List thread replies */
         post: operations["listThread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messages/{id}/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get thread subscription status */
+        get: operations["getThreadSubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messages/{id}/subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Subscribe to thread */
+        post: operations["subscribeToThread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messages/{id}/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unsubscribe from thread */
+        post: operations["unsubscribeFromThread"];
         delete?: never;
         options?: never;
         head?: never;
@@ -876,6 +979,15 @@ export interface components {
             has_more: boolean;
             next_cursor?: string;
         };
+        UnreadMessage: components["schemas"]["MessageWithUser"] & {
+            channel_name: string;
+            channel_type: components["schemas"]["ChannelType"];
+        };
+        UnreadMessagesResult: {
+            messages: components["schemas"]["UnreadMessage"][];
+            has_more: boolean;
+            next_cursor?: string;
+        };
         ApiError: {
             code: string;
             message: string;
@@ -894,8 +1006,8 @@ export interface components {
             last_read_message_id: string;
         };
         /** @enum {string} */
-        SSEEventType: "connected" | "heartbeat" | "message.new" | "message.updated" | "message.deleted" | "reaction.added" | "reaction.removed" | "channel.created" | "channel.updated" | "channel.archived" | "channel.member_added" | "channel.member_removed" | "channel.read" | "typing.start" | "typing.stop" | "presence.changed";
-        SSEEvent: components["schemas"]["SSEEventConnected"] | components["schemas"]["SSEEventHeartbeat"] | components["schemas"]["SSEEventMessageNew"] | components["schemas"]["SSEEventMessageUpdated"] | components["schemas"]["SSEEventMessageDeleted"] | components["schemas"]["SSEEventReactionAdded"] | components["schemas"]["SSEEventReactionRemoved"] | components["schemas"]["SSEEventChannelCreated"] | components["schemas"]["SSEEventChannelUpdated"] | components["schemas"]["SSEEventChannelArchived"] | components["schemas"]["SSEEventChannelMemberAdded"] | components["schemas"]["SSEEventChannelMemberRemoved"] | components["schemas"]["SSEEventChannelRead"] | components["schemas"]["SSEEventTypingStart"] | components["schemas"]["SSEEventTypingStop"] | components["schemas"]["SSEEventPresenceChanged"];
+        SSEEventType: "connected" | "heartbeat" | "message.new" | "message.updated" | "message.deleted" | "reaction.added" | "reaction.removed" | "channel.created" | "channel.updated" | "channel.archived" | "channel.member_added" | "channel.member_removed" | "channel.read" | "typing.start" | "typing.stop" | "presence.changed" | "notification";
+        SSEEvent: components["schemas"]["SSEEventConnected"] | components["schemas"]["SSEEventHeartbeat"] | components["schemas"]["SSEEventMessageNew"] | components["schemas"]["SSEEventMessageUpdated"] | components["schemas"]["SSEEventMessageDeleted"] | components["schemas"]["SSEEventReactionAdded"] | components["schemas"]["SSEEventReactionRemoved"] | components["schemas"]["SSEEventChannelCreated"] | components["schemas"]["SSEEventChannelUpdated"] | components["schemas"]["SSEEventChannelArchived"] | components["schemas"]["SSEEventChannelMemberAdded"] | components["schemas"]["SSEEventChannelMemberRemoved"] | components["schemas"]["SSEEventChannelRead"] | components["schemas"]["SSEEventTypingStart"] | components["schemas"]["SSEEventTypingStop"] | components["schemas"]["SSEEventPresenceChanged"] | components["schemas"]["SSEEventNotification"];
         SSEEventConnected: {
             id?: string;
             /**
@@ -1047,6 +1159,33 @@ export interface components {
              */
             type: "presence.changed";
             data: components["schemas"]["PresenceData"];
+        };
+        SSEEventNotification: {
+            id?: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "notification";
+            data: components["schemas"]["NotificationData"];
+        };
+        NotificationData: {
+            /** @enum {string} */
+            type: "mention" | "dm" | "channel" | "here" | "everyone" | "thread_reply";
+            channel_id: string;
+            message_id: string;
+            channel_name?: string;
+            sender_name?: string;
+            preview?: string;
+            thread_parent_id?: string;
+        };
+        /** @enum {string} */
+        ThreadSubscriptionStatus: "subscribed" | "unsubscribed" | "none";
+        /** @enum {string} */
+        NotifyLevel: "all" | "mentions" | "none";
+        NotificationPreferences: {
+            notify_level: components["schemas"]["NotifyLevel"];
+            email_enabled: boolean;
         };
         TypingEventData: {
             user_id: string;
@@ -1790,6 +1929,60 @@ export interface operations {
             };
         };
     };
+    getChannelNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Channel ID */
+                id: components["parameters"]["channelId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notification preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        preferences?: components["schemas"]["NotificationPreferences"];
+                    };
+                };
+            };
+        };
+    };
+    updateChannelNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Channel ID */
+                id: components["parameters"]["channelId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationPreferences"];
+            };
+        };
+        responses: {
+            /** @description Preferences updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        preferences?: components["schemas"]["NotificationPreferences"];
+                    };
+                };
+            };
+        };
+    };
     markAllChannelsRead: {
         parameters: {
             query?: never;
@@ -1811,6 +2004,64 @@ export interface operations {
                     "application/json": components["schemas"]["SuccessResponse"];
                 };
             };
+        };
+    };
+    listAllUnreads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                wid: components["parameters"]["workspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @default 50 */
+                    limit?: number;
+                    cursor?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description List of unread messages */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadMessagesResult"];
+                };
+            };
+        };
+    };
+    getMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Message ID */
+                id: components["parameters"]["messageId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Message details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message?: components["schemas"]["MessageWithUser"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
     sendMessage: {
@@ -2031,6 +2282,87 @@ export interface operations {
                     "application/json": components["schemas"]["MessageListResult"];
                 };
             };
+        };
+    };
+    getThreadSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Message ID */
+                id: components["parameters"]["messageId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thread subscription status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: components["schemas"]["ThreadSubscriptionStatus"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    subscribeToThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Message ID */
+                id: components["parameters"]["messageId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscribed to thread */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: components["schemas"]["ThreadSubscriptionStatus"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unsubscribeFromThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Message ID */
+                id: components["parameters"]["messageId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unsubscribed from thread */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: components["schemas"]["ThreadSubscriptionStatus"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
     uploadFile: {

@@ -45,16 +45,9 @@ const (
 
 // Defines values for NotifyLevel.
 const (
-	NotifyLevelAll      NotifyLevel = "all"
-	NotifyLevelMentions NotifyLevel = "mentions"
-	NotifyLevelNone     NotifyLevel = "none"
-)
-
-// Defines values for ThreadSubscriptionStatus.
-const (
-	ThreadSubscriptionStatusNone         ThreadSubscriptionStatus = "none"
-	ThreadSubscriptionStatusSubscribed   ThreadSubscriptionStatus = "subscribed"
-	ThreadSubscriptionStatusUnsubscribed ThreadSubscriptionStatus = "unsubscribed"
+	All      NotifyLevel = "all"
+	Mentions NotifyLevel = "mentions"
+	None     NotifyLevel = "none"
 )
 
 // Defines values for WorkspaceRole.
@@ -290,9 +283,6 @@ type ThreadParticipant struct {
 	DisplayName *string `json:"display_name,omitempty"`
 	UserId      string  `json:"user_id"`
 }
-
-// ThreadSubscriptionStatus defines model for ThreadSubscriptionStatus.
-type ThreadSubscriptionStatus string
 
 // UnreadMessage defines model for UnreadMessage.
 type UnreadMessage struct {
@@ -645,18 +635,9 @@ type ServerInterface interface {
 	// Remove reaction from message
 	// (POST /messages/{id}/reactions/remove)
 	RemoveReaction(w http.ResponseWriter, r *http.Request, id MessageId)
-	// Subscribe to thread
-	// (POST /messages/{id}/subscribe)
-	SubscribeToThread(w http.ResponseWriter, r *http.Request, id MessageId)
-	// Get thread subscription status
-	// (GET /messages/{id}/subscription)
-	GetThreadSubscription(w http.ResponseWriter, r *http.Request, id MessageId)
 	// List thread replies
 	// (POST /messages/{id}/thread/list)
 	ListThread(w http.ResponseWriter, r *http.Request, id MessageId)
-	// Unsubscribe from thread
-	// (POST /messages/{id}/unsubscribe)
-	UnsubscribeFromThread(w http.ResponseWriter, r *http.Request, id MessageId)
 	// Update a message
 	// (POST /messages/{id}/update)
 	UpdateMessage(w http.ResponseWriter, r *http.Request, id MessageId)
@@ -864,27 +845,9 @@ func (_ Unimplemented) RemoveReaction(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Subscribe to thread
-// (POST /messages/{id}/subscribe)
-func (_ Unimplemented) SubscribeToThread(w http.ResponseWriter, r *http.Request, id MessageId) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Get thread subscription status
-// (GET /messages/{id}/subscription)
-func (_ Unimplemented) GetThreadSubscription(w http.ResponseWriter, r *http.Request, id MessageId) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // List thread replies
 // (POST /messages/{id}/thread/list)
 func (_ Unimplemented) ListThread(w http.ResponseWriter, r *http.Request, id MessageId) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Unsubscribe from thread
-// (POST /messages/{id}/unsubscribe)
-func (_ Unimplemented) UnsubscribeFromThread(w http.ResponseWriter, r *http.Request, id MessageId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1691,68 +1654,6 @@ func (siw *ServerInterfaceWrapper) RemoveReaction(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// SubscribeToThread operation middleware
-func (siw *ServerInterfaceWrapper) SubscribeToThread(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "id" -------------
-	var id MessageId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SubscribeToThread(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetThreadSubscription operation middleware
-func (siw *ServerInterfaceWrapper) GetThreadSubscription(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "id" -------------
-	var id MessageId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetThreadSubscription(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListThread operation middleware
 func (siw *ServerInterfaceWrapper) ListThread(w http.ResponseWriter, r *http.Request) {
 
@@ -1775,37 +1676,6 @@ func (siw *ServerInterfaceWrapper) ListThread(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListThread(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// UnsubscribeFromThread operation middleware
-func (siw *ServerInterfaceWrapper) UnsubscribeFromThread(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "id" -------------
-	var id MessageId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UnsubscribeFromThread(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2450,16 +2320,7 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/messages/{id}/reactions/remove", wrapper.RemoveReaction)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/messages/{id}/subscribe", wrapper.SubscribeToThread)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/messages/{id}/subscription", wrapper.GetThreadSubscription)
-	})
-	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/messages/{id}/thread/list", wrapper.ListThread)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/messages/{id}/unsubscribe", wrapper.UnsubscribeFromThread)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/messages/{id}/update", wrapper.UpdateMessage)
@@ -3046,80 +2907,6 @@ func (response RemoveReaction200JSONResponse) VisitRemoveReactionResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
-type SubscribeToThreadRequestObject struct {
-	Id MessageId `json:"id"`
-}
-
-type SubscribeToThreadResponseObject interface {
-	VisitSubscribeToThreadResponse(w http.ResponseWriter) error
-}
-
-type SubscribeToThread200JSONResponse struct {
-	Status ThreadSubscriptionStatus `json:"status"`
-}
-
-func (response SubscribeToThread200JSONResponse) VisitSubscribeToThreadResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type SubscribeToThread401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response SubscribeToThread401JSONResponse) VisitSubscribeToThreadResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type SubscribeToThread404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response SubscribeToThread404JSONResponse) VisitSubscribeToThreadResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type GetThreadSubscriptionRequestObject struct {
-	Id MessageId `json:"id"`
-}
-
-type GetThreadSubscriptionResponseObject interface {
-	VisitGetThreadSubscriptionResponse(w http.ResponseWriter) error
-}
-
-type GetThreadSubscription200JSONResponse struct {
-	Status ThreadSubscriptionStatus `json:"status"`
-}
-
-func (response GetThreadSubscription200JSONResponse) VisitGetThreadSubscriptionResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type GetThreadSubscription401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response GetThreadSubscription401JSONResponse) VisitGetThreadSubscriptionResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type GetThreadSubscription404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response GetThreadSubscription404JSONResponse) VisitGetThreadSubscriptionResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type ListThreadRequestObject struct {
 	Id   MessageId `json:"id"`
 	Body *ListThreadJSONRequestBody
@@ -3134,43 +2921,6 @@ type ListThread200JSONResponse MessageListResult
 func (response ListThread200JSONResponse) VisitListThreadResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type UnsubscribeFromThreadRequestObject struct {
-	Id MessageId `json:"id"`
-}
-
-type UnsubscribeFromThreadResponseObject interface {
-	VisitUnsubscribeFromThreadResponse(w http.ResponseWriter) error
-}
-
-type UnsubscribeFromThread200JSONResponse struct {
-	Status ThreadSubscriptionStatus `json:"status"`
-}
-
-func (response UnsubscribeFromThread200JSONResponse) VisitUnsubscribeFromThreadResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type UnsubscribeFromThread401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response UnsubscribeFromThread401JSONResponse) VisitUnsubscribeFromThreadResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type UnsubscribeFromThread404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response UnsubscribeFromThread404JSONResponse) VisitUnsubscribeFromThreadResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -3576,18 +3326,9 @@ type StrictServerInterface interface {
 	// Remove reaction from message
 	// (POST /messages/{id}/reactions/remove)
 	RemoveReaction(ctx context.Context, request RemoveReactionRequestObject) (RemoveReactionResponseObject, error)
-	// Subscribe to thread
-	// (POST /messages/{id}/subscribe)
-	SubscribeToThread(ctx context.Context, request SubscribeToThreadRequestObject) (SubscribeToThreadResponseObject, error)
-	// Get thread subscription status
-	// (GET /messages/{id}/subscription)
-	GetThreadSubscription(ctx context.Context, request GetThreadSubscriptionRequestObject) (GetThreadSubscriptionResponseObject, error)
 	// List thread replies
 	// (POST /messages/{id}/thread/list)
 	ListThread(ctx context.Context, request ListThreadRequestObject) (ListThreadResponseObject, error)
-	// Unsubscribe from thread
-	// (POST /messages/{id}/unsubscribe)
-	UnsubscribeFromThread(ctx context.Context, request UnsubscribeFromThreadRequestObject) (UnsubscribeFromThreadResponseObject, error)
 	// Update a message
 	// (POST /messages/{id}/update)
 	UpdateMessage(ctx context.Context, request UpdateMessageRequestObject) (UpdateMessageResponseObject, error)
@@ -4419,58 +4160,6 @@ func (sh *strictHandler) RemoveReaction(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-// SubscribeToThread operation middleware
-func (sh *strictHandler) SubscribeToThread(w http.ResponseWriter, r *http.Request, id MessageId) {
-	var request SubscribeToThreadRequestObject
-
-	request.Id = id
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.SubscribeToThread(ctx, request.(SubscribeToThreadRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SubscribeToThread")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SubscribeToThreadResponseObject); ok {
-		if err := validResponse.VisitSubscribeToThreadResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetThreadSubscription operation middleware
-func (sh *strictHandler) GetThreadSubscription(w http.ResponseWriter, r *http.Request, id MessageId) {
-	var request GetThreadSubscriptionRequestObject
-
-	request.Id = id
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetThreadSubscription(ctx, request.(GetThreadSubscriptionRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetThreadSubscription")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetThreadSubscriptionResponseObject); ok {
-		if err := validResponse.VisitGetThreadSubscriptionResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // ListThread operation middleware
 func (sh *strictHandler) ListThread(w http.ResponseWriter, r *http.Request, id MessageId) {
 	var request ListThreadRequestObject
@@ -4497,32 +4186,6 @@ func (sh *strictHandler) ListThread(w http.ResponseWriter, r *http.Request, id M
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListThreadResponseObject); ok {
 		if err := validResponse.VisitListThreadResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// UnsubscribeFromThread operation middleware
-func (sh *strictHandler) UnsubscribeFromThread(w http.ResponseWriter, r *http.Request, id MessageId) {
-	var request UnsubscribeFromThreadRequestObject
-
-	request.Id = id
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.UnsubscribeFromThread(ctx, request.(UnsubscribeFromThreadRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "UnsubscribeFromThread")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(UnsubscribeFromThreadResponseObject); ok {
-		if err := validResponse.VisitUnsubscribeFromThreadResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

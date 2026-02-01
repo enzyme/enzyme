@@ -17,6 +17,8 @@ import {
   DocumentIcon,
   PaperClipIcon,
   PaperAirplaneIcon,
+  BellIcon,
+  BellSlashIcon,
 } from "@heroicons/react/24/outline";
 import {
   useThreadMessages,
@@ -24,6 +26,9 @@ import {
   useMessage,
   useAuth,
   useUploadFile,
+  useThreadSubscription,
+  useSubscribeToThread,
+  useUnsubscribeFromThread,
 } from "../../hooks";
 import { useThreadPanel, useProfilePanel } from "../../hooks/usePanel";
 import { Avatar, MessageSkeleton } from "../ui";
@@ -71,6 +76,23 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useThreadMessages(messageId);
 
+  // Thread subscription
+  const { data: subscriptionData, isLoading: isLoadingSubscription } =
+    useThreadSubscription(messageId);
+  const subscribe = useSubscribeToThread();
+  const unsubscribe = useUnsubscribeFromThread();
+
+  const subscriptionStatus = subscriptionData?.status ?? "none";
+  const isSubscribed = subscriptionStatus === "subscribed";
+
+  const handleToggleSubscription = () => {
+    if (isSubscribed) {
+      unsubscribe.mutate(messageId);
+    } else {
+      subscribe.mutate(messageId);
+    }
+  };
+
   // Try to get parent message from cache first
   const cachedMessage = getParentMessageFromCache(queryClient, messageId);
 
@@ -92,12 +114,33 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <h3 className="font-semibold text-gray-900 dark:text-white">Thread</h3>
-        <button
-          onClick={closeThread}
-          className="p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-        >
-          <XMarkIcon className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleToggleSubscription}
+            disabled={isLoadingSubscription || subscribe.isPending || unsubscribe.isPending}
+            className={cn(
+              "p-1 rounded transition-colors",
+              isSubscribed
+                ? "text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700",
+              (isLoadingSubscription || subscribe.isPending || unsubscribe.isPending) &&
+                "opacity-50 cursor-not-allowed"
+            )}
+            title={isSubscribed ? "Unsubscribe from thread" : "Subscribe to thread"}
+          >
+            {isSubscribed ? (
+              <BellIcon className="w-4 h-4" />
+            ) : (
+              <BellSlashIcon className="w-4 h-4" />
+            )}
+          </button>
+          <button
+            onClick={closeThread}
+            className="p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          >
+            <XMarkIcon className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Loading state for parent message */}

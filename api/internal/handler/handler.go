@@ -4,12 +4,14 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/feather/api/internal/openapi"
 	"github.com/feather/api/internal/auth"
 	"github.com/feather/api/internal/channel"
 	"github.com/feather/api/internal/file"
 	"github.com/feather/api/internal/message"
+	"github.com/feather/api/internal/notification"
+	"github.com/feather/api/internal/openapi"
 	"github.com/feather/api/internal/sse"
+	"github.com/feather/api/internal/thread"
 	"github.com/feather/api/internal/user"
 	"github.com/feather/api/internal/workspace"
 )
@@ -19,45 +21,51 @@ var _ openapi.StrictServerInterface = (*Handler)(nil)
 
 // Handler implements the generated StrictServerInterface
 type Handler struct {
-	authService    *auth.Service
-	sessionManager *auth.SessionManager
-	userRepo       *user.Repository
-	workspaceRepo  *workspace.Repository
-	channelRepo    *channel.Repository
-	messageRepo    *message.Repository
-	fileRepo       *file.Repository
-	hub            *sse.Hub
-	storagePath    string
-	maxUploadSize  int64
+	authService         *auth.Service
+	sessionManager      *auth.SessionManager
+	userRepo            *user.Repository
+	workspaceRepo       *workspace.Repository
+	channelRepo         *channel.Repository
+	messageRepo         *message.Repository
+	fileRepo            *file.Repository
+	threadRepo          *thread.Repository
+	notificationService *notification.Service
+	hub                 *sse.Hub
+	storagePath         string
+	maxUploadSize       int64
 }
 
 // Dependencies holds all dependencies for the Handler
 type Dependencies struct {
-	AuthService    *auth.Service
-	SessionManager *auth.SessionManager
-	UserRepo       *user.Repository
-	WorkspaceRepo  *workspace.Repository
-	ChannelRepo    *channel.Repository
-	MessageRepo    *message.Repository
-	FileRepo       *file.Repository
-	Hub            *sse.Hub
-	StoragePath    string
-	MaxUploadSize  int64
+	AuthService         *auth.Service
+	SessionManager      *auth.SessionManager
+	UserRepo            *user.Repository
+	WorkspaceRepo       *workspace.Repository
+	ChannelRepo         *channel.Repository
+	MessageRepo         *message.Repository
+	FileRepo            *file.Repository
+	ThreadRepo          *thread.Repository
+	NotificationService *notification.Service
+	Hub                 *sse.Hub
+	StoragePath         string
+	MaxUploadSize       int64
 }
 
 // New creates a new Handler with all dependencies
 func New(deps Dependencies) *Handler {
 	return &Handler{
-		authService:    deps.AuthService,
-		sessionManager: deps.SessionManager,
-		userRepo:       deps.UserRepo,
-		workspaceRepo:  deps.WorkspaceRepo,
-		channelRepo:    deps.ChannelRepo,
-		messageRepo:    deps.MessageRepo,
-		fileRepo:       deps.FileRepo,
-		hub:            deps.Hub,
-		storagePath:    deps.StoragePath,
-		maxUploadSize:  deps.MaxUploadSize,
+		authService:         deps.AuthService,
+		sessionManager:      deps.SessionManager,
+		userRepo:            deps.UserRepo,
+		workspaceRepo:       deps.WorkspaceRepo,
+		channelRepo:         deps.ChannelRepo,
+		messageRepo:         deps.MessageRepo,
+		fileRepo:            deps.FileRepo,
+		threadRepo:          deps.ThreadRepo,
+		notificationService: deps.NotificationService,
+		hub:                 deps.Hub,
+		storagePath:         deps.StoragePath,
+		maxUploadSize:       deps.MaxUploadSize,
 	}
 }
 

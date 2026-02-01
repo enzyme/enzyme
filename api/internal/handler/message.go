@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/feather/api/internal/openapi"
 	"github.com/feather/api/internal/channel"
 	"github.com/feather/api/internal/file"
 	"github.com/feather/api/internal/message"
+	"github.com/feather/api/internal/notification"
+	"github.com/feather/api/internal/openapi"
 	"github.com/feather/api/internal/sse"
 	"github.com/feather/api/internal/workspace"
 )
@@ -96,32 +97,52 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 	}
 
 	// Validate thread parent if provided
+	var threadParent *message.Message
 	if request.Body.ThreadParentId != nil {
-		parent, err := h.messageRepo.GetByID(ctx, *request.Body.ThreadParentId)
+		var err error
+		threadParent, err = h.messageRepo.GetByID(ctx, *request.Body.ThreadParentId)
 		if err != nil {
 			if errors.Is(err, message.ErrMessageNotFound) {
 				return nil, errors.New("thread parent message not found")
 			}
 			return nil, err
 		}
-		if parent.ChannelID != string(request.Id) {
+		if threadParent.ChannelID != string(request.Id) {
 			return nil, errors.New("thread parent must be in the same channel")
 		}
 		// Can't reply to a reply
-		if parent.ThreadParentID != nil {
+		if threadParent.ThreadParentID != nil {
 			return nil, errors.New("cannot reply to a thread reply")
 		}
+	}
+
+	// Parse mentions from content
+	var mentions []string
+	if h.notificationService != nil && content != "" {
+		mentions, _ = notification.ParseMentions(ctx, h.userRepo, ch.WorkspaceID, content)
 	}
 
 	msg := &message.Message{
 		ChannelID:      string(request.Id),
 		UserID:         &userID,
 		Content:        content,
+		Mentions:       mentions,
 		ThreadParentID: request.Body.ThreadParentId,
 	}
 
 	if err := h.messageRepo.Create(ctx, msg); err != nil {
 		return nil, err
+	}
+
+	// Handle thread subscription auto-subscribe
+	if threadParent != nil && h.threadRepo != nil {
+		// Auto-subscribe the sender to the thread (respects explicit unsubscribe)
+		_ = h.threadRepo.AutoSubscribe(ctx, threadParent.ID, userID)
+
+		// If this is the first reply, auto-subscribe the thread author
+		if threadParent.ReplyCount == 0 && threadParent.UserID != nil && *threadParent.UserID != userID {
+			_ = h.threadRepo.AutoSubscribe(ctx, threadParent.ID, *threadParent.UserID)
+		}
 	}
 
 	// Link attachments to the message
@@ -154,6 +175,35 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 			Type: sse.EventMessageNew,
 			Data: apiMsg,
 		})
+	}
+
+	// Trigger notifications
+	if h.notificationService != nil {
+		// Get sender's display name
+		senderName := ""
+		if sender, err := h.userRepo.GetByID(ctx, userID); err == nil {
+			senderName = sender.DisplayName
+		}
+
+		channelInfo := &notification.ChannelInfo{
+			ID:          ch.ID,
+			WorkspaceID: ch.WorkspaceID,
+			Name:        ch.Name,
+			Type:        ch.Type,
+		}
+		msgInfo := &notification.MessageInfo{
+			ID:             msg.ID,
+			ChannelID:      msg.ChannelID,
+			SenderID:       userID,
+			SenderName:     senderName,
+			Content:        msg.Content,
+			Mentions:       mentions,
+			ThreadParentID: msg.ThreadParentID,
+		}
+		// Send notifications asynchronously
+		go func() {
+			_ = h.notificationService.Notify(context.Background(), channelInfo, msgInfo)
+		}()
 	}
 
 	return openapi.SendMessage200JSONResponse{

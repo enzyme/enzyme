@@ -584,6 +584,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/MarkReadResponse'
 
+  /channels/{id}/notifications:
+    get:
+      tags: [channels]
+      summary: Get channel notification preferences
+      operationId: getChannelNotifications
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      responses:
+        '200':
+          description: Notification preferences
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  preferences:
+                    $ref: '#/components/schemas/NotificationPreferences'
+    post:
+      tags: [channels]
+      summary: Update channel notification preferences
+      operationId: updateChannelNotifications
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferences'
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  preferences:
+                    $ref: '#/components/schemas/NotificationPreferences'
+
   /workspaces/{wid}/channels/mark-all-read:
     post:
       tags: [channels]
@@ -600,6 +644,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
+
+  /workspaces/{wid}/unreads:
+    post:
+      tags: [messages]
+      summary: List all unread messages across channels
+      operationId: listAllUnreads
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limit:
+                  type: integer
+                  default: 50
+                cursor:
+                  type: string
+      responses:
+        '200':
+          description: List of unread messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadMessagesResult'
 
   # Message endpoints
   /messages/{id}:
@@ -816,6 +888,81 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageListResult'
+
+  /messages/{id}/subscription:
+    get:
+      tags: [messages]
+      summary: Get thread subscription status
+      operationId: getThreadSubscription
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      responses:
+        '200':
+          description: Thread subscription status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    $ref: '#/components/schemas/ThreadSubscriptionStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /messages/{id}/subscribe:
+    post:
+      tags: [messages]
+      summary: Subscribe to thread
+      operationId: subscribeToThread
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      responses:
+        '200':
+          description: Subscribed to thread
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    $ref: '#/components/schemas/ThreadSubscriptionStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /messages/{id}/unsubscribe:
+    post:
+      tags: [messages]
+      summary: Unsubscribe from thread
+      operationId: unsubscribeFromThread
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      responses:
+        '200':
+          description: Unsubscribed from thread
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    $ref: '#/components/schemas/ThreadSubscriptionStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # File endpoints
   /channels/{id}/files/upload:
@@ -1435,6 +1582,30 @@ components:
         next_cursor:
           type: string
 
+    UnreadMessage:
+      allOf:
+        - $ref: '#/components/schemas/MessageWithUser'
+        - type: object
+          required: [channel_name, channel_type]
+          properties:
+            channel_name:
+              type: string
+            channel_type:
+              $ref: '#/components/schemas/ChannelType'
+
+    UnreadMessagesResult:
+      type: object
+      required: [messages, has_more]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/UnreadMessage'
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+
     # API response schemas
     ApiError:
       type: object
@@ -1495,6 +1666,7 @@ components:
         - typing.start
         - typing.stop
         - presence.changed
+        - notification
 
     SSEEvent:
       oneOf:
@@ -1514,6 +1686,7 @@ components:
         - $ref: '#/components/schemas/SSEEventTypingStart'
         - $ref: '#/components/schemas/SSEEventTypingStop'
         - $ref: '#/components/schemas/SSEEventPresenceChanged'
+        - $ref: '#/components/schemas/SSEEventNotification'
       discriminator:
         propertyName: type
         mapping:
@@ -1533,6 +1706,7 @@ components:
           typing.start: '#/components/schemas/SSEEventTypingStart'
           typing.stop: '#/components/schemas/SSEEventTypingStop'
           presence.changed: '#/components/schemas/SSEEventPresenceChanged'
+          notification: '#/components/schemas/SSEEventNotification'
 
     SSEEventConnected:
       type: object
@@ -1741,6 +1915,55 @@ components:
           enum: [presence.changed]
         data:
           $ref: '#/components/schemas/PresenceData'
+
+    SSEEventNotification:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [notification]
+        data:
+          $ref: '#/components/schemas/NotificationData'
+
+    NotificationData:
+      type: object
+      required: [type, channel_id, message_id]
+      properties:
+        type:
+          type: string
+          enum: [mention, dm, channel, here, everyone, thread_reply]
+        channel_id:
+          type: string
+        message_id:
+          type: string
+        channel_name:
+          type: string
+        sender_name:
+          type: string
+        preview:
+          type: string
+        thread_parent_id:
+          type: string
+
+    ThreadSubscriptionStatus:
+      type: string
+      enum: [subscribed, unsubscribed, none]
+
+    NotifyLevel:
+      type: string
+      enum: [all, mentions, none]
+
+    NotificationPreferences:
+      type: object
+      required: [notify_level, email_enabled]
+      properties:
+        notify_level:
+          $ref: '#/components/schemas/NotifyLevel'
+        email_enabled:
+          type: boolean
 
     TypingEventData:
       type: object
