@@ -5,6 +5,12 @@ export interface MentionOption {
   avatarUrl?: string;
 }
 
+export interface ParsedMention {
+  type: 'user' | 'special';
+  id: string;
+  raw: string;
+}
+
 export interface MentionTrigger {
   isActive: boolean;
   query: string;
@@ -164,4 +170,51 @@ export function getCaretCoordinates(
   document.body.removeChild(mirror);
 
   return { top, left };
+}
+
+/**
+ * Parse stored message content and extract mentions.
+ * Returns an array of segments (text or mention) for rendering.
+ */
+export interface MessageSegment {
+  type: 'text' | 'user_mention' | 'special_mention';
+  content: string; // For text: the text content. For mentions: the user ID or special ID
+}
+
+export function parseStoredMentions(content: string): MessageSegment[] {
+  const segments: MessageSegment[] = [];
+  // Match <@userId> for user mentions and <!special> for special mentions
+  const mentionRegex = /<(@|!)([^>]+)>/g;
+
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mentionRegex.exec(content)) !== null) {
+    // Add text before this mention
+    if (match.index > lastIndex) {
+      segments.push({
+        type: 'text',
+        content: content.slice(lastIndex, match.index),
+      });
+    }
+
+    // Add the mention
+    const isUser = match[1] === '@';
+    segments.push({
+      type: isUser ? 'user_mention' : 'special_mention',
+      content: match[2], // The ID
+    });
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text after last mention
+  if (lastIndex < content.length) {
+    segments.push({
+      type: 'text',
+      content: content.slice(lastIndex),
+    });
+  }
+
+  return segments;
 }

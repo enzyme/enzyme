@@ -5,6 +5,7 @@ import {
   type KeyboardEvent,
   type FormEvent,
 } from "react";
+import { useParams } from "react-router-dom";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   Button as AriaButton,
@@ -29,14 +30,16 @@ import {
   useThreadSubscription,
   useSubscribeToThread,
   useUnsubscribeFromThread,
+  useWorkspaceMembers,
 } from "../../hooks";
 import { useThreadPanel, useProfilePanel } from "../../hooks/usePanel";
 import { Avatar, MessageSkeleton } from "../ui";
 import { ReactionPicker } from "../message/ReactionPicker";
 import { AttachmentDisplay } from "../message/AttachmentDisplay";
+import { MessageContent } from "../message/MessageContent";
 import { cn, formatTime } from "../../lib/utils";
 import { messagesApi } from "../../api/messages";
-import type { MessageWithUser, MessageListResult } from "@feather/api-client";
+import type { MessageWithUser, MessageListResult, WorkspaceMemberWithUser } from "@feather/api-client";
 
 function ClickableName({
   userId,
@@ -71,10 +74,12 @@ interface ThreadPanelProps {
 }
 
 export function ThreadPanel({ messageId }: ThreadPanelProps) {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
   const queryClient = useQueryClient();
   const { closeThread } = useThreadPanel();
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useThreadMessages(messageId);
+  const { data: membersData } = useWorkspaceMembers(workspaceId);
 
   // Thread subscription
   const { data: subscriptionData, isLoading: isLoadingSubscription } =
@@ -160,7 +165,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
       )}
 
       {/* Parent message */}
-      {parentMessage && <ParentMessage message={parentMessage} />}
+      {parentMessage && <ParentMessage message={parentMessage} members={membersData?.members} />}
 
       {/* Thread messages */}
       <div className="flex-1 overflow-y-auto">
@@ -186,6 +191,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
                 key={message.id}
                 message={message}
                 parentMessageId={messageId}
+                members={membersData?.members}
               />
             ))}
           </>
@@ -203,7 +209,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
   );
 }
 
-function ParentMessage({ message }: { message: MessageWithUser }) {
+function ParentMessage({ message, members }: { message: MessageWithUser; members?: WorkspaceMemberWithUser[] }) {
   const { openProfile } = useProfilePanel();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -378,7 +384,7 @@ function ParentMessage({ message }: { message: MessageWithUser }) {
           </div>
           {message.content && (
             <div className="text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
-              {message.content}
+              <MessageContent content={message.content} members={members} />
             </div>
           )}
           {message.attachments && message.attachments.length > 0 && (
@@ -437,9 +443,10 @@ function ParentMessage({ message }: { message: MessageWithUser }) {
 interface ThreadMessageProps {
   message: MessageWithUser;
   parentMessageId: string;
+  members?: WorkspaceMemberWithUser[];
 }
 
-function ThreadMessage({ message, parentMessageId }: ThreadMessageProps) {
+function ThreadMessage({ message, parentMessageId, members }: ThreadMessageProps) {
   const { openProfile } = useProfilePanel();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -594,7 +601,7 @@ function ThreadMessage({ message, parentMessageId }: ThreadMessageProps) {
           </div>
           {message.content && (
             <div className="text-sm text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
-              {message.content}
+              <MessageContent content={message.content} members={members} />
             </div>
           )}
           {message.attachments && message.attachments.length > 0 && (

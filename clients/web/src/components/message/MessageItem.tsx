@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarStack, Menu, MenuItem, Modal, Button, Tooltip } from '../ui';
 import { ReactionPicker } from './ReactionPicker';
 import { AttachmentDisplay } from './AttachmentDisplay';
+import { MessageContent } from './MessageContent';
 import { useAuth, useAddReaction, useRemoveReaction, useWorkspaceMembers } from '../../hooks';
 import { useMarkMessageUnread, useUpdateMessage, useDeleteMessage } from '../../hooks/useMessages';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
@@ -224,7 +225,10 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
             <>
               {message.content && (
                 <div className="text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
-                  {message.content}
+                  <MessageContent
+                    content={message.content}
+                    members={membersData?.members}
+                  />
                 </div>
               )}
               {message.attachments && message.attachments.length > 0 && (
