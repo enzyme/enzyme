@@ -136,7 +136,10 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
 
   return (
     <div
-      className="group px-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 relative"
+      className={cn(
+        "group px-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 relative",
+        showDropdown && "bg-gray-50 dark:bg-gray-800/50"
+      )}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
         if (!showDropdown) {
