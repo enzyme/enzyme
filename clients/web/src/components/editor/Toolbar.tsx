@@ -1,4 +1,5 @@
 import type { Editor } from '@tiptap/react';
+import { useEditorState } from '@tiptap/react';
 import { ToggleButton } from 'react-aria-components';
 import { tv } from 'tailwind-variants';
 import {
@@ -61,6 +62,28 @@ interface ToolbarProps {
 export function Toolbar({ editor }: ToolbarProps) {
   const s = toolbar();
 
+  // Use useEditorState to reactively track active states
+  const editorState = useEditorState({
+    editor,
+    selector: (ctx) => {
+      if (!ctx.editor) {
+        return null;
+      }
+      return {
+        isBold: ctx.editor.isActive('bold'),
+        isItalic: ctx.editor.isActive('italic'),
+        isUnderline: ctx.editor.isActive('underline'),
+        isStrike: ctx.editor.isActive('strike'),
+        isLink: ctx.editor.isActive('link'),
+        isOrderedList: ctx.editor.isActive('orderedList'),
+        isBulletList: ctx.editor.isActive('bulletList'),
+        isBlockquote: ctx.editor.isActive('blockquote'),
+        isCode: ctx.editor.isActive('code'),
+        isCodeBlock: ctx.editor.isActive('codeBlock'),
+      };
+    },
+  });
+
   if (!editor) {
     return null;
   }
@@ -83,10 +106,10 @@ export function Toolbar({ editor }: ToolbarProps) {
 
   return (
     <div className={s.container()}>
-      {/* Text formatting */}
+      {/* Text formatting: Bold, Italic, Underline, Strikethrough */}
       <ToggleButton
-        isSelected={editor.isActive('bold')}
-        onChange={() => editor.chain().focus().toggleBold().run()}
+        isSelected={editorState?.isBold ?? false}
+        onPress={() => editor.chain().focus().toggleBold().run()}
         className={s.button()}
         aria-label="Bold (Cmd+B)"
       >
@@ -94,8 +117,8 @@ export function Toolbar({ editor }: ToolbarProps) {
       </ToggleButton>
 
       <ToggleButton
-        isSelected={editor.isActive('italic')}
-        onChange={() => editor.chain().focus().toggleItalic().run()}
+        isSelected={editorState?.isItalic ?? false}
+        onPress={() => editor.chain().focus().toggleItalic().run()}
         className={s.button()}
         aria-label="Italic (Cmd+I)"
       >
@@ -103,50 +126,59 @@ export function Toolbar({ editor }: ToolbarProps) {
       </ToggleButton>
 
       <ToggleButton
-        isSelected={editor.isActive('strike')}
-        onChange={() => editor.chain().focus().toggleStrike().run()}
-        className={s.button()}
-        aria-label="Strikethrough (Cmd+Shift+X)"
-      >
-        <StrikethroughIcon className={s.icon()} />
-      </ToggleButton>
-
-      <ToggleButton
-        isSelected={editor.isActive('underline')}
-        onChange={() => editor.chain().focus().toggleUnderline().run()}
+        isSelected={editorState?.isUnderline ?? false}
+        onPress={() => editor.chain().focus().toggleUnderline().run()}
         className={s.button()}
         aria-label="Underline (Cmd+U)"
       >
         <UnderlineIcon className={s.icon()} />
       </ToggleButton>
 
-      <div className={s.separator()} />
-
-      {/* Code */}
       <ToggleButton
-        isSelected={editor.isActive('code')}
-        onChange={() => editor.chain().focus().toggleCode().run()}
+        isSelected={editorState?.isStrike ?? false}
+        onPress={() => editor.chain().focus().toggleStrike().run()}
         className={s.button()}
-        aria-label="Inline code (Cmd+E)"
+        aria-label="Strikethrough (Cmd+Shift+X)"
       >
-        <CodeBracketIcon className={s.icon()} />
-      </ToggleButton>
-
-      <ToggleButton
-        isSelected={editor.isActive('codeBlock')}
-        onChange={() => editor.chain().focus().toggleCodeBlock().run()}
-        className={s.button()}
-        aria-label="Code block"
-      >
-        <CodeBracketSquareIcon className={s.icon()} />
+        <StrikethroughIcon className={s.icon()} />
       </ToggleButton>
 
       <div className={s.separator()} />
 
-      {/* Block formatting */}
+      {/* Link, OrderedList, BulletList */}
       <ToggleButton
-        isSelected={editor.isActive('blockquote')}
-        onChange={() => editor.chain().focus().toggleBlockquote().run()}
+        isSelected={editorState?.isLink ?? false}
+        onPress={addLink}
+        className={s.button()}
+        aria-label="Insert link"
+      >
+        <LinkIcon className={s.icon()} />
+      </ToggleButton>
+
+      <ToggleButton
+        isSelected={editorState?.isOrderedList ?? false}
+        onPress={() => editor.chain().focus().toggleOrderedList().run()}
+        className={s.button()}
+        aria-label="Numbered list"
+      >
+        <NumberedListIcon className={s.icon()} />
+      </ToggleButton>
+
+      <ToggleButton
+        isSelected={editorState?.isBulletList ?? false}
+        onPress={() => editor.chain().focus().toggleBulletList().run()}
+        className={s.button()}
+        aria-label="Bullet list"
+      >
+        <ListBulletIcon className={s.icon()} />
+      </ToggleButton>
+
+      <div className={s.separator()} />
+
+      {/* Quote, Code, CodeBlock */}
+      <ToggleButton
+        isSelected={editorState?.isBlockquote ?? false}
+        onPress={() => editor.chain().focus().toggleBlockquote().run()}
         className={s.button()}
         aria-label="Blockquote"
       >
@@ -154,33 +186,21 @@ export function Toolbar({ editor }: ToolbarProps) {
       </ToggleButton>
 
       <ToggleButton
-        isSelected={editor.isActive('bulletList')}
-        onChange={() => editor.chain().focus().toggleBulletList().run()}
+        isSelected={editorState?.isCode ?? false}
+        onPress={() => editor.chain().focus().toggleCode().run()}
         className={s.button()}
-        aria-label="Bullet list"
+        aria-label="Inline code (Cmd+E)"
       >
-        <ListBulletIcon className={s.icon()} />
+        <CodeBracketIcon className={s.icon()} />
       </ToggleButton>
 
       <ToggleButton
-        isSelected={editor.isActive('orderedList')}
-        onChange={() => editor.chain().focus().toggleOrderedList().run()}
+        isSelected={editorState?.isCodeBlock ?? false}
+        onPress={() => editor.chain().focus().toggleCodeBlock().run()}
         className={s.button()}
-        aria-label="Numbered list"
+        aria-label="Code block"
       >
-        <NumberedListIcon className={s.icon()} />
-      </ToggleButton>
-
-      <div className={s.separator()} />
-
-      {/* Link */}
-      <ToggleButton
-        isSelected={editor.isActive('link')}
-        onChange={addLink}
-        className={s.button()}
-        aria-label="Insert link"
-      >
-        <LinkIcon className={s.icon()} />
+        <CodeBracketSquareIcon className={s.icon()} />
       </ToggleButton>
     </div>
   );

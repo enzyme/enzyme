@@ -244,10 +244,12 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     );
 
     const editor = useEditor({
+      immediatelyRender: false,
       extensions: [
         StarterKit.configure({
           heading: false,
           horizontalRule: false,
+          trailingNode: false,
         }),
         Placeholder.configure({
           placeholder,
@@ -348,6 +350,32 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
           class: 'focus:outline-none',
         },
         handleKeyDown: (view, event) => {
+          // Handle backspace in empty list item - lift out instead of merging with previous
+          if (event.key === 'Backspace') {
+            const { state } = view;
+            const { $from, empty } = state.selection;
+
+            if (empty && $from.parentOffset === 0) {
+              // Check if we're in a list item
+              for (let depth = $from.depth; depth > 0; depth--) {
+                if ($from.node(depth).type.name === 'listItem') {
+                  const listItem = $from.node(depth);
+                  // Check if list item is empty (only contains empty paragraph)
+                  const isEmpty = listItem.childCount === 1 &&
+                    listItem.firstChild?.type.name === 'paragraph' &&
+                    listItem.firstChild?.content.size === 0;
+
+                  if (isEmpty) {
+                    // Lift out of list instead of merging with previous item
+                    editor?.chain().focus().liftListItem('listItem').run();
+                    return true;
+                  }
+                  break;
+                }
+              }
+            }
+          }
+
           // Shift+Enter in lists should create new list item
           if (event.key === 'Enter' && event.shiftKey) {
             const { state } = view;
