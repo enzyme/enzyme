@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useState, useRef, useEffect } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import { Button as AriaButton } from "react-aria-components";
 import {
   PlusIcon,
   SunIcon,
@@ -9,16 +10,17 @@ import {
   UserPlusIcon,
   ServerStackIcon,
   ArrowRightStartOnRectangleIcon,
-} from '@heroicons/react/24/outline';
-import { useAuth } from '../../hooks';
-import { Avatar, Modal, Button, Input, toast } from '../ui';
-import { useCreateWorkspace } from '../../hooks/useWorkspaces';
-import { useDarkMode } from '../../hooks/useDarkMode';
-import { useProfilePanel } from '../../hooks/usePanel';
-import { cn, getAvatarColor } from '../../lib/utils';
+} from "@heroicons/react/24/outline";
+import { useAuth } from "../../hooks";
+import { Avatar, Modal, Button, Input, toast, Tooltip } from "../ui";
+import { useCreateWorkspace } from "../../hooks/useWorkspaces";
+import { useDarkMode } from "../../hooks/useDarkMode";
+import { useProfilePanel } from "../../hooks/usePanel";
+import { cn, getAvatarColor } from "../../lib/utils";
 
 export function WorkspaceSwitcher() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const navigate = useNavigate();
   const { workspaces } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { darkMode, toggle: toggleDarkMode } = useDarkMode();
@@ -28,41 +30,42 @@ export function WorkspaceSwitcher() {
       {/* Workspaces */}
       <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto">
         {workspaces?.map((ws) => (
-          <Link
-            key={ws.id}
-            to={`/workspaces/${ws.id}`}
-            className={cn(
-              'w-10 h-10 rounded-lg flex items-center justify-center transition-all hover:rounded-xl',
-              ws.id === workspaceId
-                ? 'bg-primary-600 rounded-xl'
-                : ws.icon_url
-                  ? ''
-                  : `${getAvatarColor(ws.id)} hover:opacity-80`
-            )}
-            title={ws.name}
-          >
-            {ws.icon_url ? (
-              <img
-                src={ws.icon_url}
-                alt={ws.name}
-                className="w-full h-full rounded-lg object-cover"
-              />
-            ) : (
-              <span className="text-white font-semibold text-sm">
-                {ws.name.slice(0, 2).toUpperCase()}
-              </span>
-            )}
-          </Link>
+          <Tooltip key={ws.id} content={ws.name} placement="right">
+            <AriaButton
+              onPress={() => navigate(`/workspaces/${ws.id}`)}
+              className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                ws.id === workspaceId
+                  ? "bg-primary-600"
+                  : ws.icon_url
+                    ? ""
+                    : `${getAvatarColor(ws.id)} hover:opacity-80`,
+              )}
+            >
+              {ws.icon_url ? (
+                <img
+                  src={ws.icon_url}
+                  alt={ws.name}
+                  className="w-full h-full rounded-lg object-cover"
+                />
+              ) : (
+                <span className="text-white font-semibold text-sm">
+                  {ws.name.slice(0, 2).toUpperCase()}
+                </span>
+              )}
+            </AriaButton>
+          </Tooltip>
         ))}
 
         {/* Add Workspace Button */}
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="w-10 h-10 rounded-lg flex items-center justify-center bg-transparent border-2 border-dashed border-gray-300 dark:border-gray-500 text-gray-400 hover:border-gray-400 dark:hover:border-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
-          title="Create workspace"
-        >
-          <PlusIcon className="w-5 h-5" />
-        </button>
+        <Tooltip content="Add workspace" placement="right">
+          <AriaButton
+            onPress={() => setIsCreateModalOpen(true)}
+            className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <PlusIcon className="w-5 h-5" />
+          </AriaButton>
+        </Tooltip>
       </div>
 
       {/* Bottom section */}
@@ -70,8 +73,8 @@ export function WorkspaceSwitcher() {
         {/* Dark mode toggle */}
         <button
           onClick={toggleDarkMode}
-          className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          title={darkMode ? 'Light mode' : 'Dark mode'}
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          title={darkMode ? "Light mode" : "Dark mode"}
         >
           {darkMode ? (
             <SunIcon className="w-5 h-5" />
@@ -107,8 +110,9 @@ function UserMenu() {
       }
     }
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isOpen]);
 
@@ -125,7 +129,7 @@ function UserMenu() {
       <button onClick={() => setIsOpen(!isOpen)}>
         <Avatar
           src={user?.avatar_url}
-          name={user?.display_name || 'User'}
+          name={user?.display_name || "User"}
           id={user?.id}
           size="md"
           status="online"
@@ -205,9 +209,15 @@ function UserMenu() {
   );
 }
 
-function CreateWorkspaceModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
+function CreateWorkspaceModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
   const createWorkspace = useCreateWorkspace();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -215,12 +225,15 @@ function CreateWorkspaceModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
 
     try {
       await createWorkspace.mutateAsync({ name, slug });
-      toast('Workspace created!', 'success');
+      toast("Workspace created!", "success");
       onClose();
-      setName('');
-      setSlug('');
+      setName("");
+      setSlug("");
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to create workspace', 'error');
+      toast(
+        err instanceof Error ? err.message : "Failed to create workspace",
+        "error",
+      );
     }
   };
 
@@ -230,8 +243,8 @@ function CreateWorkspaceModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
     setSlug(
       value
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, ""),
     );
   };
 
