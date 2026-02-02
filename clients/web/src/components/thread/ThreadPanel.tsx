@@ -2,25 +2,21 @@ import {
   useState,
   useRef,
   useCallback,
-  type KeyboardEvent,
   type FormEvent,
 } from "react";
 import { useParams } from "react-router-dom";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import {
-  Button as AriaButton,
   DropZone,
-  FileTrigger,
 } from "react-aria-components";
 import {
   XMarkIcon,
   FaceSmileIcon,
   DocumentIcon,
-  PaperClipIcon,
-  PaperAirplaneIcon,
   BellIcon,
   BellSlashIcon,
 } from "@heroicons/react/24/outline";
+import { RichTextEditor, type RichTextEditorRef } from "../editor";
 import {
   useThreadMessages,
   useSendThreadReply,
@@ -31,6 +27,7 @@ import {
   useSubscribeToThread,
   useUnsubscribeFromThread,
   useWorkspaceMembers,
+  useChannels,
 } from "../../hooks";
 import { useThreadPanel, useProfilePanel } from "../../hooks/usePanel";
 import { Avatar, MessageSkeleton } from "../ui";
@@ -676,14 +673,16 @@ const ACCEPTED_IMAGE_TYPES = [
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 function ThreadComposer({ parentMessageId, channelId }: ThreadComposerProps) {
-  const [content, setContent] = useState("");
+  const { workspaceId } = useParams<{ workspaceId: string }>();
   const [pendingAttachments, setPendingAttachments] = useState<
     PendingAttachment[]
   >([]);
   const [isDragging, setIsDragging] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<RichTextEditorRef>(null);
   const sendReply = useSendThreadReply(parentMessageId, channelId);
   const uploadFile = useUploadFile(channelId);
+  const { data: membersData } = useWorkspaceMembers(workspaceId);
+  const { data: channelsData } = useChannels(workspaceId);
 
   const uploadAttachment = useCallback(
     async (attachment: PendingAttachment) => {
@@ -744,48 +743,50 @@ function ThreadComposer({ parentMessageId, channelId }: ThreadComposerProps) {
     .filter((a) => a.status === "complete" && a.uploadedId)
     .map((a) => a.uploadedId!);
 
-  const hasContent = content.trim() !== "";
   const hasAttachments = completedAttachmentIds.length > 0;
   const isUploading = pendingAttachments.some((a) => a.status === "uploading");
-  const canSend =
-    (hasContent || hasAttachments) && !sendReply.isPending && !isUploading;
 
-  const handleSubmit = async (e?: FormEvent) => {
-    e?.preventDefault();
+  const handleSubmit = async (content: string) => {
+    const hasContent = content.trim() !== "";
+    const canSend =
+      (hasContent || hasAttachments) && !sendReply.isPending && !isUploading;
+
     if (!canSend) return;
 
     try {
       await sendReply.mutateAsync({
-        content: content.trim() || undefined,
+        content: hasContent ? content : undefined,
         attachment_ids: hasAttachments ? completedAttachmentIds : undefined,
       });
-      setContent("");
       pendingAttachments.forEach((a) => {
         if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
       });
       setPendingAttachments([]);
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-      }
     } catch {
       // Error handled by mutation
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
+  const handleFormSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const content = editorRef.current?.getContent() || "";
+    handleSubmit(content);
+    editorRef.current?.clear();
   };
 
-  const handleChange = (value: string) => {
-    setContent(value);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  };
+  // Convert workspace members to the format expected by RichTextEditor
+  const workspaceMembers = membersData?.members.map((m) => ({
+    user_id: m.user_id,
+    display_name: m.display_name,
+    avatar_url: m.avatar_url,
+  })) || [];
+
+  // Convert channels to the format expected by RichTextEditor
+  const workspaceChannels = channelsData?.channels.map((c) => ({
+    id: c.id,
+    name: c.name,
+    type: c.type as 'public' | 'private' | 'dm',
+  })) || [];
 
   return (
     <div className="p-3 border-t border-gray-200 dark:border-gray-700">
@@ -842,46 +843,18 @@ function ThreadComposer({ parentMessageId, channelId }: ThreadComposerProps) {
         }}
         className={cn("rounded-lg", isDragging && "ring-2 ring-primary-500")}
       >
-        <form onSubmit={handleSubmit}>
-          <div className="border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500">
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => handleChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Reply..."
-              rows={1}
-              className="w-full px-3 py-2 resize-none bg-transparent text-gray-900 dark:text-white text-sm placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none max-h-24"
-            />
-            <div className="flex items-center justify-between px-1.5 py-1">
-              <FileTrigger
-                acceptedFileTypes={["image/*", ".pdf", ".txt", ".doc", ".docx"]}
-                allowsMultiple
-                onSelect={(files) =>
-                  files && handleFilesSelected(Array.from(files))
-                }
-              >
-                <AriaButton
-                  className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                  aria-label="Attach files"
-                >
-                  <PaperClipIcon className="w-4 h-4" />
-                </AriaButton>
-              </FileTrigger>
-              <button
-                type="submit"
-                disabled={!canSend}
-                className={cn(
-                  "p-1 rounded transition-colors",
-                  canSend
-                    ? "text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20"
-                    : "text-gray-400 cursor-not-allowed",
-                )}
-              >
-                <PaperAirplaneIcon className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+        <form onSubmit={handleFormSubmit}>
+          <RichTextEditor
+            ref={editorRef}
+            placeholder="Reply..."
+            onSubmit={handleSubmit}
+            workspaceMembers={workspaceMembers}
+            workspaceChannels={workspaceChannels}
+            showToolbar={false}
+            disabled={sendReply.isPending}
+            isPending={sendReply.isPending || isUploading}
+            onAttachmentClick={handleFilesSelected}
+          />
         </form>
       </DropZone>
     </div>

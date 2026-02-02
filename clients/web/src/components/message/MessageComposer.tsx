@@ -1,18 +1,14 @@
-import { useState, useRef, useCallback, useEffect, type KeyboardEvent, type FormEvent } from 'react';
-import { Button as AriaButton, DropZone, FileTrigger } from 'react-aria-components';
+import { useState, useRef, useCallback, type FormEvent } from 'react';
+import { DropZone } from 'react-aria-components';
 import {
   DocumentIcon,
   ExclamationCircleIcon,
   XMarkIcon,
-  PaperClipIcon,
-  PaperAirplaneIcon,
 } from '@heroicons/react/24/outline';
-import { useSendMessage, useTyping, useUploadFile, useAuth } from '../../hooks';
-import { useMentions } from '../../hooks/useMentions';
+import { useSendMessage, useTyping, useUploadFile, useAuth, useWorkspaceMembers, useChannels } from '../../hooks';
 import { useTypingUsers } from '../../lib/presenceStore';
 import { cn } from '../../lib/utils';
-import { insertMention, convertMentionsForStorage, getCaretCoordinates, type MentionOption } from '../../lib/mentions';
-import { MentionPopover } from '../ui/MentionPopover';
+import { RichTextEditor, type RichTextEditorRef } from '../editor';
 
 interface MessageComposerProps {
   channelId: string;
@@ -38,34 +34,15 @@ export function MessageComposer({
   workspaceId,
   placeholder = 'Type a message...',
 }: MessageComposerProps) {
-  const [content, setContent] = useState('');
-  const [cursorPosition, setCursorPosition] = useState(0);
-  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [popoverLeftOffset, setPopoverLeftOffset] = useState(0);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const mentionMapRef = useRef<Map<string, string>>(new Map());
+  const editorRef = useRef<RichTextEditorRef>(null);
   const sendMessage = useSendMessage(channelId);
   const uploadFile = useUploadFile(channelId);
   const { onTyping, onStopTyping } = useTyping(workspaceId, channelId);
   const { user } = useAuth();
-
-  const { trigger: mentionTrigger, options: mentionOptions } = useMentions(
-    workspaceId,
-    content,
-    cursorPosition
-  );
-
-  const isMentionPopoverOpen = mentionTrigger?.isActive && mentionOptions.length > 0;
-
-  // Update popover horizontal position when trigger changes
-  useEffect(() => {
-    if (mentionTrigger?.isActive && textareaRef.current) {
-      const pos = getCaretCoordinates(textareaRef.current, mentionTrigger.startIndex);
-      setPopoverLeftOffset(pos.left);
-    }
-  }, [mentionTrigger?.isActive, mentionTrigger?.startIndex]);
+  const { data: membersData } = useWorkspaceMembers(workspaceId);
+  const { data: channelsData } = useChannels(workspaceId);
 
   const typingUsers = useTypingUsers(channelId);
   const otherTypingUsers = typingUsers.filter((u) => u.userId !== user?.id);
@@ -135,136 +112,52 @@ export function MessageComposer({
     .filter((a) => a.status === 'complete' && a.uploadedId)
     .map((a) => a.uploadedId!);
 
-  const hasContent = content.trim() !== '';
-  const hasAttachments = completedAttachmentIds.length > 0;
   const isUploading = pendingAttachments.some((a) => a.status === 'uploading');
-  const canSend = (hasContent || hasAttachments) && !sendMessage.isPending && !isUploading;
+  const hasAttachments = completedAttachmentIds.length > 0;
 
-  const handleMentionSelect = useCallback((option: MentionOption) => {
-    if (!mentionTrigger) return;
-
-    const result = insertMention(content, mentionTrigger, option);
-    setContent(result.content);
-
-    // Track user mentions for conversion on send
-    if (option.type === 'user') {
-      mentionMapRef.current.set(option.displayName, option.id);
-    }
-
-    // Set cursor position after React updates
-    requestAnimationFrame(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(result.cursorPos, result.cursorPos);
-        setCursorPosition(result.cursorPos);
-      }
-    });
-
-    setSelectedMentionIndex(0);
-  }, [content, mentionTrigger]);
-
-  const handleSubmit = async (e?: FormEvent) => {
-    e?.preventDefault();
+  const handleSubmit = async (content: string) => {
+    const hasContent = content.trim() !== '';
+    const canSend = (hasContent || hasAttachments) && !sendMessage.isPending && !isUploading;
 
     if (!canSend) return;
 
     try {
-      // Convert mentions to storage format before sending
-      const processedContent = convertMentionsForStorage(content.trim(), mentionMapRef.current);
-
       await sendMessage.mutateAsync({
-        content: processedContent || undefined,
+        content: hasContent ? content : undefined,
         attachment_ids: hasAttachments ? completedAttachmentIds : undefined,
       });
-      setContent('');
-      mentionMapRef.current.clear();
+
       // Clear attachments and revoke preview URLs
       pendingAttachments.forEach((a) => {
         if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
       });
       setPendingAttachments([]);
       onStopTyping();
-
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-      }
     } catch {
       // Error handling is done via toast in mutation
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Handle mention popover navigation
-    if (isMentionPopoverOpen) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedMentionIndex((prev) =>
-          prev < mentionOptions.length - 1 ? prev + 1 : 0
-        );
-        return;
-      }
-
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedMentionIndex((prev) =>
-          prev > 0 ? prev - 1 : mentionOptions.length - 1
-        );
-        return;
-      }
-
-      if (e.key === 'Enter' || e.key === 'Tab') {
-        e.preventDefault();
-        handleMentionSelect(mentionOptions[selectedMentionIndex]);
-        return;
-      }
-
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        // Clear the trigger by moving cursor
-        setCursorPosition(-1);
-        requestAnimationFrame(() => {
-          if (textareaRef.current) {
-            setCursorPosition(textareaRef.current.selectionStart);
-          }
-        });
-        return;
-      }
-    }
-
-    // Normal Enter to send
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
+  const handleFormSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const content = editorRef.current?.getContent() || '';
+    handleSubmit(content);
+    editorRef.current?.clear();
   };
 
-  const handleChange = (value: string) => {
-    setContent(value);
-    onTyping();
+  // Convert workspace members to the format expected by RichTextEditor
+  const workspaceMembers = membersData?.members.map((m) => ({
+    user_id: m.user_id,
+    display_name: m.display_name,
+    avatar_url: m.avatar_url,
+  })) || [];
 
-    // Update cursor position
-    if (textareaRef.current) {
-      setCursorPosition(textareaRef.current.selectionStart);
-    }
-
-    // Reset selected mention index when query changes
-    setSelectedMentionIndex(0);
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  };
-
-  const handleSelect = () => {
-    if (textareaRef.current) {
-      setCursorPosition(textareaRef.current.selectionStart);
-    }
-  };
-
-  const handleBlur = () => {
-    onStopTyping();
-  };
+  // Convert channels to the format expected by RichTextEditor
+  const workspaceChannels = channelsData?.channels.map((c) => ({
+    id: c.id,
+    name: c.name,
+    type: c.type as 'public' | 'private' | 'dm',
+  })) || [];
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 p-4">
@@ -365,63 +258,19 @@ export function MessageComposer({
             </span>
           </div>
         )}
-        <form onSubmit={handleSubmit}>
-          <div className="relative border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500">
-            {/* Text input */}
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => handleChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onSelect={handleSelect}
-              onClick={handleSelect}
-              onBlur={handleBlur}
-              placeholder={placeholder}
-              rows={1}
-              className="w-full px-4 py-3 resize-none bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none max-h-32"
-            />
-
-            {/* Mention popover */}
-            {isMentionPopoverOpen && (
-              <MentionPopover
-                options={mentionOptions}
-                selectedIndex={selectedMentionIndex}
-                onSelect={handleMentionSelect}
-                leftOffset={popoverLeftOffset}
-              />
-            )}
-
-            {/* Actions row */}
-            <div className="flex items-center justify-between px-2 py-1">
-              {/* Attachment button */}
-              <FileTrigger
-                acceptedFileTypes={['image/*', '.pdf', '.txt', '.doc', '.docx']}
-                allowsMultiple
-                onSelect={(files) => files && handleFilesSelected(Array.from(files))}
-              >
-                <AriaButton
-                  className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                  aria-label="Attach files"
-                >
-                  <PaperClipIcon className="w-4 h-4" />
-                </AriaButton>
-              </FileTrigger>
-
-              {/* Send button */}
-              <button
-                type="submit"
-                disabled={!canSend}
-                className={cn(
-                  'p-1 rounded transition-colors',
-                  canSend
-                    ? 'text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20'
-                    : 'text-gray-400 cursor-not-allowed'
-                )}
-              >
-                <PaperAirplaneIcon className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+        <form onSubmit={handleFormSubmit}>
+          <RichTextEditor
+            ref={editorRef}
+            placeholder={placeholder}
+            onSubmit={handleSubmit}
+            onTyping={onTyping}
+            onBlur={onStopTyping}
+            workspaceMembers={workspaceMembers}
+            workspaceChannels={workspaceChannels}
+            disabled={sendMessage.isPending}
+            isPending={sendMessage.isPending || isUploading}
+            onAttachmentClick={handleFilesSelected}
+          />
         </form>
       </DropZone>
     </div>
