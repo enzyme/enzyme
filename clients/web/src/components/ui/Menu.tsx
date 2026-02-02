@@ -5,7 +5,6 @@ import {
   MenuTrigger,
   Popover,
   SubmenuTrigger as AriaSubmenuTrigger,
-  Submenu as AriaSubmenu,
   Section,
   Header,
   Separator as AriaSeparator,
@@ -128,22 +127,12 @@ export function SubmenuTrigger({
         <span className="flex-1">{label}</span>
         <ChevronRightIcon className="w-4 h-4" />
       </AriaMenuItem>
-      {children}
+      <Popover offset={-2} crossOffset={-4} className={styles.popover()}>
+        <AriaMenu className={styles.menu()}>
+          {children}
+        </AriaMenu>
+      </Popover>
     </AriaSubmenuTrigger>
-  );
-}
-
-interface SubmenuProps {
-  children: ReactNode;
-}
-
-export function Submenu({ children }: SubmenuProps) {
-  const styles = menu();
-
-  return (
-    <AriaSubmenu className={styles.menu()}>
-      {children}
-    </AriaSubmenu>
   );
 }
 
