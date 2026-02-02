@@ -24,7 +24,6 @@ import {
   Menu,
   MenuItem,
   SubmenuTrigger,
-  Submenu,
   MenuSection,
   MenuHeader,
   MenuSeparator,
@@ -41,20 +40,19 @@ export function WorkspaceSwitcher() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   return (
-    <div className="w-16 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center py-3 gap-3">
+    <div className="w-16 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center py-4 gap-4">
       {/* Workspaces */}
-      <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto">
+      <div className="flex-1 flex flex-col items-center gap-3 overflow-y-auto p-1">
         {workspaces?.map((ws) => (
           <Tooltip key={ws.id} content={ws.name} placement="right">
             <AriaButton
               onPress={() => navigate(`/workspaces/${ws.id}`)}
               className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
                 ws.id === workspaceId
-                  ? "bg-primary-600"
-                  : ws.icon_url
-                    ? ""
-                    : `${getAvatarColor(ws.id)} hover:opacity-80`,
+                  ? "ring-2 ring-gray-900 dark:ring-white"
+                  : "",
+                ws.icon_url ? "" : `${getAvatarColor(ws.id)} hover:opacity-80`,
               )}
             >
               {ws.icon_url ? (
@@ -64,7 +62,7 @@ export function WorkspaceSwitcher() {
                   className="w-full h-full rounded-lg object-cover"
                 />
               ) : (
-                <span className="text-white font-semibold text-sm">
+                <span className="text-white font-semibold text-xs">
                   {ws.name.slice(0, 2).toUpperCase()}
                 </span>
               )}
@@ -76,15 +74,15 @@ export function WorkspaceSwitcher() {
         <Tooltip content="Add workspace" placement="right">
           <AriaButton
             onPress={() => setIsCreateModalOpen(true)}
-            className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
-            <PlusIcon className="w-5 h-5" />
+            <PlusIcon className="w-4 h-4" />
           </AriaButton>
         </Tooltip>
       </div>
 
       {/* Bottom section */}
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-3">
         {/* User menu */}
         <UserMenu />
       </div>
@@ -161,29 +159,27 @@ function UserMenu() {
           label={`Theme: ${themeModeLabel}`}
           icon={<ThemeIcon className="w-4 h-4" />}
         >
-          <Submenu>
-            <MenuItem
-              onAction={() => setMode("system")}
-              icon={<ComputerDesktopIcon className="w-4 h-4" />}
-            >
-              <span className="flex-1">System</span>
-              {mode === "system" && <CheckIcon className="w-4 h-4" />}
-            </MenuItem>
-            <MenuItem
-              onAction={() => setMode("light")}
-              icon={<SunIcon className="w-4 h-4" />}
-            >
-              <span className="flex-1">Light</span>
-              {mode === "light" && <CheckIcon className="w-4 h-4" />}
-            </MenuItem>
-            <MenuItem
-              onAction={() => setMode("dark")}
-              icon={<MoonIcon className="w-4 h-4" />}
-            >
-              <span className="flex-1">Dark</span>
-              {mode === "dark" && <CheckIcon className="w-4 h-4" />}
-            </MenuItem>
-          </Submenu>
+          <MenuItem
+            onAction={() => setMode("system")}
+            icon={<ComputerDesktopIcon className="w-4 h-4" />}
+          >
+            <span className="flex-1">System</span>
+            {mode === "system" && <CheckIcon className="w-4 h-4" />}
+          </MenuItem>
+          <MenuItem
+            onAction={() => setMode("light")}
+            icon={<SunIcon className="w-4 h-4" />}
+          >
+            <span className="flex-1">Light</span>
+            {mode === "light" && <CheckIcon className="w-4 h-4" />}
+          </MenuItem>
+          <MenuItem
+            onAction={() => setMode("dark")}
+            icon={<MoonIcon className="w-4 h-4" />}
+          >
+            <span className="flex-1">Dark</span>
+            {mode === "dark" && <CheckIcon className="w-4 h-4" />}
+          </MenuItem>
         </SubmenuTrigger>
 
         {workspaceId && (
