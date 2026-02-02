@@ -12,11 +12,8 @@ import (
 
 const (
 	StatusOnline  = "online"
-	StatusAway    = "away"
-	StatusDND     = "dnd"
 	StatusOffline = "offline"
 
-	AwayTimeout    = 5 * time.Minute
 	OfflineTimeout = 30 * time.Second
 )
 
@@ -33,9 +30,6 @@ type Manager struct {
 	// workspaceID -> userID -> presence
 	presence map[string]map[string]*UserPresence
 
-	// userID -> last activity timestamp
-	activity map[string]time.Time
-
 	db  *sql.DB
 	hub *sse.Hub
 }
@@ -43,7 +37,6 @@ type Manager struct {
 func NewManager(db *sql.DB, hub *sse.Hub) *Manager {
 	return &Manager{
 		presence: make(map[string]map[string]*UserPresence),
-		activity: make(map[string]time.Time),
 		db:       db,
 		hub:      hub,
 	}
@@ -104,7 +97,6 @@ func (m *Manager) SetOnline(workspaceID, userID string) {
 	defer m.mu.Unlock()
 
 	now := time.Now().UTC()
-	m.activity[userID] = now
 
 	if m.presence[workspaceID] == nil {
 		m.presence[workspaceID] = make(map[string]*UserPresence)
@@ -157,7 +149,7 @@ func (m *Manager) SetOffline(workspaceID, userID string) {
 }
 
 func (m *Manager) SetStatus(workspaceID, userID, status string) {
-	if status != StatusOnline && status != StatusAway && status != StatusDND && status != StatusOffline {
+	if status != StatusOnline && status != StatusOffline {
 		return
 	}
 
@@ -188,12 +180,6 @@ func (m *Manager) SetStatus(workspaceID, userID, status string) {
 	if prevStatus != status {
 		m.broadcastPresenceChange(workspaceID, userID, status)
 	}
-}
-
-func (m *Manager) RecordActivity(userID string) {
-	m.mu.Lock()
-	m.activity[userID] = time.Now().UTC()
-	m.mu.Unlock()
 }
 
 func (m *Manager) GetPresence(workspaceID, userID string) string {
@@ -229,7 +215,7 @@ func (m *Manager) checkPresence() {
 
 	for workspaceID, workspace := range m.presence {
 		for userID, p := range workspace {
-			if p.Status == StatusOffline || p.Status == StatusDND {
+			if p.Status == StatusOffline {
 				continue
 			}
 
@@ -243,23 +229,6 @@ func (m *Manager) checkPresence() {
 					m.persistPresence(workspaceID, userID, StatusOffline, now)
 					m.broadcastPresenceChange(workspaceID, userID, StatusOffline)
 				}
-				continue
-			}
-
-			// Check for away status based on activity
-			lastActivity, hasActivity := m.activity[userID]
-			if !hasActivity {
-				lastActivity = p.LastSeenAt
-			}
-
-			if p.Status == StatusOnline && now.Sub(lastActivity) > AwayTimeout {
-				p.Status = StatusAway
-				m.persistPresence(workspaceID, userID, StatusAway, now)
-				m.broadcastPresenceChange(workspaceID, userID, StatusAway)
-			} else if p.Status == StatusAway && now.Sub(lastActivity) <= AwayTimeout {
-				p.Status = StatusOnline
-				m.persistPresence(workspaceID, userID, StatusOnline, now)
-				m.broadcastPresenceChange(workspaceID, userID, StatusOnline)
 			}
 		}
 	}

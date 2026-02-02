@@ -2094,7 +2094,7 @@ components:
 
     PresenceStatus:
       type: string
-      enum: [online, away, offline]
+      enum: [online, offline]
 
     PresenceData:
       type: object

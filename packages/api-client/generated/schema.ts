@@ -1234,7 +1234,7 @@ export interface components {
             user_display_name?: string;
         };
         /** @enum {string} */
-        PresenceStatus: "online" | "away" | "offline";
+        PresenceStatus: "online" | "offline";
         PresenceData: {
             user_id: string;
             status: components["schemas"]["PresenceStatus"];

@@ -22,7 +22,6 @@ export function Avatar({ src, name, id, size = 'md', status, className, style, o
 
   const statusColors = {
     online: 'bg-green-500',
-    away: 'bg-yellow-500',
     offline: 'bg-gray-400',
   };
 

@@ -4,6 +4,7 @@ import { useUserProfile, useUpdateProfile, useUploadAvatar, useDeleteAvatar, use
 import { useProfilePanel } from "../../hooks/usePanel";
 import { Avatar, Button, Input, Spinner, toast } from "../ui";
 import { cn } from "../../lib/utils";
+import { useUserPresence } from "../../lib/presenceStore";
 
 interface ProfilePaneProps {
   userId: string;
@@ -75,10 +76,17 @@ interface ViewProfileProps {
 }
 
 function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
+  const presence = useUserPresence(profile.id);
   const memberSince = new Date(profile.created_at).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
   });
+
+  const statusConfig = {
+    online: { color: "text-green-600 dark:text-green-400", dot: "bg-green-500", label: "Online" },
+    offline: { color: "text-gray-500", dot: "bg-gray-400", label: "Offline" },
+  };
+  const status = statusConfig[presence ?? "offline"];
 
   return (
     <div className="space-y-6">
@@ -97,18 +105,16 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
         <span
           className={cn(
             "mt-1 inline-flex items-center gap-1.5 text-sm",
-            profile.status === "active"
-              ? "text-green-600 dark:text-green-400"
-              : "text-gray-500",
+            status.color,
           )}
         >
           <span
             className={cn(
               "w-2 h-2 rounded-full",
-              profile.status === "active" ? "bg-green-500" : "bg-gray-400",
+              status.dot,
             )}
           />
-          {profile.status === "active" ? "Active" : profile.status}
+          {status.label}
         </span>
       </div>
 
