@@ -7,7 +7,7 @@ export { Modal, DialogTrigger } from './Modal';
 export { Skeleton, MessageSkeleton, ChannelListSkeleton } from './Skeleton';
 export { toast } from './toast-store';
 export { Toaster } from './Toast';
-export { Menu, MenuItem, MenuTrigger } from './Menu';
+export { Menu, MenuItem, MenuTrigger, SubmenuTrigger, Submenu, MenuSection, MenuHeader, MenuSeparator } from './Menu';
 export { Tabs, TabList, Tab, TabPanel } from './Tabs';
 export { RadioGroup, Radio } from './RadioGroup';
 export { Tooltip } from './Tooltip';

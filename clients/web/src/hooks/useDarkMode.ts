@@ -3,6 +3,8 @@ import { useLocalStorage } from './useLocalStorage';
 
 const DARK_MODE_KEY = 'feather:dark-mode';
 
+export type ThemeMode = 'system' | 'light' | 'dark';
+
 /**
  * Get system color scheme preference
  */
@@ -17,6 +19,9 @@ function getSystemPreference(): boolean {
 export function useDarkMode() {
   // null means "follow system"
   const [preference, setPreference] = useLocalStorage<boolean | null>(DARK_MODE_KEY, null);
+
+  // Derive mode from stored preference
+  const mode: ThemeMode = preference === null ? 'system' : preference ? 'dark' : 'light';
 
   // Resolve actual dark mode value
   const darkMode = preference ?? getSystemPreference();
@@ -49,5 +54,19 @@ export function useDarkMode() {
     setPreference(dark);
   }, [setPreference]);
 
-  return { darkMode, toggle, setDarkMode };
+  const setMode = useCallback((newMode: ThemeMode) => {
+    switch (newMode) {
+      case 'system':
+        setPreference(null);
+        break;
+      case 'light':
+        setPreference(false);
+        break;
+      case 'dark':
+        setPreference(true);
+        break;
+    }
+  }, [setPreference]);
+
+  return { darkMode, mode, toggle, setDarkMode, setMode };
 }

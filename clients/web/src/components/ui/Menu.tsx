@@ -4,9 +4,15 @@ import {
   MenuItem as AriaMenuItem,
   MenuTrigger,
   Popover,
+  SubmenuTrigger as AriaSubmenuTrigger,
+  Submenu as AriaSubmenu,
+  Section,
+  Header,
+  Separator as AriaSeparator,
   type MenuItemProps as AriaMenuItemProps,
 } from 'react-aria-components';
 import { tv, type VariantProps } from 'tailwind-variants';
+import { ChevronRightIcon } from '@heroicons/react/24/outline';
 
 const menu = tv({
   slots: {
@@ -23,6 +29,9 @@ const menu = tv({
       'focus:bg-gray-100 dark:focus:bg-gray-700',
       'disabled:opacity-50 disabled:cursor-not-allowed',
     ],
+    section: '',
+    header: 'px-3 py-2 border-b border-gray-200 dark:border-gray-700',
+    separator: 'border-t border-gray-200 dark:border-gray-700 my-1',
   },
   variants: {
     variant: {
@@ -47,6 +56,7 @@ interface MenuProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   align?: 'start' | 'end';
+  placement?: 'bottom' | 'top' | 'left' | 'right';
 }
 
 export function Menu({
@@ -55,14 +65,17 @@ export function Menu({
   open,
   onOpenChange,
   align = 'end',
+  placement = 'bottom',
 }: MenuProps) {
   const styles = menu();
+
+  const popoverPlacement = `${placement} ${align}` as const;
 
   return (
     <MenuTrigger isOpen={open} onOpenChange={onOpenChange}>
       {trigger}
       <Popover
-        placement={align === 'end' ? 'bottom end' : 'bottom start'}
+        placement={popoverPlacement}
         className={styles.popover()}
       >
         <AriaMenu className={styles.menu()}>
@@ -92,6 +105,80 @@ export function MenuItem({
       {children}
     </AriaMenuItem>
   );
+}
+
+interface SubmenuTriggerProps extends MenuVariants {
+  icon?: ReactNode;
+  label: ReactNode;
+  children: ReactNode;
+}
+
+export function SubmenuTrigger({
+  label,
+  children,
+  variant,
+  icon,
+}: SubmenuTriggerProps) {
+  const styles = menu({ variant });
+
+  return (
+    <AriaSubmenuTrigger>
+      <AriaMenuItem className={styles.item()}>
+        {icon}
+        <span className="flex-1">{label}</span>
+        <ChevronRightIcon className="w-4 h-4" />
+      </AriaMenuItem>
+      {children}
+    </AriaSubmenuTrigger>
+  );
+}
+
+interface SubmenuProps {
+  children: ReactNode;
+}
+
+export function Submenu({ children }: SubmenuProps) {
+  const styles = menu();
+
+  return (
+    <AriaSubmenu className={styles.menu()}>
+      {children}
+    </AriaSubmenu>
+  );
+}
+
+interface MenuSectionProps {
+  children: ReactNode;
+}
+
+export function MenuSection({ children }: MenuSectionProps) {
+  const styles = menu();
+
+  return (
+    <Section className={styles.section()}>
+      {children}
+    </Section>
+  );
+}
+
+interface MenuHeaderProps {
+  children: ReactNode;
+}
+
+export function MenuHeader({ children }: MenuHeaderProps) {
+  const styles = menu();
+
+  return (
+    <Header className={styles.header()}>
+      {children}
+    </Header>
+  );
+}
+
+export function MenuSeparator() {
+  const styles = menu();
+
+  return <AriaSeparator className={styles.separator()} />;
 }
 
 export { MenuTrigger };

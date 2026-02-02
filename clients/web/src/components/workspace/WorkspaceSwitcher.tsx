@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button as AriaButton } from "react-aria-components";
 import {
   PlusIcon,
@@ -10,9 +10,25 @@ import {
   UserPlusIcon,
   ServerStackIcon,
   ArrowRightStartOnRectangleIcon,
+  ComputerDesktopIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks";
-import { Avatar, Modal, Button, Input, toast, Tooltip } from "../ui";
+import {
+  Avatar,
+  Modal,
+  Button,
+  Input,
+  toast,
+  Tooltip,
+  Menu,
+  MenuItem,
+  SubmenuTrigger,
+  Submenu,
+  MenuSection,
+  MenuHeader,
+  MenuSeparator,
+} from "../ui";
 import { useCreateWorkspace } from "../../hooks/useWorkspaces";
 import { useDarkMode } from "../../hooks/useDarkMode";
 import { useProfilePanel } from "../../hooks/usePanel";
@@ -23,7 +39,6 @@ export function WorkspaceSwitcher() {
   const navigate = useNavigate();
   const { workspaces } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const { darkMode, toggle: toggleDarkMode } = useDarkMode();
 
   return (
     <div className="w-16 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center py-3 gap-3">
@@ -70,19 +85,6 @@ export function WorkspaceSwitcher() {
 
       {/* Bottom section */}
       <div className="flex flex-col items-center gap-2">
-        {/* Dark mode toggle */}
-        <button
-          onClick={toggleDarkMode}
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          title={darkMode ? "Light mode" : "Dark mode"}
-        >
-          {darkMode ? (
-            <SunIcon className="w-5 h-5" />
-          ) : (
-            <MoonIcon className="w-5 h-5" />
-          )}
-        </button>
-
         {/* User menu */}
         <UserMenu />
       </div>
@@ -99,22 +101,8 @@ function UserMenu() {
   const { user, logout } = useAuth();
   const { openProfile } = useProfilePanel();
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const [isOpen, setIsOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Close on click outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [isOpen]);
+  const navigate = useNavigate();
+  const { mode, setMode } = useDarkMode();
 
   const handleLogout = async () => {
     try {
@@ -124,88 +112,115 @@ function UserMenu() {
     }
   };
 
+  // Get icon for current mode
+  const ThemeIcon =
+    mode === "system"
+      ? ComputerDesktopIcon
+      : mode === "light"
+        ? SunIcon
+        : MoonIcon;
+
+  const themeModeLabel =
+    mode === "system" ? "System" : mode === "light" ? "Light" : "Dark";
+
   return (
-    <div ref={menuRef} className="relative">
-      <button onClick={() => setIsOpen(!isOpen)}>
-        <Avatar
-          src={user?.avatar_url}
-          name={user?.display_name || "User"}
-          id={user?.id}
-          size="md"
-          status="online"
-        />
-      </button>
+    <Menu
+      align="start"
+      placement="top"
+      trigger={
+        <AriaButton className="outline-none">
+          <Avatar
+            src={user?.avatar_url}
+            name={user?.display_name || "User"}
+            id={user?.id}
+            size="md"
+            status="online"
+          />
+        </AriaButton>
+      }
+    >
+      <MenuSection>
+        <MenuHeader>
+          <p className="font-medium text-gray-900 dark:text-white truncate">
+            {user?.display_name}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+            {user?.email}
+          </p>
+        </MenuHeader>
 
-      {isOpen && (
-        <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-          {/* User info header */}
-          <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-            <p className="font-medium text-gray-900 dark:text-white truncate">
-              {user?.display_name}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-              {user?.email}
-            </p>
-          </div>
+        <MenuItem
+          onAction={() => user?.id && openProfile(user.id)}
+          icon={<UserIcon className="w-4 h-4" />}
+        >
+          View Profile
+        </MenuItem>
 
-          {/* Menu items */}
-          <div className="py-1">
-            <button
-              onClick={() => {
-                if (user?.id) openProfile(user.id);
-                setIsOpen(false);
-              }}
-              className="w-full px-3 py-1.5 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        {/* Theme selector with submenu */}
+        <SubmenuTrigger
+          label={`Theme: ${themeModeLabel}`}
+          icon={<ThemeIcon className="w-4 h-4" />}
+        >
+          <Submenu>
+            <MenuItem
+              onAction={() => setMode("system")}
+              icon={<ComputerDesktopIcon className="w-4 h-4" />}
             >
-              <UserIcon className="w-4 h-4" />
-              View Profile
-            </button>
-
-            {workspaceId && (
-              <>
-                <Link
-                  to={`/workspaces/${workspaceId}/settings`}
-                  onClick={() => setIsOpen(false)}
-                  className="w-full px-3 py-1.5 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                >
-                  <Cog6ToothIcon className="w-4 h-4" />
-                  Workspace Settings
-                </Link>
-
-                <Link
-                  to={`/workspaces/${workspaceId}/invite`}
-                  onClick={() => setIsOpen(false)}
-                  className="w-full px-3 py-1.5 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                >
-                  <UserPlusIcon className="w-4 h-4" />
-                  Invite People
-                </Link>
-              </>
-            )}
-
-            <Link
-              to="/settings"
-              onClick={() => setIsOpen(false)}
-              className="w-full px-3 py-1.5 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              <span className="flex-1">System</span>
+              {mode === "system" && <CheckIcon className="w-4 h-4" />}
+            </MenuItem>
+            <MenuItem
+              onAction={() => setMode("light")}
+              icon={<SunIcon className="w-4 h-4" />}
             >
-              <ServerStackIcon className="w-4 h-4" />
-              Server Settings
-            </Link>
-          </div>
-
-          {/* Logout */}
-          <div className="border-t border-gray-200 dark:border-gray-700 py-1">
-            <button
-              onClick={handleLogout}
-              className="w-full px-3 py-1.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              <span className="flex-1">Light</span>
+              {mode === "light" && <CheckIcon className="w-4 h-4" />}
+            </MenuItem>
+            <MenuItem
+              onAction={() => setMode("dark")}
+              icon={<MoonIcon className="w-4 h-4" />}
             >
-              <ArrowRightStartOnRectangleIcon className="w-4 h-4" />
-              Log Out
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+              <span className="flex-1">Dark</span>
+              {mode === "dark" && <CheckIcon className="w-4 h-4" />}
+            </MenuItem>
+          </Submenu>
+        </SubmenuTrigger>
+
+        {workspaceId && (
+          <>
+            <MenuItem
+              onAction={() => navigate(`/workspaces/${workspaceId}/settings`)}
+              icon={<Cog6ToothIcon className="w-4 h-4" />}
+            >
+              Workspace Settings
+            </MenuItem>
+            <MenuItem
+              onAction={() => navigate(`/workspaces/${workspaceId}/invite`)}
+              icon={<UserPlusIcon className="w-4 h-4" />}
+            >
+              Invite People
+            </MenuItem>
+          </>
+        )}
+
+        <MenuItem
+          onAction={() => navigate("/settings")}
+          icon={<ServerStackIcon className="w-4 h-4" />}
+        >
+          Server Settings
+        </MenuItem>
+
+        <MenuSeparator />
+
+        <MenuItem
+          onAction={handleLogout}
+          variant="danger"
+          icon={<ArrowRightStartOnRectangleIcon className="w-4 h-4" />}
+        >
+          Log Out
+        </MenuItem>
+      </MenuSection>
+    </Menu>
   );
 }
 
