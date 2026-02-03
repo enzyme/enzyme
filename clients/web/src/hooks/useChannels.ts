@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { channelsApi, type CreateChannelInput, type CreateDMInput } from '../api/channels';
+import { channelsApi, type CreateChannelInput, type CreateDMInput, type UpdateChannelInput } from '../api/channels';
 import type { ChannelWithMembership } from '@feather/api-client';
 
 export function useChannels(workspaceId: string | undefined) {
@@ -128,6 +128,28 @@ export function useAddChannelMember(channelId: string) {
       channelsApi.addMember(channelId, userId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['channel', channelId, 'members'] });
+    },
+  });
+}
+
+export function useUpdateChannel(workspaceId: string, channelId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpdateChannelInput) => channelsApi.update(channelId, input),
+    onSuccess: (data) => {
+      queryClient.setQueryData(
+        ['channels', workspaceId],
+        (old: { channels: ChannelWithMembership[] } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            channels: old.channels.map((c) =>
+              c.id === channelId ? { ...c, ...data.channel } : c
+            ),
+          };
+        }
+      );
     },
   });
 }

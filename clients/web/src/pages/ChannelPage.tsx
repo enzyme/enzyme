@@ -2,13 +2,15 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { EllipsisVerticalIcon, LockClosedIcon, HashtagIcon } from '@heroicons/react/24/outline';
+import { Button as AriaButton } from 'react-aria-components';
 import { useChannels, useArchiveChannel, useLeaveChannel, useJoinChannel, useAuth } from '../hooks';
 import { useThreadPanel } from '../hooks/usePanel';
 import { useMarkChannelAsRead } from '../hooks/useChannels';
 import { MessageList, MessageComposer } from '../components/message';
 import { ChannelMembersButton } from '../components/channel/ChannelMembersButton';
 import { ChannelNotificationButton } from '../components/channel/ChannelNotificationButton';
-import { Spinner, Modal, Button, toast } from '../components/ui';
+import { ChannelDetailsModal } from '../components/channel/ChannelDetailsModal';
+import { Spinner, Modal, Button, toast, Tooltip } from '../components/ui';
 
 function ChannelIcon({ type, className }: { type: string; className?: string }) {
   if (type === 'private') {
@@ -53,8 +55,28 @@ export function ChannelPage() {
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [detailsModalTab, setDetailsModalTab] = useState<'about' | 'members' | 'add'>('about');
   const menuRef = useRef<HTMLDivElement>(null);
   const markAsReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const descriptionRef = useRef<HTMLElement>(null);
+  const [isDescriptionTruncated, setIsDescriptionTruncated] = useState(false);
+
+  // Check if description is truncated
+  useEffect(() => {
+    const checkTruncation = () => {
+      const el = descriptionRef.current;
+      if (el) {
+        setIsDescriptionTruncated(el.scrollWidth > el.clientWidth);
+      } else {
+        setIsDescriptionTruncated(false);
+      }
+    };
+
+    checkTruncation();
+    window.addEventListener('resize', checkTruncation);
+    return () => window.removeEventListener('resize', checkTruncation);
+  }, [channel?.description]);
 
   // Auto mark-as-read when user is at bottom for 2 seconds
   useEffect(() => {
@@ -151,6 +173,15 @@ export function ChannelPage() {
   const canJoin = channel && channel.type === 'public' && !isMember;
   const canArchive = channel && channel.type !== 'dm' && channel.type !== 'group_dm';
   const canLeave = channel && channel.type !== 'dm' && channel.type !== 'group_dm' && isMember;
+  const canEditChannel = channel &&
+    channel.type !== 'dm' &&
+    channel.type !== 'group_dm' &&
+    channel.channel_role !== undefined;
+
+  const openDetailsModal = (tab: 'about' | 'members' | 'add') => {
+    setDetailsModalTab(tab);
+    setIsDetailsModalOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -180,21 +211,45 @@ export function ChannelPage() {
     <div className="flex-1 flex flex-col min-h-0">
       {/* Channel header */}
       <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ChannelIcon type={channel.type} className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-            <h1 className="font-semibold text-gray-900 dark:text-white">
-              {channel.name}
-            </h1>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={() => openDetailsModal('about')}
+              className="flex items-center gap-2 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1.5 py-0.5 -ml-1.5 transition-colors"
+            >
+              <ChannelIcon type={channel.type} className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              <h1 className="font-semibold text-gray-900 dark:text-white">
+                {channel.name}
+              </h1>
+            </button>
+            {channel.description && (
+              isDescriptionTruncated ? (
+                <Tooltip content={channel.description} placement="bottom">
+                  <AriaButton
+                    ref={descriptionRef as React.RefObject<HTMLButtonElement>}
+                    className="text-sm text-gray-400 dark:text-gray-500 text-left cursor-default outline-none bg-transparent border-none p-0 truncate min-w-0 max-w-md"
+                    excludeFromTabOrder
+                  >
+                    {channel.description}
+                  </AriaButton>
+                </Tooltip>
+              ) : (
+                <span
+                  ref={descriptionRef as React.RefObject<HTMLSpanElement>}
+                  className="text-sm text-gray-400 dark:text-gray-500 truncate min-w-0 max-w-md"
+                >
+                  {channel.description}
+                </span>
+              )
+            )}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {/* Channel members */}
             <ChannelMembersButton
               channelId={channelId}
-              workspaceId={workspaceId}
               channelType={channel.type}
-              canAddMembers={canAddMembers}
+              onPress={() => openDetailsModal('members')}
             />
 
             {/* Notification settings */}
@@ -243,11 +298,6 @@ export function ChannelPage() {
             )}
           </div>
         </div>
-        {channel.description && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {channel.description}
-          </p>
-        )}
       </div>
 
       {/* Leave confirmation modal */}
@@ -329,6 +379,18 @@ export function ChannelPage() {
           placeholder={`Message ${getChannelPrefix(channel.type)}${channel.name}`}
         />
       )}
+
+      {/* Channel details modal */}
+      <ChannelDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        channelId={channelId}
+        workspaceId={workspaceId}
+        channel={channel}
+        canAddMembers={canAddMembers}
+        canEditChannel={!!canEditChannel}
+        defaultTab={detailsModalTab}
+      />
     </div>
   );
 }

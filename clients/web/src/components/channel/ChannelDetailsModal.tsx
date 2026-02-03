@@ -1,29 +1,48 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, Avatar, Button, Tabs, TabList, Tab, TabPanel, Spinner } from '../ui';
-import { useChannelMembers, useAddChannelMember } from '../../hooks/useChannels';
+import { useChannelMembers, useAddChannelMember, useUpdateChannel } from '../../hooks/useChannels';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
 import { cn } from '../../lib/utils';
-import type { ChannelMember, WorkspaceMemberWithUser } from '@feather/api-client';
+import type { ChannelMember, WorkspaceMemberWithUser, ChannelWithMembership } from '@feather/api-client';
 
-interface ChannelMembersModalProps {
+type TabId = 'about' | 'members' | 'add';
+
+interface ChannelDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   channelId: string;
   workspaceId: string;
   canAddMembers: boolean;
+  canEditChannel: boolean;
+  channel: ChannelWithMembership;
+  defaultTab?: TabId;
 }
 
-export function ChannelMembersModal({
+export function ChannelDetailsModal({
   isOpen,
   onClose,
   channelId,
   workspaceId,
   canAddMembers,
-}: ChannelMembersModalProps) {
+  canEditChannel,
+  channel,
+  defaultTab = 'about',
+}: ChannelDetailsModalProps) {
   const { data: membersData, isLoading: membersLoading } = useChannelMembers(channelId);
   const { data: workspaceMembersData, isLoading: workspaceMembersLoading } = useWorkspaceMembers(workspaceId);
   const addMember = useAddChannelMember(channelId);
+  const updateChannel = useUpdateChannel(workspaceId, channelId);
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
+  const [description, setDescription] = useState(channel.description || '');
+  const [selectedTab, setSelectedTab] = useState<TabId>(defaultTab);
+
+  // Reset description when modal opens or channel changes
+  useEffect(() => {
+    if (isOpen) {
+      setDescription(channel.description || '');
+      setSelectedTab(defaultTab);
+    }
+  }, [isOpen, channel.description, defaultTab]);
 
   const members = membersData?.members || [];
   const workspaceMembers = workspaceMembersData?.members || [];
@@ -41,6 +60,12 @@ export function ChannelMembersModal({
     }
   };
 
+  const handleSaveDescription = async () => {
+    await updateChannel.mutateAsync({ description });
+  };
+
+  const hasDescriptionChanged = description !== (channel.description || '');
+
   const getRoleBadge = (role?: string) => {
     if (!role || role === 'poster') return null;
     return (
@@ -56,6 +81,47 @@ export function ChannelMembersModal({
       </span>
     );
   };
+
+  const renderAboutTab = () => (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Channel name
+        </label>
+        <p className="text-gray-900 dark:text-white">{channel.name}</p>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Description
+        </label>
+        {canEditChannel ? (
+          <>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add a description for this channel..."
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              rows={3}
+            />
+            <div className="mt-2 flex justify-end">
+              <Button
+                size="sm"
+                onPress={handleSaveDescription}
+                isLoading={updateChannel.isPending}
+                isDisabled={!hasDescriptionChanged}
+              >
+                Save
+              </Button>
+            </div>
+          </>
+        ) : (
+          <p className="text-gray-600 dark:text-gray-400">
+            {channel.description || 'No description set'}
+          </p>
+        )}
+      </div>
+    </div>
+  );
 
   const renderMemberList = (membersList: ChannelMember[]) => (
     <div className="max-h-64 overflow-y-auto space-y-1">
@@ -127,26 +193,30 @@ export function ChannelMembersModal({
   const isLoading = membersLoading || (canAddMembers && workspaceMembersLoading);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Channel Members" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Channel Details" size="md">
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
           <Spinner />
         </div>
-      ) : canAddMembers ? (
-        <Tabs>
+      ) : (
+        <Tabs selectedKey={selectedTab} onSelectionChange={(key) => setSelectedTab(key as TabId)}>
           <TabList>
+            <Tab id="about">About</Tab>
             <Tab id="members">Members ({members.length})</Tab>
-            <Tab id="add">Add Members</Tab>
+            {canAddMembers && <Tab id="add">Add Members</Tab>}
           </TabList>
+          <TabPanel id="about" className="pt-4">
+            {renderAboutTab()}
+          </TabPanel>
           <TabPanel id="members" className="pt-4">
             {renderMemberList(members)}
           </TabPanel>
-          <TabPanel id="add" className="pt-4">
-            {renderAddMemberList(nonMembers)}
-          </TabPanel>
+          {canAddMembers && (
+            <TabPanel id="add" className="pt-4">
+              {renderAddMemberList(nonMembers)}
+            </TabPanel>
+          )}
         </Tabs>
-      ) : (
-        renderMemberList(members)
       )}
     </Modal>
   );
