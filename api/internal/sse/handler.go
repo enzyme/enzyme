@@ -82,6 +82,16 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 
+	// Send initial presence - list of currently online users
+	onlineUserIDs := h.hub.GetConnectedUserIDs(workspaceID)
+	h.writeEvent(w, flusher, Event{
+		ID:   ulid.Make().String(),
+		Type: EventPresenceInitial,
+		Data: map[string]interface{}{
+			"online_user_ids": onlineUserIDs,
+		},
+	})
+
 	// Handle reconnection - replay missed events
 	lastEventID := r.Header.Get("Last-Event-ID")
 	if lastEventID != "" {

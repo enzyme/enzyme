@@ -17,6 +17,7 @@ const (
 	EventTypingStart     = "typing.start"
 	EventTypingStop      = "typing.stop"
 	EventPresenceChanged = "presence.changed"
+	EventPresenceInitial = "presence.initial"
 	EventNotification    = "notification"
 )
 

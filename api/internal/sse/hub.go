@@ -49,9 +49,29 @@ func (h *Hub) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case client := <-h.register:
-			h.addClient(client)
+			isFirstConnection := h.addClient(client)
+			if isFirstConnection {
+				// User just came online - broadcast to workspace
+				h.BroadcastToWorkspace(client.WorkspaceID, Event{
+					Type: EventPresenceChanged,
+					Data: map[string]interface{}{
+						"user_id": client.UserID,
+						"status":  "online",
+					},
+				})
+			}
 		case client := <-h.unregister:
-			h.removeClient(client)
+			isLastConnection := h.removeClient(client)
+			if isLastConnection {
+				// User just went offline - broadcast to workspace
+				h.BroadcastToWorkspace(client.WorkspaceID, Event{
+					Type: EventPresenceChanged,
+					Data: map[string]interface{}{
+						"user_id": client.UserID,
+						"status":  "offline",
+					},
+				})
+			}
 		}
 	}
 }
@@ -64,20 +84,23 @@ func (h *Hub) Unregister(client *Client) {
 	h.unregister <- client
 }
 
-func (h *Hub) addClient(client *Client) {
+func (h *Hub) addClient(client *Client) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	if h.workspaces[client.WorkspaceID] == nil {
 		h.workspaces[client.WorkspaceID] = make(map[string][]*Client)
 	}
+	isFirst := len(h.workspaces[client.WorkspaceID][client.UserID]) == 0
 	h.workspaces[client.WorkspaceID][client.UserID] = append(h.workspaces[client.WorkspaceID][client.UserID], client)
+	return isFirst
 }
 
-func (h *Hub) removeClient(client *Client) {
+func (h *Hub) removeClient(client *Client) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
+	isLast := false
 	if workspace, ok := h.workspaces[client.WorkspaceID]; ok {
 		if clients, ok := workspace[client.UserID]; ok {
 			for i, c := range clients {
@@ -88,6 +111,7 @@ func (h *Hub) removeClient(client *Client) {
 			}
 			if len(workspace[client.UserID]) == 0 {
 				delete(workspace, client.UserID)
+				isLast = true
 			}
 		}
 		if len(workspace) == 0 {
@@ -96,6 +120,7 @@ func (h *Hub) removeClient(client *Client) {
 	}
 
 	close(client.Send)
+	return isLast
 }
 
 func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {

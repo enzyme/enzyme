@@ -1782,6 +1782,7 @@ components:
         - typing.start
         - typing.stop
         - presence.changed
+        - presence.initial
         - notification
 
     SSEEvent:
@@ -1802,6 +1803,7 @@ components:
         - $ref: '#/components/schemas/SSEEventTypingStart'
         - $ref: '#/components/schemas/SSEEventTypingStop'
         - $ref: '#/components/schemas/SSEEventPresenceChanged'
+        - $ref: '#/components/schemas/SSEEventPresenceInitial'
         - $ref: '#/components/schemas/SSEEventNotification'
       discriminator:
         propertyName: type
@@ -1822,6 +1824,7 @@ components:
           typing.start: '#/components/schemas/SSEEventTypingStart'
           typing.stop: '#/components/schemas/SSEEventTypingStop'
           presence.changed: '#/components/schemas/SSEEventPresenceChanged'
+          presence.initial: '#/components/schemas/SSEEventPresenceInitial'
           notification: '#/components/schemas/SSEEventNotification'
 
     SSEEventConnected:
@@ -2031,6 +2034,28 @@ components:
           enum: [presence.changed]
         data:
           $ref: '#/components/schemas/PresenceData'
+
+    SSEEventPresenceInitial:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [presence.initial]
+        data:
+          $ref: '#/components/schemas/PresenceInitialData'
+
+    PresenceInitialData:
+      type: object
+      required: [online_user_ids]
+      properties:
+        online_user_ids:
+          type: array
+          items:
+            type: string
+          description: List of user IDs currently online in this workspace
 
     SSEEventNotification:
       type: object

@@ -323,6 +323,14 @@ export function useSSE(workspaceId: string | undefined) {
       setUserPresence(event.data.user_id, event.data.status);
     });
 
+    // Handle initial presence (sent on connection with list of online users)
+    connection.on('presence.initial', (event) => {
+      const onlineUserIds = event.data.online_user_ids as string[];
+      for (const userId of onlineUserIds) {
+        setUserPresence(userId, 'online');
+      }
+    });
+
     // Handle notification events
     connection.on('notification', (event) => {
       const notification = event.data as NotificationData;

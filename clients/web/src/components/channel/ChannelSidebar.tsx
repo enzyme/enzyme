@@ -3,9 +3,10 @@ import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircleIcon, ChevronRightIcon, PlusIcon, LockClosedIcon, HashtagIcon, InboxIcon } from '@heroicons/react/24/outline';
 import { useChannels, useWorkspace, useAuth } from '../../hooks';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
-import { ChannelListSkeleton, Modal, Button, Input, toast, Tabs, TabList, Tab, TabPanel, RadioGroup, Radio } from '../ui';
+import { ChannelListSkeleton, Modal, Button, Input, toast, Tabs, TabList, Tab, TabPanel, RadioGroup, Radio, Avatar } from '../ui';
 import { useCreateChannel, useMarkAllChannelsAsRead, useCreateDM, useJoinChannel } from '../../hooks/useChannels';
 import { cn, getAvatarColor } from '../../lib/utils';
+import { useUserPresence } from '../../lib/presenceStore';
 import type { ChannelWithMembership, ChannelType } from '@feather/api-client';
 
 function ChannelIcon({ type, className }: { type: string; className?: string }) {
@@ -226,6 +227,15 @@ function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
   const isDM = channel.type === 'dm' || channel.type === 'group_dm';
   const dmParticipant = isDM && channel.dm_participants?.[0];
 
+  // Get presence for 1:1 DMs only (group DMs have multiple participants)
+  const rawPresence = useUserPresence(
+    channel.type === 'dm' && dmParticipant ? dmParticipant.user_id : ''
+  );
+  // Default to offline if not in presence store (only online users are tracked)
+  const participantPresence = channel.type === 'dm' && dmParticipant
+    ? (rawPresence ?? 'offline')
+    : undefined;
+
   // For DMs, show participant name; for group DMs, show all names
   const displayName = isDM
     ? channel.dm_participants?.map((p) => p.display_name).join(', ') || channel.name
@@ -242,17 +252,13 @@ function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
       )}
     >
       {isDM && dmParticipant ? (
-        dmParticipant.avatar_url ? (
-          <img
-            src={dmParticipant.avatar_url}
-            alt={dmParticipant.display_name}
-            className="w-5 h-5 rounded-full"
-          />
-        ) : (
-          <div className={cn('w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium text-white', getAvatarColor(dmParticipant.user_id))}>
-            {dmParticipant.display_name.charAt(0).toUpperCase()}
-          </div>
-        )
+        <Avatar
+          src={dmParticipant.avatar_url}
+          name={dmParticipant.display_name}
+          id={dmParticipant.user_id}
+          size="xs"
+          status={participantPresence}
+        />
       ) : (
         <ChannelIcon type={channel.type} className="text-gray-500 dark:text-gray-400" />
       )}
