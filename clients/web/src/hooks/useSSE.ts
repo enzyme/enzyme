@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { SSEConnection } from '../lib/sse';
 import { addTypingUser, removeTypingUser, setUserPresence } from '../lib/presenceStore';
 import { playNotificationSound, showBrowserNotification, unlockAudio } from '../lib/notificationSound';
-import type { MessageListResult, ChannelWithMembership, Channel, NotificationData } from '@feather/api-client';
+import type { MessageListResult, MessageWithUser, ChannelWithMembership, Channel, NotificationData } from '@feather/api-client';
 
 export function useSSE(workspaceId: string | undefined) {
   const [isConnected, setIsConnected] = useState(false);
@@ -185,7 +185,17 @@ export function useSSE(workspaceId: string | undefined) {
             ...old,
             pages: old.pages.map((page) => ({
               ...page,
-              messages: page.messages.filter((m) => m.id !== id),
+              messages: page.messages
+                .map((m) => {
+                  if (m.id !== id) return m;
+                  // Messages with replies: mark as deleted (keep in cache for placeholder)
+                  if (m.reply_count > 0) {
+                    return { ...m, deleted_at: new Date().toISOString() };
+                  }
+                  // Messages without replies: return null to filter out
+                  return null;
+                })
+                .filter((m): m is MessageWithUser => m !== null),
             })),
           };
         }

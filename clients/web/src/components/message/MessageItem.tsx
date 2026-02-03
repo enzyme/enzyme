@@ -50,7 +50,9 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const messageRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { openThread } = useThreadPanel();
   const { openProfile } = useProfilePanel();
@@ -122,8 +124,25 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
   };
 
   const handleDeleteConfirm = () => {
-    deleteMessage.mutate(message.id);
     setShowDeleteModal(false);
+    // Messages with replies: delete immediately (shows placeholder)
+    // Messages without replies: animate then delete
+    if (message.reply_count > 0) {
+      deleteMessage.mutate(message.id);
+    } else {
+      // Capture current height before animating
+      if (messageRef.current) {
+        const height = messageRef.current.offsetHeight;
+        messageRef.current.style.maxHeight = `${height}px`;
+        // Force reflow to ensure the maxHeight is applied before transition
+        void messageRef.current.offsetHeight;
+      }
+      setIsDeleting(true);
+      // Delay the actual deletion to allow animation to play
+      setTimeout(() => {
+        deleteMessage.mutate(message.id);
+      }, 500);
+    }
   };
 
   const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -144,20 +163,63 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
     }
   }, [isEditing]);
 
+  // Deleted messages without replies: render nothing
+  if (isDeleted && message.reply_count === 0) {
+    return null;
+  }
+
+  // Deleted messages with replies: show placeholder with thread indicator
   if (isDeleted) {
     return (
-      <div className="px-4 py-2 text-gray-400 dark:text-gray-500 italic text-sm">
-        This message was deleted
+      <div className="group px-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+        <div className="flex items-start gap-3">
+          {/* Trash icon in avatar-sized circle */}
+          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+            <TrashIcon className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <span className="text-sm text-gray-400 dark:text-gray-500 italic">
+              This message was deleted.
+            </span>
+
+            {/* Thread replies indicator */}
+            {message.reply_count > 0 && (
+              <button
+                onClick={() => openThread(message.id)}
+                className="mt-2 flex items-center gap-2 group/thread hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded px-1 -mx-1 py-0.5"
+              >
+                {message.thread_participants && message.thread_participants.length > 0 && (
+                  <AvatarStack users={message.thread_participants} showCount={false} />
+                )}
+                <span className="text-sm text-primary-600 dark:text-primary-400 group-hover/thread:underline">
+                  {message.reply_count} {message.reply_count === 1 ? 'reply' : 'replies'}
+                </span>
+                {message.last_reply_at && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Last reply {formatRelativeTime(message.last_reply_at)}
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div
+      ref={messageRef}
       className={cn(
-        "group px-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 relative",
-        showDropdown && "bg-gray-50 dark:bg-gray-800/50"
+        "group px-4 py-1.5 relative",
+        isDeleting
+          ? "bg-red-400 dark:bg-red-700 !max-h-0 opacity-0 !py-0 overflow-hidden transition-all duration-500"
+          : "hover:bg-gray-50 dark:hover:bg-gray-800/50",
+        showDropdown && !isDeleting && "bg-gray-50 dark:bg-gray-800/50"
       )}
+      style={isDeleting ? { marginTop: 0, marginBottom: 0 } : undefined}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
         if (!showDropdown) {

@@ -141,7 +141,7 @@ export function useSendThreadReply(parentMessageId: string, channelId: string) {
                 return {
                   ...msg,
                   // Only increment if SSE hasn't already done it
-                  reply_count: alreadyInCache ? msg.reply_count : msg.reply_count + 1,
+                  reply_count: alreadyInCache ? msg.reply_count : (msg.reply_count || 0) + 1,
                   last_reply_at: data.message.created_at,
                   thread_participants: shouldAddParticipant
                     ? [
@@ -196,7 +196,7 @@ export function useDeleteMessage() {
   return useMutation({
     mutationFn: (messageId: string) => messagesApi.delete(messageId),
     onSuccess: (_, messageId) => {
-      // Remove from all message caches
+      // Update message caches: set deleted_at for messages with replies, filter out others
       queryClient.setQueriesData(
         { queryKey: ['messages'] },
         (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
@@ -205,7 +205,17 @@ export function useDeleteMessage() {
             ...old,
             pages: old.pages.map((page) => ({
               ...page,
-              messages: page.messages.filter((msg) => msg.id !== messageId),
+              messages: page.messages
+                .map((msg) => {
+                  if (msg.id !== messageId) return msg;
+                  // Messages with replies: mark as deleted (keep in cache for placeholder)
+                  if (msg.reply_count > 0) {
+                    return { ...msg, deleted_at: new Date().toISOString() };
+                  }
+                  // Messages without replies: return null to filter out
+                  return null;
+                })
+                .filter((msg): msg is MessageWithUser => msg !== null),
             })),
           };
         }
