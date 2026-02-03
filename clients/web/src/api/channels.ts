@@ -1,4 +1,4 @@
-import { post, type Channel, type ChannelWithMembership, type ChannelMember, type ChannelType, type MarkReadResponse } from '@feather/api-client';
+import { get, post, type Channel, type ChannelWithMembership, type ChannelMember, type ChannelType, type MarkReadResponse, type NotificationPreferences } from '@feather/api-client';
 
 export interface CreateChannelInput {
   name: string;
@@ -48,4 +48,10 @@ export const channelsApi = {
 
   markAllAsRead: (workspaceId: string) =>
     post<{ success: boolean }>(`/workspaces/${workspaceId}/channels/mark-all-read`),
+
+  getNotifications: (channelId: string) =>
+    get<{ preferences: NotificationPreferences }>(`/channels/${channelId}/notifications`),
+
+  updateNotifications: (channelId: string, preferences: NotificationPreferences) =>
+    post<{ preferences: NotificationPreferences }>(`/channels/${channelId}/notifications`, preferences),
 };

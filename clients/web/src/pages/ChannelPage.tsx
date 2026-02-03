@@ -7,6 +7,7 @@ import { useThreadPanel } from '../hooks/usePanel';
 import { useMarkChannelAsRead } from '../hooks/useChannels';
 import { MessageList, MessageComposer } from '../components/message';
 import { ChannelMembersButton } from '../components/channel/ChannelMembersButton';
+import { ChannelNotificationButton } from '../components/channel/ChannelNotificationButton';
 import { Spinner, Modal, Button, toast } from '../components/ui';
 
 function ChannelIcon({ type, className }: { type: string; className?: string }) {
@@ -194,6 +195,12 @@ export function ChannelPage() {
               workspaceId={workspaceId}
               channelType={channel.type}
               canAddMembers={canAddMembers}
+            />
+
+            {/* Notification settings */}
+            <ChannelNotificationButton
+              channelId={channelId}
+              channelType={channel.type}
             />
 
             {/* Settings menu */}

@@ -40,3 +40,8 @@ export type SSEEvent = components['schemas']['SSEEvent'];
 export type TypingEventData = components['schemas']['TypingEventData'];
 export type PresenceStatus = components['schemas']['PresenceStatus'];
 export type PresenceData = components['schemas']['PresenceData'];
+
+// Notification types
+export type NotifyLevel = components['schemas']['NotifyLevel'];
+export type NotificationPreferences = components['schemas']['NotificationPreferences'];
+export type ThreadSubscriptionStatus = components['schemas']['ThreadSubscriptionStatus'];
