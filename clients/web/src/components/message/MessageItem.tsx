@@ -10,14 +10,15 @@ import {
   TrashIcon,
   LinkIcon,
 } from '@heroicons/react/24/outline';
-import { Avatar, AvatarStack, Menu, MenuItem, Modal, Button, Tooltip, toast } from '../ui';
+import { Avatar, Menu, MenuItem, Modal, Button, Tooltip, toast } from '../ui';
 import { ReactionPicker } from './ReactionPicker';
 import { AttachmentDisplay } from './AttachmentDisplay';
 import { MessageContent } from './MessageContent';
+import { ThreadRepliesIndicator } from './ThreadRepliesIndicator';
 import { useAuth, useAddReaction, useRemoveReaction, useWorkspaceMembers } from '../../hooks';
 import { useMarkMessageUnread, useUpdateMessage, useDeleteMessage } from '../../hooks/useMessages';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
-import { cn, formatTime, formatRelativeTime } from '../../lib/utils';
+import { cn, formatTime } from '../../lib/utils';
 import type { MessageWithUser } from '@feather/api-client';
 
 function ClickableName({ userId, displayName }: { userId?: string; displayName: string }) {
@@ -193,24 +194,12 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
             </span>
 
             {/* Thread replies indicator */}
-            {message.reply_count > 0 && (
-              <button
-                onClick={() => openThread(message.id)}
-                className="mt-2 flex items-center gap-2 group/thread hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded px-1 -mx-1 py-0.5"
-              >
-                {message.thread_participants && message.thread_participants.length > 0 && (
-                  <AvatarStack users={message.thread_participants} showCount={false} />
-                )}
-                <span className="text-sm text-primary-600 dark:text-primary-400 group-hover/thread:underline">
-                  {message.reply_count} {message.reply_count === 1 ? 'reply' : 'replies'}
-                </span>
-                {message.last_reply_at && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    Last reply {formatRelativeTime(message.last_reply_at)}
-                  </span>
-                )}
-              </button>
-            )}
+            <ThreadRepliesIndicator
+              messageId={message.id}
+              replyCount={message.reply_count}
+              lastReplyAt={message.last_reply_at}
+              threadParticipants={message.thread_participants}
+            />
           </div>
         </div>
       </div>
@@ -336,25 +325,12 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
           )}
 
           {/* Thread replies indicator */}
-          {message.reply_count > 0 && (
-            <button
-              onClick={() => openThread(message.id)}
-              className="mt-2 flex items-center gap-2 group/thread hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded px-1 -mx-1 py-0.5"
-            >
-              {/* Avatar stack */}
-              {message.thread_participants && message.thread_participants.length > 0 && (
-                <AvatarStack users={message.thread_participants} showCount={false} />
-              )}
-              <span className="text-sm text-primary-600 dark:text-primary-400 group-hover/thread:underline">
-                {message.reply_count} {message.reply_count === 1 ? 'reply' : 'replies'}
-              </span>
-              {message.last_reply_at && (
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Last reply {formatRelativeTime(message.last_reply_at)}
-                </span>
-              )}
-            </button>
-          )}
+          <ThreadRepliesIndicator
+            messageId={message.id}
+            replyCount={message.reply_count}
+            lastReplyAt={message.last_reply_at}
+            threadParticipants={message.thread_participants}
+          />
         </div>
       </div>
 

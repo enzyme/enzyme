@@ -8,12 +8,13 @@ import {
   LinkIcon,
   EyeSlashIcon,
 } from '@heroicons/react/24/outline';
-import { Avatar, AvatarStack, Tooltip, Menu, MenuItem, toast } from '../ui';
+import { Avatar, Tooltip, Menu, MenuItem, toast } from '../ui';
 import { ReactionPicker } from './ReactionPicker';
+import { ThreadRepliesIndicator } from './ThreadRepliesIndicator';
 import { useAuth, useAddReaction, useRemoveReaction, useWorkspaceMembers } from '../../hooks';
 import { useMarkMessageUnread } from '../../hooks/useMessages';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
-import { cn, formatTime, formatRelativeTime } from '../../lib/utils';
+import { cn, formatTime } from '../../lib/utils';
 import type { MessageWithUser } from '@feather/api-client';
 
 interface SystemMessageProps {
@@ -172,24 +173,12 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
           )}
 
           {/* Thread replies indicator */}
-          {message.reply_count > 0 && (
-            <button
-              onClick={() => openThread(message.id)}
-              className="mt-2 flex items-center gap-2 group/thread hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded px-1 -mx-1 py-0.5"
-            >
-              {message.thread_participants && message.thread_participants.length > 0 && (
-                <AvatarStack users={message.thread_participants} showCount={false} />
-              )}
-              <span className="text-sm text-primary-600 dark:text-primary-400 group-hover/thread:underline">
-                {message.reply_count} {message.reply_count === 1 ? 'reply' : 'replies'}
-              </span>
-              {message.last_reply_at && (
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Last reply {formatRelativeTime(message.last_reply_at)}
-                </span>
-              )}
-            </button>
-          )}
+          <ThreadRepliesIndicator
+            messageId={message.id}
+            replyCount={message.reply_count}
+            lastReplyAt={message.last_reply_at}
+            threadParticipants={message.thread_participants}
+          />
         </div>
       </div>
 
