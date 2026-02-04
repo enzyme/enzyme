@@ -1,4 +1,4 @@
-import { type ReactNode, type Key } from 'react';
+import { type ReactNode } from 'react';
 import {
   Menu as AriaMenu,
   MenuItem as AriaMenuItem,
@@ -10,6 +10,8 @@ import {
   Separator as AriaSeparator,
   type MenuItemProps as AriaMenuItemProps,
   type Selection,
+  type PopoverProps,
+  type Key,
 } from 'react-aria-components';
 import { tv, type VariantProps } from 'tailwind-variants';
 import { ChevronRightIcon, CheckIcon } from '@heroicons/react/24/outline';
@@ -56,8 +58,16 @@ interface MenuProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   align?: 'start' | 'end';
-  placement?: 'bottom' | 'top' | 'left' | 'right';
+  placement?: 'bottom' | 'top';
 }
+
+// Map our simplified placement API to valid React Aria Placement values
+const placementMap: Record<string, PopoverProps['placement']> = {
+  'bottom-start': 'bottom start',
+  'bottom-end': 'bottom end',
+  'top-start': 'top start',
+  'top-end': 'top end',
+};
 
 export function Menu({
   trigger,
@@ -69,13 +79,13 @@ export function Menu({
 }: MenuProps) {
   const styles = menu();
 
-  const popoverPlacement = align === 'start' ? `${placement} start` : `${placement} end`;
+  const popoverPlacement = placementMap[`${placement}-${align}`];
 
   return (
     <MenuTrigger isOpen={open} onOpenChange={onOpenChange}>
       {trigger}
       <Popover
-        placement={popoverPlacement as 'bottom' | 'bottom start' | 'bottom end' | 'top' | 'top start' | 'top end' | 'left' | 'left start' | 'left end' | 'right' | 'right start' | 'right end'}
+        placement={popoverPlacement}
         className={styles.popover()}
       >
         <AriaMenu className={styles.menu()}>
@@ -179,7 +189,7 @@ interface SelectMenuProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   align?: 'start' | 'end';
-  placement?: 'bottom' | 'top' | 'left' | 'right';
+  placement?: 'bottom' | 'top';
 }
 
 export function SelectMenu({
@@ -193,7 +203,7 @@ export function SelectMenu({
   placement = 'bottom',
 }: SelectMenuProps) {
   const styles = menu();
-  const popoverPlacement = align === 'start' ? `${placement} start` : `${placement} end`;
+  const popoverPlacement = placementMap[`${placement}-${align}`];
 
   const handleSelectionChange = (keys: Selection) => {
     const selected = [...keys][0];
@@ -205,11 +215,11 @@ export function SelectMenu({
   return (
     <MenuTrigger isOpen={open} onOpenChange={onOpenChange}>
       {trigger}
-      <Popover placement={popoverPlacement as 'bottom' | 'bottom start' | 'bottom end' | 'top' | 'top start' | 'top end' | 'left' | 'left start' | 'left end' | 'right' | 'right start' | 'right end'} className={styles.popover()}>
+      <Popover placement={popoverPlacement} className={styles.popover()}>
         <AriaMenu
           className={styles.menu()}
           selectionMode="single"
-          selectedKeys={new Set([selectedKey])}
+          selectedKeys={[selectedKey]}
           onSelectionChange={handleSelectionChange}
         >
           {children}
