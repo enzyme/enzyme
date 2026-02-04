@@ -4,10 +4,10 @@ import { CheckCircleIcon, ChevronRightIcon, PlusIcon, LockClosedIcon, HashtagIco
 import { useChannels, useWorkspace, useAuth } from '../../hooks';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
 import { ChannelListSkeleton, Modal, Button, Input, toast, Tabs, TabList, Tab, TabPanel, RadioGroup, Radio, Avatar } from '../ui';
-import { useCreateChannel, useMarkAllChannelsAsRead, useCreateDM, useJoinChannel } from '../../hooks/useChannels';
+import { useCreateChannel, useMarkAllChannelsAsRead, useCreateDM, useJoinChannel, useDMSuggestions } from '../../hooks/useChannels';
 import { cn, getAvatarColor } from '../../lib/utils';
 import { useUserPresence } from '../../lib/presenceStore';
-import type { ChannelWithMembership, ChannelType } from '@feather/api-client';
+import type { ChannelWithMembership, ChannelType, SuggestedUser } from '@feather/api-client';
 
 function ChannelIcon({ type, className }: { type: string; className?: string }) {
   if (type === 'private') {
@@ -147,8 +147,7 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
               />
             )}
 
-            <ChannelSection
-                title="Direct Messages"
+            <DMSection
                 channels={groupedChannels.dm}
                 workspaceId={workspaceId}
                 activeChannelId={channelId}
@@ -229,6 +228,132 @@ function ChannelSection({
         </div>
       )}
     </div>
+  );
+}
+
+interface DMSectionProps {
+  channels: ChannelWithMembership[];
+  workspaceId: string;
+  activeChannelId: string | undefined;
+  onAddClick?: () => void;
+}
+
+function DMSection({
+  channels,
+  workspaceId,
+  activeChannelId,
+  onAddClick,
+}: DMSectionProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const navigate = useNavigate();
+  const { data: suggestionsData } = useDMSuggestions(workspaceId);
+  const createDM = useCreateDM(workspaceId);
+
+  const handleSuggestedUserClick = async (userId: string) => {
+    try {
+      const result = await createDM.mutateAsync({ user_ids: [userId] });
+      navigate(`/workspaces/${workspaceId}/channels/${result.channel.id}`);
+    } catch {
+      toast('Failed to start conversation', 'error');
+    }
+  };
+
+  // Get user IDs that already have DM channels
+  const existingDMUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    channels.forEach((channel) => {
+      if (channel.type === 'dm' && channel.dm_participants) {
+        channel.dm_participants.forEach((p) => ids.add(p.user_id));
+      }
+    });
+    return ids;
+  }, [channels]);
+
+  // Filter out suggested users who already have DMs
+  const filteredSuggestions = useMemo(() => {
+    if (!suggestionsData?.suggested_users) return [];
+    return suggestionsData.suggested_users.filter(
+      (user) => !existingDMUserIds.has(user.id)
+    );
+  }, [suggestionsData?.suggested_users, existingDMUserIds]);
+
+  // Show suggestions to fill up to ~5 total items
+  const maxSuggestions = Math.max(0, 5 - channels.length);
+  const suggestionsToShow = filteredSuggestions.slice(0, maxSuggestions);
+
+  return (
+    <div className="py-2">
+      <div className="w-full flex items-center justify-between px-4 py-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-300"
+        >
+          <ChevronRightIcon
+            className={cn('w-3 h-3 transition-transform', isExpanded && 'rotate-90')}
+          />
+          <span>Direct Messages</span>
+        </button>
+        {onAddClick && (
+          <button
+            onClick={onAddClick}
+            className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            <PlusIcon className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {isExpanded && (
+        <div className="mt-1 space-y-0.5 px-2">
+          {channels.map((channel) => (
+            <ChannelItem
+              key={channel.id}
+              channel={channel}
+              workspaceId={workspaceId}
+              isActive={channel.id === activeChannelId}
+            />
+          ))}
+          {suggestionsToShow.map((user) => (
+            <SuggestedUserItem
+              key={user.id}
+              user={user}
+              onClick={() => handleSuggestedUserClick(user.id)}
+              isLoading={createDM.isPending}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface SuggestedUserItemProps {
+  user: SuggestedUser;
+  onClick: () => void;
+  isLoading: boolean;
+}
+
+function SuggestedUserItem({ user, onClick, isLoading }: SuggestedUserItemProps) {
+  const presence = useUserPresence(user.id);
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={isLoading}
+      className={cn(
+        'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-500 dark:text-gray-400 text-left',
+        isLoading && 'opacity-50 cursor-not-allowed'
+      )}
+    >
+      <Avatar
+        src={user.avatar_url}
+        name={user.display_name}
+        id={user.id}
+        size="xs"
+        status={presence ?? 'offline'}
+      />
+      <span className="truncate">{user.display_name}</span>
+    </button>
   );
 }
 

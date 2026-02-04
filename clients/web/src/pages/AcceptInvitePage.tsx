@@ -6,7 +6,7 @@ import { Button, Spinner } from '../components/ui';
 export function AcceptInvitePage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, workspaces } = useAuth();
   const acceptInvite = useAcceptInvite();
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +29,11 @@ export function AcceptInvitePage() {
       setError(err instanceof Error ? err.message : 'Failed to accept invite');
     }
   };
+
+  // Get fallback workspace link for error state
+  const fallbackWorkspaceLink = workspaces && workspaces.length > 0
+    ? `/workspaces/${workspaces[0].id}`
+    : '/login';
 
   if (authLoading) {
     return (
@@ -71,8 +76,10 @@ export function AcceptInvitePage() {
         {error ? (
           <>
             <p className="text-red-600 dark:text-red-400 mb-6">{error}</p>
-            <Link to="/workspaces">
-              <Button variant="secondary">Go to Workspaces</Button>
+            <Link to={fallbackWorkspaceLink}>
+              <Button variant="secondary">
+                {workspaces && workspaces.length > 0 ? 'Go to Workspace' : 'Go to Login'}
+              </Button>
             </Link>
           </>
         ) : (

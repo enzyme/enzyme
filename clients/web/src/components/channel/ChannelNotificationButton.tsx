@@ -35,7 +35,7 @@ export function ChannelNotificationButton({
 
   const currentLevel = data?.preferences?.notify_level || 'all';
   const currentEmailEnabled = data?.preferences?.email_enabled ?? true;
-  const currentIcon = getIconForLevel(currentLevel);
+  const CurrentIcon = getIconForLevel(currentLevel);
   const isMuted = currentLevel === 'none';
 
   const handleSelect = (key: React.Key) => {
@@ -67,7 +67,7 @@ export function ChannelNotificationButton({
           )}
           aria-label="Channel notification settings"
         >
-          {currentIcon({ className: 'w-5 h-5' })}
+          <CurrentIcon className="w-5 h-5" />
         </AriaButton>
       }
       align="end"

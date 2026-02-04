@@ -105,8 +105,10 @@ function UserMenu() {
   const handleLogout = async () => {
     try {
       await logout();
+      navigate('/login');
     } catch {
-      // Ignore logout errors
+      // Ignore logout errors - still redirect
+      navigate('/login');
     }
   };
 
@@ -228,18 +230,16 @@ function CreateWorkspaceModal({
   onClose: () => void;
 }) {
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
   const createWorkspace = useCreateWorkspace();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      await createWorkspace.mutateAsync({ name, slug });
+      await createWorkspace.mutateAsync({ name });
       toast("Workspace created!", "success");
       onClose();
       setName("");
-      setSlug("");
     } catch (err) {
       toast(
         err instanceof Error ? err.message : "Failed to create workspace",
@@ -248,33 +248,14 @@ function CreateWorkspaceModal({
     }
   };
 
-  const handleNameChange = (value: string) => {
-    setName(value);
-    // Auto-generate slug from name
-    setSlug(
-      value
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, ""),
-    );
-  };
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create Workspace">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Workspace Name"
           value={name}
-          onChange={(e) => handleNameChange(e.target.value)}
+          onChange={(e) => setName(e.target.value)}
           placeholder="My Workspace"
-          isRequired
-        />
-
-        <Input
-          label="Workspace URL"
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          placeholder="my-workspace"
           isRequired
         />
 

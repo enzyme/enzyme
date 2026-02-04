@@ -17,11 +17,12 @@ export function RegisterPage() {
       // AcceptInvitePage will clear it after processing
       return <Navigate to={`/invites/${pendingInvite}`} replace />;
     }
-    // Redirect to first workspace or workspace list
+    // Redirect to first workspace (RegisterForm handles workspace creation for new users)
     if (workspaces && workspaces.length > 0) {
       return <Navigate to={`/workspaces/${workspaces[0].id}`} replace />;
     }
-    return <Navigate to="/workspaces" replace />;
+    // Edge case: authenticated but no workspaces (shouldn't happen with new flow)
+    // Stay on register page - form will show workspace name field
   }
 
   return (

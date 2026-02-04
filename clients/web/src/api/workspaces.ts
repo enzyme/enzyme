@@ -1,12 +1,10 @@
 import { get, post, del, uploadFile, type Workspace, type WorkspaceMemberWithUser, type Invite, type WorkspaceRole } from '@feather/api-client';
 
 export interface CreateWorkspaceInput {
-  slug: string;
   name: string;
 }
 
 export interface UpdateWorkspaceInput {
-  slug?: string;
   name?: string;
 }
 

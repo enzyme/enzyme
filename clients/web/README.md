@@ -166,11 +166,11 @@ import { Button, Input, Modal, Menu, MenuItem } from '../components/ui';
 | Route | Component | Description |
 |-------|-----------|-------------|
 | `/login` | LoginPage | Login form |
-| `/register` | RegisterPage | Registration form |
+| `/register` | RegisterPage | Registration form (includes workspace creation) |
 | `/invites/:code` | AcceptInvitePage | Accept workspace invite |
-| `/workspaces` | WorkspaceListPage | Workspace selection |
 | `/workspaces/:workspaceId` | AppLayout | Redirects to first channel |
 | `/workspaces/:workspaceId/channels/:channelId` | ChannelPage | Main chat view |
+| `/settings` | ServerSettingsPage | Server settings |
 
 ## Architecture Decisions
 

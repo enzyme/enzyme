@@ -1,6 +1,14 @@
 import { Link } from 'react-router-dom';
+import { useAuth } from '../hooks';
 
 export function ServerSettingsPage() {
+  const { workspaces } = useAuth();
+
+  // Get close link - navigate to first workspace or login
+  const closeLink = workspaces && workspaces.length > 0
+    ? `/workspaces/${workspaces[0].id}`
+    : '/login';
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto p-8">
@@ -9,7 +17,7 @@ export function ServerSettingsPage() {
             Server Settings
           </h1>
           <Link
-            to="/workspaces"
+            to={closeLink}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

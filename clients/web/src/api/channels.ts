@@ -1,4 +1,4 @@
-import { get, post, del, type Channel, type ChannelWithMembership, type ChannelMember, type ChannelType, type MarkReadResponse, type NotificationPreferences } from '@feather/api-client';
+import { get, post, del, type Channel, type ChannelWithMembership, type ChannelMember, type ChannelType, type MarkReadResponse, type NotificationPreferences, type DMSuggestionsResponse } from '@feather/api-client';
 
 export interface CreateChannelInput {
   name: string;
@@ -60,4 +60,7 @@ export const channelsApi = {
 
   unstar: (channelId: string) =>
     del<{ success: boolean }>(`/channels/${channelId}/star`),
+
+  getDMSuggestions: (workspaceId: string) =>
+    post<DMSuggestionsResponse>(`/workspaces/${workspaceId}/dm-suggestions`),
 };

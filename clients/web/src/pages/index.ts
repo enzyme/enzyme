@@ -1,6 +1,5 @@
 export { LoginPage } from './LoginPage';
 export { RegisterPage } from './RegisterPage';
-export { WorkspaceListPage } from './WorkspaceListPage';
 export { WorkspaceLandingPage } from './WorkspaceLandingPage';
 export { WorkspaceSettingsPage } from './WorkspaceSettingsPage';
 export { ChannelPage } from './ChannelPage';

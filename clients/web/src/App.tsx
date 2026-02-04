@@ -7,7 +7,6 @@ import { Toaster } from './components/ui';
 import {
   LoginPage,
   RegisterPage,
-  WorkspaceListPage,
   WorkspaceLandingPage,
   WorkspaceSettingsPage,
   ChannelPage,
@@ -36,15 +35,6 @@ function App() {
           <Route path="/invites/:code" element={<AcceptInvitePage />} />
 
           {/* Protected routes */}
-          <Route
-            path="/workspaces"
-            element={
-              <RequireAuth>
-                <WorkspaceListPage />
-              </RequireAuth>
-            }
-          />
-
           <Route
             path="/workspaces/:workspaceId"
             element={
