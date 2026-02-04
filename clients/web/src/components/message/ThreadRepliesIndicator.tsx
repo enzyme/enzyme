@@ -26,7 +26,7 @@ export function ThreadRepliesIndicator({
   return (
     <button
       onClick={() => openThread(messageId)}
-      className="mt-2 flex items-center gap-2 group/thread hover:bg-white dark:hover:bg-gray-800 hover:border hover:border-gray-200 dark:hover:border-gray-700 rounded-lg px-2 py-1 -mx-2 border border-transparent min-w-[300px]"
+      className="mt-2 flex items-center gap-2 group/thread hover:bg-white dark:hover:bg-gray-900 hover:border hover:border-gray-200 dark:hover:border-gray-700 rounded-lg px-2 py-1 -mx-2 border border-transparent min-w-[300px]"
     >
       {threadParticipants && threadParticipants.length > 0 && (
         <AvatarStack users={threadParticipants} showCount={false} />
