@@ -80,7 +80,6 @@ func CreateTestUser(t *testing.T, db *sql.DB, email, displayName string) *TestUs
 // TestWorkspace represents a test workspace
 type TestWorkspace struct {
 	ID        string
-	Slug      string
 	Name      string
 	Settings  string
 	CreatedAt time.Time
@@ -88,7 +87,7 @@ type TestWorkspace struct {
 }
 
 // CreateTestWorkspace creates a workspace directly in the database
-func CreateTestWorkspace(t *testing.T, db *sql.DB, ownerID, slug, name string) *TestWorkspace {
+func CreateTestWorkspace(t *testing.T, db *sql.DB, ownerID, name string) *TestWorkspace {
 	t.Helper()
 
 	id := ulid.Make().String()
@@ -96,9 +95,9 @@ func CreateTestWorkspace(t *testing.T, db *sql.DB, ownerID, slug, name string) *
 
 	// Create workspace
 	_, err := db.ExecContext(context.Background(), `
-		INSERT INTO workspaces (id, slug, name, settings, created_at, updated_at)
-		VALUES (?, ?, ?, '{}', ?, ?)
-	`, id, slug, name, now.Format(time.RFC3339), now.Format(time.RFC3339))
+		INSERT INTO workspaces (id, name, settings, created_at, updated_at)
+		VALUES (?, ?, '{}', ?, ?)
+	`, id, name, now.Format(time.RFC3339), now.Format(time.RFC3339))
 	if err != nil {
 		t.Fatalf("creating test workspace: %v", err)
 	}
@@ -115,7 +114,6 @@ func CreateTestWorkspace(t *testing.T, db *sql.DB, ownerID, slug, name string) *
 
 	return &TestWorkspace{
 		ID:        id,
-		Slug:      slug,
 		Name:      name,
 		Settings:  "{}",
 		CreatedAt: now,

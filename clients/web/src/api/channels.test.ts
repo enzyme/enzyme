@@ -227,10 +227,10 @@ describe('channelsApi', () => {
 
   describe('updateNotifications', () => {
     it('POST update notification preferences', async () => {
-      const preferences = { muted: true, level: 'mentions' };
+      const preferences = { notify_level: 'mentions' as const, email_enabled: false };
       mockPost.mockResolvedValue({ preferences });
 
-      const result = await channelsApi.updateNotifications('ch-1', preferences as Parameters<typeof channelsApi.updateNotifications>[1]);
+      const result = await channelsApi.updateNotifications('ch-1', preferences);
 
       expect(mockPost).toHaveBeenCalledWith('/channels/ch-1/notifications', preferences);
       expect(result).toEqual({ preferences });

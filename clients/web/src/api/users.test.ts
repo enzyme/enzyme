@@ -17,7 +17,7 @@ vi.mock('@feather/api-client', async (importOriginal) => {
 
 // Mock fetch for deleteAvatar
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+(globalThis as Record<string, unknown>).fetch = mockFetch;
 
 import { usersApi } from './users';
 

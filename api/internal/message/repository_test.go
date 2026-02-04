@@ -15,7 +15,7 @@ func TestRepository_Create(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 
 	msg := &Message{
@@ -43,7 +43,7 @@ func TestRepository_Create_ThreadReply(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 
 	// Create parent message
@@ -78,7 +78,7 @@ func TestRepository_GetByID(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 	created := testutil.CreateTestMessage(t, db, ch.ID, owner.ID, "Hello")
 
@@ -112,7 +112,7 @@ func TestRepository_GetByIDWithUser(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 	created := testutil.CreateTestMessage(t, db, ch.ID, owner.ID, "Hello")
 
@@ -132,7 +132,7 @@ func TestRepository_Update(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 	msg := testutil.CreateTestMessage(t, db, ch.ID, owner.ID, "Original content")
 
@@ -156,7 +156,7 @@ func TestRepository_Delete(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 	msg := testutil.CreateTestMessage(t, db, ch.ID, owner.ID, "To be deleted")
 
@@ -180,7 +180,7 @@ func TestRepository_Delete_AlreadyDeleted(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 	msg := testutil.CreateTestMessage(t, db, ch.ID, owner.ID, "To be deleted")
 
@@ -199,7 +199,7 @@ func TestRepository_List(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 
 	// Create multiple messages
@@ -228,7 +228,7 @@ func TestRepository_List_Pagination(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 
 	// Create 5 messages
@@ -274,7 +274,7 @@ func TestRepository_List_ExcludesThreadReplies(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 
 	// Create parent message
@@ -305,7 +305,7 @@ func TestRepository_ListThread(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 
 	// Create parent message
@@ -338,7 +338,7 @@ func TestRepository_AddReaction(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 	msg := testutil.CreateTestMessage(t, db, ch.ID, owner.ID, "Hello")
 
@@ -361,7 +361,7 @@ func TestRepository_AddReaction_Duplicate(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 	msg := testutil.CreateTestMessage(t, db, ch.ID, owner.ID, "Hello")
 
@@ -379,7 +379,7 @@ func TestRepository_RemoveReaction(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 	msg := testutil.CreateTestMessage(t, db, ch.ID, owner.ID, "Hello")
 
@@ -397,7 +397,7 @@ func TestRepository_RemoveReaction_NotFound(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 	msg := testutil.CreateTestMessage(t, db, ch.ID, owner.ID, "Hello")
 
@@ -413,7 +413,7 @@ func TestRepository_List_IncludesReactions(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 	ch := testutil.CreateTestChannel(t, db, ws.ID, owner.ID, "general", channel.TypePublic)
 	msg := testutil.CreateTestMessage(t, db, ch.ID, owner.ID, "Hello")
 

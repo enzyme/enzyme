@@ -131,11 +131,10 @@ describe('useCreateWorkspace', () => {
     });
 
     await act(async () => {
-      await result.current.mutateAsync({ slug: 'new-ws', name: 'New Workspace' });
+      await result.current.mutateAsync({ name: 'New Workspace' });
     });
 
     expect(mockWorkspacesApi.create).toHaveBeenCalledWith({
-      slug: 'new-ws',
       name: 'New Workspace',
     });
   });
@@ -150,7 +149,7 @@ describe('useCreateWorkspace', () => {
     });
 
     await act(async () => {
-      await result.current.mutateAsync({ slug: 'test', name: 'Test' });
+      await result.current.mutateAsync({ name: 'Test' });
     });
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['auth', 'me'] });

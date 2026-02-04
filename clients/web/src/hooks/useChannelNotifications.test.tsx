@@ -83,7 +83,7 @@ describe('useUpdateChannelNotifications', () => {
 
   it('calls API with settings', async () => {
     const queryClient = createTestQueryClient();
-    const newPreferences: NotificationPreferences = { muted: true, level: 'mentions' };
+    const newPreferences: NotificationPreferences = { notify_level: 'mentions', email_enabled: false };
     mockChannelsApi.updateNotifications.mockResolvedValue({ preferences: newPreferences });
 
     const { result } = renderHook(() => useUpdateChannelNotifications('ch-1'), {
@@ -99,8 +99,8 @@ describe('useUpdateChannelNotifications', () => {
 
   it('invalidates cache after mutation', async () => {
     const queryClient = createTestQueryClient();
-    const initialPreferences: NotificationPreferences = { muted: false, level: 'all' };
-    const newPreferences: NotificationPreferences = { muted: true, level: 'mentions' };
+    const initialPreferences: NotificationPreferences = { notify_level: 'all', email_enabled: true };
+    const newPreferences: NotificationPreferences = { notify_level: 'mentions', email_enabled: false };
     mockChannelsApi.updateNotifications.mockResolvedValue({ preferences: newPreferences });
 
     // Pre-populate cache
@@ -120,7 +120,7 @@ describe('useUpdateChannelNotifications', () => {
 
   it('returns updated preferences on success', async () => {
     const queryClient = createTestQueryClient();
-    const newPreferences: NotificationPreferences = { muted: false, level: 'all' };
+    const newPreferences: NotificationPreferences = { notify_level: 'all', email_enabled: true };
     mockChannelsApi.updateNotifications.mockResolvedValue({ preferences: newPreferences });
 
     const { result } = renderHook(() => useUpdateChannelNotifications('ch-1'), {
@@ -137,7 +137,7 @@ describe('useUpdateChannelNotifications', () => {
 
   it('uses correct channel ID from hook parameter', async () => {
     const queryClient = createTestQueryClient();
-    const preferences: NotificationPreferences = { muted: true };
+    const preferences: NotificationPreferences = { notify_level: 'none', email_enabled: false };
     mockChannelsApi.updateNotifications.mockResolvedValue({ preferences });
 
     const { result } = renderHook(() => useUpdateChannelNotifications('specific-channel'), {

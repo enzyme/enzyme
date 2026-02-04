@@ -17,7 +17,6 @@ func TestRepository_Create(t *testing.T) {
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 
 	ws := &Workspace{
-		Slug:     "test-workspace",
 		Name:     "Test Workspace",
 		Settings: "{}",
 	}
@@ -43,7 +42,6 @@ func TestRepository_Create_AddsOwnerMembership(t *testing.T) {
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 
 	ws := &Workspace{
-		Slug:     "test-workspace",
 		Name:     "Test Workspace",
 		Settings: "{}",
 	}
@@ -64,25 +62,6 @@ func TestRepository_Create_AddsOwnerMembership(t *testing.T) {
 	}
 }
 
-func TestRepository_Create_DuplicateSlug(t *testing.T) {
-	db := testutil.TestDB(t)
-	repo := NewRepository(db)
-	ctx := context.Background()
-
-	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-
-	ws1 := &Workspace{Slug: "duplicate-slug", Name: "First", Settings: "{}"}
-	if err := repo.Create(ctx, ws1, owner.ID); err != nil {
-		t.Fatalf("first Create() error = %v", err)
-	}
-
-	ws2 := &Workspace{Slug: "duplicate-slug", Name: "Second", Settings: "{}"}
-	err := repo.Create(ctx, ws2, owner.ID)
-	if !errors.Is(err, ErrSlugAlreadyInUse) {
-		t.Errorf("second Create() error = %v, want %v", err, ErrSlugAlreadyInUse)
-	}
-}
-
 func TestRepository_GetByID(t *testing.T) {
 	db := testutil.TestDB(t)
 	repo := NewRepository(db)
@@ -90,7 +69,7 @@ func TestRepository_GetByID(t *testing.T) {
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 
-	created := &Workspace{Slug: "test-ws", Name: "Test WS", Settings: "{}"}
+	created := &Workspace{Name: "Test WS", Settings: "{}"}
 	repo.Create(ctx, created, owner.ID)
 
 	ws, err := repo.GetByID(ctx, created.ID)
@@ -101,8 +80,8 @@ func TestRepository_GetByID(t *testing.T) {
 	if ws.ID != created.ID {
 		t.Errorf("ID = %q, want %q", ws.ID, created.ID)
 	}
-	if ws.Slug != "test-ws" {
-		t.Errorf("Slug = %q, want %q", ws.Slug, "test-ws")
+	if ws.Name != "Test WS" {
+		t.Errorf("Name = %q, want %q", ws.Name, "Test WS")
 	}
 }
 
@@ -117,26 +96,6 @@ func TestRepository_GetByID_NotFound(t *testing.T) {
 	}
 }
 
-func TestRepository_GetBySlug(t *testing.T) {
-	db := testutil.TestDB(t)
-	repo := NewRepository(db)
-	ctx := context.Background()
-
-	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-
-	created := &Workspace{Slug: "find-me", Name: "Find Me", Settings: "{}"}
-	repo.Create(ctx, created, owner.ID)
-
-	ws, err := repo.GetBySlug(ctx, "find-me")
-	if err != nil {
-		t.Fatalf("GetBySlug() error = %v", err)
-	}
-
-	if ws.ID != created.ID {
-		t.Errorf("ID = %q, want %q", ws.ID, created.ID)
-	}
-}
-
 func TestRepository_Update(t *testing.T) {
 	db := testutil.TestDB(t)
 	repo := NewRepository(db)
@@ -144,7 +103,7 @@ func TestRepository_Update(t *testing.T) {
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 
-	ws := &Workspace{Slug: "update-me", Name: "Update Me", Settings: "{}"}
+	ws := &Workspace{Name: "Update Me", Settings: "{}"}
 	repo.Create(ctx, ws, owner.ID)
 
 	ws.Name = "Updated Name"
@@ -172,7 +131,7 @@ func TestRepository_AddMember(t *testing.T) {
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@example.com", "Member")
 
-	ws := &Workspace{Slug: "test-ws", Name: "Test WS", Settings: "{}"}
+	ws := &Workspace{Name: "Test WS", Settings: "{}"}
 	repo.Create(ctx, ws, owner.ID)
 
 	m, err := repo.AddMember(ctx, member.ID, ws.ID, RoleMember)
@@ -195,7 +154,7 @@ func TestRepository_AddMember_AlreadyMember(t *testing.T) {
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 
-	ws := &Workspace{Slug: "test-ws", Name: "Test WS", Settings: "{}"}
+	ws := &Workspace{Name: "Test WS", Settings: "{}"}
 	repo.Create(ctx, ws, owner.ID)
 
 	// Owner is already a member
@@ -213,7 +172,7 @@ func TestRepository_RemoveMember(t *testing.T) {
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@example.com", "Member")
 
-	ws := &Workspace{Slug: "test-ws", Name: "Test WS", Settings: "{}"}
+	ws := &Workspace{Name: "Test WS", Settings: "{}"}
 	repo.Create(ctx, ws, owner.ID)
 
 	repo.AddMember(ctx, member.ID, ws.ID, RoleMember)
@@ -236,7 +195,7 @@ func TestRepository_RemoveMember_CannotRemoveOwner(t *testing.T) {
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 
-	ws := &Workspace{Slug: "test-ws", Name: "Test WS", Settings: "{}"}
+	ws := &Workspace{Name: "Test WS", Settings: "{}"}
 	repo.Create(ctx, ws, owner.ID)
 
 	err := repo.RemoveMember(ctx, owner.ID, ws.ID)
@@ -253,7 +212,7 @@ func TestRepository_UpdateMemberRole(t *testing.T) {
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@example.com", "Member")
 
-	ws := &Workspace{Slug: "test-ws", Name: "Test WS", Settings: "{}"}
+	ws := &Workspace{Name: "Test WS", Settings: "{}"}
 	repo.Create(ctx, ws, owner.ID)
 
 	repo.AddMember(ctx, member.ID, ws.ID, RoleMember)
@@ -277,7 +236,7 @@ func TestRepository_ListMembers(t *testing.T) {
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@example.com", "Member")
 
-	ws := &Workspace{Slug: "test-ws", Name: "Test WS", Settings: "{}"}
+	ws := &Workspace{Name: "Test WS", Settings: "{}"}
 	repo.Create(ctx, ws, owner.ID)
 
 	repo.AddMember(ctx, member.ID, ws.ID, RoleMember)
@@ -299,7 +258,7 @@ func TestRepository_CreateInvite(t *testing.T) {
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 
-	ws := &Workspace{Slug: "test-ws", Name: "Test WS", Settings: "{}"}
+	ws := &Workspace{Name: "Test WS", Settings: "{}"}
 	repo.Create(ctx, ws, owner.ID)
 
 	invite := &Invite{
@@ -329,7 +288,7 @@ func TestRepository_AcceptInvite(t *testing.T) {
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	newMember := testutil.CreateTestUser(t, db, "new@example.com", "New Member")
 
-	ws := &Workspace{Slug: "test-ws", Name: "Test WS", Settings: "{}"}
+	ws := &Workspace{Name: "Test WS", Settings: "{}"}
 	repo.Create(ctx, ws, owner.ID)
 
 	invite := &Invite{
@@ -365,7 +324,7 @@ func TestRepository_AcceptInvite_Expired(t *testing.T) {
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	newMember := testutil.CreateTestUser(t, db, "new@example.com", "New Member")
 
-	ws := &Workspace{Slug: "test-ws", Name: "Test WS", Settings: "{}"}
+	ws := &Workspace{Name: "Test WS", Settings: "{}"}
 	repo.Create(ctx, ws, owner.ID)
 
 	expiredTime := time.Now().Add(-1 * time.Hour)
@@ -391,7 +350,7 @@ func TestRepository_AcceptInvite_MaxUsed(t *testing.T) {
 	member1 := testutil.CreateTestUser(t, db, "member1@example.com", "Member 1")
 	member2 := testutil.CreateTestUser(t, db, "member2@example.com", "Member 2")
 
-	ws := &Workspace{Slug: "test-ws", Name: "Test WS", Settings: "{}"}
+	ws := &Workspace{Name: "Test WS", Settings: "{}"}
 	repo.Create(ctx, ws, owner.ID)
 
 	maxUses := 1

@@ -82,7 +82,7 @@ describe('useAuth', () => {
 
   it('returns unauthenticated state on 401 error', async () => {
     const { ApiError } = await import('@feather/api-client');
-    mockAuthApi.me.mockRejectedValue(new ApiError('Unauthorized', 401));
+    mockAuthApi.me.mockRejectedValue(new ApiError('UNAUTHORIZED', 'Unauthorized', 401));
 
     const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
 

@@ -14,7 +14,7 @@ func TestRepository_Create(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	ch := &Channel{
 		WorkspaceID: ws.ID,
@@ -41,7 +41,7 @@ func TestRepository_Create_AddsCreatorAsMember(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	ch := &Channel{
 		WorkspaceID: ws.ID,
@@ -68,7 +68,7 @@ func TestRepository_GetByID(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	created := &Channel{WorkspaceID: ws.ID, Name: "general", Type: TypePublic}
 	repo.Create(ctx, created, owner.ID)
@@ -103,7 +103,7 @@ func TestRepository_Update(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	ch := &Channel{WorkspaceID: ws.ID, Name: "general", Type: TypePublic}
 	repo.Create(ctx, ch, owner.ID)
@@ -132,7 +132,7 @@ func TestRepository_Archive(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	ch := &Channel{WorkspaceID: ws.ID, Name: "general", Type: TypePublic}
 	repo.Create(ctx, ch, owner.ID)
@@ -155,7 +155,7 @@ func TestRepository_CreateDM(t *testing.T) {
 
 	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
 	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
-	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
 
 	ch, err := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID})
 	if err != nil {
@@ -178,7 +178,7 @@ func TestRepository_CreateDM_GroupDM(t *testing.T) {
 	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
 	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
 	user3 := testutil.CreateTestUser(t, db, "user3@example.com", "User 3")
-	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
 
 	ch, err := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID, user3.ID})
 	if err != nil {
@@ -197,7 +197,7 @@ func TestRepository_CreateDM_ReturnsExisting(t *testing.T) {
 
 	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
 	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
-	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
 
 	// Create first DM
 	dm1, err := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID})
@@ -223,7 +223,7 @@ func TestRepository_CreateDM_OrderIndependent(t *testing.T) {
 
 	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
 	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
-	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
 
 	// Create with user1 first
 	dm1, _ := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID})
@@ -243,7 +243,7 @@ func TestRepository_AddMember(t *testing.T) {
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@example.com", "Member")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	ch := &Channel{WorkspaceID: ws.ID, Name: "general", Type: TypePublic}
 	repo.Create(ctx, ch, owner.ID)
@@ -268,7 +268,7 @@ func TestRepository_AddMember_AlreadyMember(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	ch := &Channel{WorkspaceID: ws.ID, Name: "general", Type: TypePublic}
 	repo.Create(ctx, ch, owner.ID)
@@ -288,7 +288,7 @@ func TestRepository_AddMember_ArchivedChannel(t *testing.T) {
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@example.com", "Member")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	ch := &Channel{WorkspaceID: ws.ID, Name: "general", Type: TypePublic}
 	repo.Create(ctx, ch, owner.ID)
@@ -309,7 +309,7 @@ func TestRepository_RemoveMember(t *testing.T) {
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@example.com", "Member")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	ch := &Channel{WorkspaceID: ws.ID, Name: "general", Type: TypePublic}
 	repo.Create(ctx, ch, owner.ID)
@@ -335,7 +335,7 @@ func TestRepository_RemoveMember_CannotLeaveDM(t *testing.T) {
 
 	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
 	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
-	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
 
 	dm, _ := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID})
 
@@ -352,7 +352,7 @@ func TestRepository_ListMembers(t *testing.T) {
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@example.com", "Member")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	ch := &Channel{WorkspaceID: ws.ID, Name: "general", Type: TypePublic}
 	repo.Create(ctx, ch, owner.ID)
@@ -376,7 +376,7 @@ func TestRepository_UpdateLastRead(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	ch := &Channel{WorkspaceID: ws.ID, Name: "general", Type: TypePublic}
 	repo.Create(ctx, ch, owner.ID)
@@ -401,7 +401,7 @@ func TestRepository_ListMemberChannelIDs(t *testing.T) {
 	ctx := context.Background()
 
 	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
-	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "test-ws", "Test WS")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	ch1 := &Channel{WorkspaceID: ws.ID, Name: "general", Type: TypePublic}
 	repo.Create(ctx, ch1, owner.ID)
