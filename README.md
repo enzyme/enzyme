@@ -32,7 +32,6 @@ feather/
 ├── api/                    # Go backend server
 ├── clients/web/            # React frontend
 ├── packages/api-client/    # Shared TypeScript types
-├── docker-compose.yml      # Container setup
 └── Makefile                # Build orchestration
 ```
 
@@ -81,12 +80,6 @@ This builds binaries for 6 platforms and creates a GitHub Release with:
 - `feather-darwin-amd64`, `feather-darwin-arm64`
 - `feather-windows-amd64.exe`, `feather-windows-arm64.exe`
 - `feather-web.tar.gz` (frontend bundle)
-
-## Docker
-
-```bash
-docker-compose up --build
-```
 
 ## Documentation
 

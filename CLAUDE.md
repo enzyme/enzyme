@@ -64,8 +64,7 @@ feather/
 │       └── generated/          # Auto-generated from OpenAPI
 ├── package.json                # pnpm workspace root
 ├── pnpm-workspace.yaml
-├── Makefile
-└── docker-compose.yml
+└── Makefile
 ```
 
 ## Build Commands
@@ -294,12 +293,3 @@ Export from `src/components/ui/index.ts`
 **Infinite scroll**: `MessageList` uses `useInfiniteQuery`, messages reversed for display, scroll preserved
 
 **Thread panel**: Slide-out controlled by `?thread=` URL search param (see `useThreadPanel` hook)
-
----
-
-## Docker
-
-```bash
-docker-compose up --build
-# api: :8080, web: :3000
-```
