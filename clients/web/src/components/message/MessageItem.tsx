@@ -3,13 +3,14 @@ import { useParams } from 'react-router-dom';
 import { Button as AriaButton } from 'react-aria-components';
 import {
   FaceSmileIcon,
-  ArrowUturnLeftIcon,
-  EnvelopeIcon,
+  ChatBubbleBottomCenterTextIcon,
+  EyeSlashIcon,
   EllipsisVerticalIcon,
   PencilSquareIcon,
   TrashIcon,
+  LinkIcon,
 } from '@heroicons/react/24/outline';
-import { Avatar, AvatarStack, Menu, MenuItem, Modal, Button, Tooltip } from '../ui';
+import { Avatar, AvatarStack, Menu, MenuItem, Modal, Button, Tooltip, toast } from '../ui';
 import { ReactionPicker } from './ReactionPicker';
 import { AttachmentDisplay } from './AttachmentDisplay';
 import { MessageContent } from './MessageContent';
@@ -121,6 +122,13 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
   const handleDeleteClick = () => {
     setShowDropdown(false);
     setShowDeleteModal(true);
+  };
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/w/${workspaceId}/c/${channelId}?msg=${message.id}`;
+    navigator.clipboard.writeText(url);
+    toast('Link copied to clipboard', 'success');
+    setShowDropdown(false);
   };
 
   const handleDeleteConfirm = () => {
@@ -353,31 +361,25 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
       {/* Action buttons */}
       {showActions && !isEditing && (
         <div className="absolute right-4 top-0 -translate-y-1/2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm flex items-center">
-          <button
-            onClick={() => setShowReactionPicker(!showReactionPicker)}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg"
-            title="Add reaction"
-          >
-            <FaceSmileIcon className="w-4 h-4 text-gray-500" />
-          </button>
+          <Tooltip content="Add reaction">
+            <AriaButton
+              onPress={() => setShowReactionPicker(!showReactionPicker)}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg"
+            >
+              <FaceSmileIcon className="w-4 h-4 text-gray-500" />
+            </AriaButton>
+          </Tooltip>
 
-          <button
-            onClick={() => openThread(message.id)}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
-            title="Reply in thread"
-          >
-            <ArrowUturnLeftIcon className="w-4 h-4 text-gray-500" />
-          </button>
+          <Tooltip content="Reply in thread">
+            <AriaButton
+              onPress={() => openThread(message.id)}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <ChatBubbleBottomCenterTextIcon className="w-4 h-4 text-gray-500" />
+            </AriaButton>
+          </Tooltip>
 
-          <button
-            onClick={() => markUnread.mutate(message.id)}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
-            title="Mark unread"
-          >
-            <EnvelopeIcon className="w-4 h-4 text-gray-500" />
-          </button>
-
-          {isOwnMessage && (
+          <Tooltip content="More options">
             <Menu
               open={showDropdown}
               onOpenChange={setShowDropdown}
@@ -388,27 +390,43 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
                     'p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-r-lg',
                     showDropdown && 'bg-gray-100 dark:bg-gray-700'
                   )}
-                  aria-label="More actions"
+                  aria-label="More options"
                 >
                   <EllipsisVerticalIcon className="w-4 h-4 text-gray-500" />
                 </AriaButton>
               }
             >
               <MenuItem
-                onAction={handleStartEdit}
-                icon={<PencilSquareIcon className="w-4 h-4" />}
+                onAction={handleCopyLink}
+                icon={<LinkIcon className="w-4 h-4" />}
               >
-                Edit message
+                Copy link to message
               </MenuItem>
               <MenuItem
-                onAction={handleDeleteClick}
-                variant="danger"
-                icon={<TrashIcon className="w-4 h-4" />}
+                onAction={() => markUnread.mutate(message.id)}
+                icon={<EyeSlashIcon className="w-4 h-4" />}
               >
-                Delete message
+                Mark unread
               </MenuItem>
+              {isOwnMessage && (
+                <>
+                  <MenuItem
+                    onAction={handleStartEdit}
+                    icon={<PencilSquareIcon className="w-4 h-4" />}
+                  >
+                    Edit message
+                  </MenuItem>
+                  <MenuItem
+                    onAction={handleDeleteClick}
+                    variant="danger"
+                    icon={<TrashIcon className="w-4 h-4" />}
+                  >
+                    Delete message
+                  </MenuItem>
+                </>
+              )}
             </Menu>
-          )}
+          </Tooltip>
         </div>
       )}
 

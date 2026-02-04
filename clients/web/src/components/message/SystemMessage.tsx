@@ -1,13 +1,20 @@
 import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { Button as AriaButton } from 'react-aria-components';
-import { FaceSmileIcon } from '@heroicons/react/24/outline';
-import { Avatar, Tooltip } from '../ui';
+import {
+  FaceSmileIcon,
+  ChatBubbleBottomCenterTextIcon,
+  EllipsisVerticalIcon,
+  LinkIcon,
+  EyeSlashIcon,
+} from '@heroicons/react/24/outline';
+import { Avatar, Tooltip, Menu, MenuItem, toast } from '../ui';
 import { ReactionPicker } from './ReactionPicker';
 import { useAuth, useAddReaction, useRemoveReaction, useWorkspaceMembers } from '../../hooks';
-import { useProfilePanel } from '../../hooks/usePanel';
+import { useMarkMessageUnread } from '../../hooks/useMessages';
+import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { cn, formatTime } from '../../lib/utils';
 import type { MessageWithUser } from '@feather/api-client';
-import { useParams } from 'react-router-dom';
 
 interface SystemMessageProps {
   message: MessageWithUser;
@@ -18,11 +25,21 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const [showActions, setShowActions] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const { user } = useAuth();
+  const { openThread } = useThreadPanel();
   const { openProfile } = useProfilePanel();
   const addReaction = useAddReaction(channelId);
   const removeReaction = useRemoveReaction(channelId);
+  const markUnread = useMarkMessageUnread(workspaceId || '');
   const { data: membersData } = useWorkspaceMembers(workspaceId);
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/w/${workspaceId}/c/${channelId}?msg=${message.id}`;
+    navigator.clipboard.writeText(url);
+    toast('Link copied to clipboard', 'success');
+    setShowDropdown(false);
+  };
 
   // Create a lookup map from user ID to display name
   const memberNames = (membersData?.members || []).reduce((acc, member) => {
@@ -82,11 +99,14 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
     <div
       className={cn(
         "group px-4 py-1.5 relative",
-        "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+        "hover:bg-gray-50 dark:hover:bg-gray-800/50",
+        showDropdown && "bg-gray-50 dark:bg-gray-800/50"
       )}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
-        setShowActions(false);
+        if (!showDropdown) {
+          setShowActions(false);
+        }
         setShowReactionPicker(false);
       }}
     >
@@ -153,16 +173,61 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
         </div>
       </div>
 
-      {/* Action buttons - only reaction picker, no edit/delete */}
+      {/* Action buttons */}
       {showActions && (
-        <div className="absolute right-4 top-0 -translate-y-1/2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm flex items-center">
-          <button
-            onClick={() => setShowReactionPicker(!showReactionPicker)}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-            title="Add reaction"
-          >
-            <FaceSmileIcon className="w-4 h-4 text-gray-500" />
-          </button>
+        <div className={cn(
+          "absolute right-4 top-0 -translate-y-1/2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm flex items-center",
+          showDropdown && "bg-gray-50 dark:bg-gray-800/50"
+        )}>
+          <Tooltip content="Add reaction">
+            <AriaButton
+              onPress={() => setShowReactionPicker(!showReactionPicker)}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg"
+            >
+              <FaceSmileIcon className="w-4 h-4 text-gray-500" />
+            </AriaButton>
+          </Tooltip>
+
+          <Tooltip content="Reply in thread">
+            <AriaButton
+              onPress={() => openThread(message.id)}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <ChatBubbleBottomCenterTextIcon className="w-4 h-4 text-gray-500" />
+            </AriaButton>
+          </Tooltip>
+
+          <Tooltip content="More options">
+            <Menu
+              open={showDropdown}
+              onOpenChange={setShowDropdown}
+              align="end"
+              trigger={
+                <AriaButton
+                  className={cn(
+                    'p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-r-lg',
+                    showDropdown && 'bg-gray-100 dark:bg-gray-700'
+                  )}
+                  aria-label="More options"
+                >
+                  <EllipsisVerticalIcon className="w-4 h-4 text-gray-500" />
+                </AriaButton>
+              }
+            >
+              <MenuItem
+                onAction={handleCopyLink}
+                icon={<LinkIcon className="w-4 h-4" />}
+              >
+                Copy link to message
+              </MenuItem>
+              <MenuItem
+                onAction={() => markUnread.mutate(message.id)}
+                icon={<EyeSlashIcon className="w-4 h-4" />}
+              >
+                Mark unread
+              </MenuItem>
+            </Menu>
+          </Tooltip>
         </div>
       )}
 
