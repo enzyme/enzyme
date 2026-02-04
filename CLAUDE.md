@@ -163,21 +163,19 @@ import { get, post, ApiError } from '@feather/api-client';
 
 **Add migration**: Create `api/internal/database/migrations/NNN_description.sql` with `-- +goose Up/Down`
 
-**SQLite migration gotcha - foreign key cascades**: This project enables foreign keys (`PRAGMA foreign_keys = ON`). When writing migrations that recreate tables (required for dropping columns in SQLite), you must disable foreign keys temporarily to prevent `ON DELETE CASCADE` from deleting data in related tables:
+**SQLite migrations**: This project uses `modernc.org/sqlite` which supports SQLite 3.35+ features including `ALTER TABLE DROP COLUMN`.
 
+For dropping columns, use:
 ```sql
--- +goose Up
-PRAGMA foreign_keys = OFF;
-
-CREATE TABLE my_table_new (...);
-INSERT INTO my_table_new SELECT ... FROM my_table;
-DROP TABLE my_table;
-ALTER TABLE my_table_new RENAME TO my_table;
-
-PRAGMA foreign_keys = ON;
+ALTER TABLE my_table DROP COLUMN column_name;
 ```
 
-Without this, `DROP TABLE` triggers cascading deletes on any table with `REFERENCES my_table(id) ON DELETE CASCADE`.
+Only use table recreation for complex changes (altering column types/constraints). If recreating tables, disable foreign keys to prevent CASCADE deletes:
+```sql
+PRAGMA foreign_keys = OFF;
+-- ... recreation steps ...
+PRAGMA foreign_keys = ON;
+```
 
 **Add domain**: Create package in `internal/`, add model/repository/handler, wire in `app.go`
 
