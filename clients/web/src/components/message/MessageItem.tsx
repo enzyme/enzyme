@@ -364,18 +364,18 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
           <Tooltip content="Add reaction">
             <AriaButton
               onPress={() => setShowReactionPicker(!showReactionPicker)}
-              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg"
+              className="group/btn p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg"
             >
-              <FaceSmileIcon className="w-4 h-4 text-gray-500" />
+              <FaceSmileIcon className="w-4 h-4 text-gray-500 transition-transform group-hover/btn:scale-110 group-hover/btn:text-gray-700 dark:group-hover/btn:text-gray-300" />
             </AriaButton>
           </Tooltip>
 
           <Tooltip content="Reply in thread">
             <AriaButton
               onPress={() => openThread(message.id)}
-              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="group/btn p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <ChatBubbleBottomCenterTextIcon className="w-4 h-4 text-gray-500" />
+              <ChatBubbleBottomCenterTextIcon className="w-4 h-4 text-gray-500 transition-transform group-hover/btn:scale-110 group-hover/btn:text-gray-700 dark:group-hover/btn:text-gray-300" />
             </AriaButton>
           </Tooltip>
 
@@ -387,12 +387,12 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
               trigger={
                 <AriaButton
                   className={cn(
-                    'p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-r-lg',
+                    'group/btn p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-r-lg',
                     showDropdown && 'bg-gray-100 dark:bg-gray-700'
                   )}
                   aria-label="More options"
                 >
-                  <EllipsisVerticalIcon className="w-4 h-4 text-gray-500" />
+                  <EllipsisVerticalIcon className="w-4 h-4 text-gray-500 transition-transform group-hover/btn:scale-110 group-hover/btn:text-gray-700 dark:group-hover/btn:text-gray-300" />
                 </AriaButton>
               }
             >
