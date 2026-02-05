@@ -53,4 +53,8 @@ export const workspacesApi = {
 
   deleteIcon: (workspaceId: string) =>
     del<{ success: boolean }>(`/workspaces/${workspaceId}/icon`),
+
+  // Reorder workspaces
+  reorder: (workspaceIds: string[]) =>
+    post<{ success: boolean }>('/workspaces/reorder', { workspace_ids: workspaceIds }),
 };

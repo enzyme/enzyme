@@ -1,10 +1,20 @@
 import { useState, useMemo } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircleIcon, ChevronRightIcon, PlusIcon, LockClosedIcon, HashtagIcon, InboxIcon } from '@heroicons/react/24/outline';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  useDraggable,
+} from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useChannels, useWorkspace, useAuth } from '../../hooks';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
 import { ChannelListSkeleton, Modal, Button, Input, toast, Tabs, TabList, Tab, TabPanel, RadioGroup, Radio, Avatar } from '../ui';
-import { useCreateChannel, useMarkAllChannelsAsRead, useCreateDM, useJoinChannel, useDMSuggestions } from '../../hooks/useChannels';
+import { useCreateChannel, useMarkAllChannelsAsRead, useCreateDM, useJoinChannel, useDMSuggestions, useStarChannel, useUnstarChannel } from '../../hooks/useChannels';
 import { cn, getAvatarColor } from '../../lib/utils';
 import { useUserPresence } from '../../lib/presenceStore';
 import type { ChannelWithMembership, ChannelType, SuggestedUser } from '@feather/api-client';
@@ -31,8 +41,31 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isNewDMModalOpen, setIsNewDMModalOpen] = useState(false);
   const markAllAsRead = useMarkAllChannelsAsRead(workspaceId || '');
+  const starChannel = useStarChannel(workspaceId || '');
+  const unstarChannel = useUnstarChannel(workspaceId || '');
+  const [activeChannel, setActiveChannel] = useState<ChannelWithMembership | null>(null);
 
-  const channels = useMemo(() => data?.channels || [], [data?.channels]);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  // Local state for immediate visual updates during drag
+  const [localChannels, setLocalChannels] = useState<ChannelWithMembership[]>([]);
+  const [prevServerChannels, setPrevServerChannels] = useState<ChannelWithMembership[] | undefined>();
+
+  // Sync local state with server state when server data changes (React-recommended pattern)
+  if (data?.channels !== prevServerChannels) {
+    setPrevServerChannels(data?.channels);
+    if (data?.channels) {
+      setLocalChannels(data.channels);
+    }
+  }
+
+  const channels = localChannels;
   const totalUnreadCount = useMemo(() => channels.reduce((sum, c) => sum + c.unread_count, 0), [channels]);
   const hasUnread = totalUnreadCount > 0;
   const isUnreadsPage = location.pathname.includes('/unreads');
@@ -40,8 +73,7 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
   const groupedChannels = useMemo(() => {
     const groups = {
       starred: [] as ChannelWithMembership[],
-      public: [] as ChannelWithMembership[],
-      private: [] as ChannelWithMembership[],
+      channels: [] as ChannelWithMembership[],
       dm: [] as ChannelWithMembership[],
     };
 
@@ -58,17 +90,70 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
         return;
       }
 
-      if (channel.type === 'public') {
-        groups.public.push(channel);
-      } else if (channel.type === 'private') {
-        groups.private.push(channel);
+      if (channel.type === 'public' || channel.type === 'private') {
+        groups.channels.push(channel);
       } else {
         groups.dm.push(channel);
       }
     });
 
+    // Sort starred: channels alphabetically first, then DMs alphabetically
+    groups.starred.sort((a, b) => {
+      const aIsDM = a.type === 'dm' || a.type === 'group_dm';
+      const bIsDM = b.type === 'dm' || b.type === 'group_dm';
+      if (aIsDM !== bIsDM) return aIsDM ? 1 : -1;
+      return a.name.localeCompare(b.name);
+    });
+
+    // Sort channels alphabetically
+    groups.channels.sort((a, b) => a.name.localeCompare(b.name));
+
     return groups;
   }, [channels]);
+
+  // Determine if the active (dragged) item is a DM
+  const isDraggingDM = activeChannel
+    ? activeChannel.type === 'dm' || activeChannel.type === 'group_dm'
+    : false;
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const channel = channels.find((c) => c.id === event.active.id);
+    if (channel) {
+      setActiveChannel(channel);
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveChannel(null);
+
+    if (!over) return;
+
+    const channel = channels.find((c) => c.id === active.id);
+    if (!channel) return;
+
+    const overId = over.id as string;
+
+    // Handle dropping on Starred section
+    if (overId === 'starred-drop-zone' && !channel.is_starred) {
+      // Update local state immediately for smooth visual transition
+      setLocalChannels((prev) =>
+        prev.map((c) => (c.id === channel.id ? { ...c, is_starred: true } : c))
+      );
+      starChannel.mutate(channel.id);
+    }
+    // Handle dropping on Channels or DMs sections (unstar)
+    else if (
+      (overId === 'channels-drop-zone' || overId === 'dms-drop-zone') &&
+      channel.is_starred
+    ) {
+      // Update local state immediately for smooth visual transition
+      setLocalChannels((prev) =>
+        prev.map((c) => (c.id === channel.id ? { ...c, is_starred: false } : c))
+      );
+      unstarChannel.mutate(channel.id);
+    }
+  };
 
   if (!workspaceId) {
     return null;
@@ -120,40 +205,49 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
         {isLoading ? (
           <ChannelListSkeleton />
         ) : (
-          <>
-            {groupedChannels.starred.length > 0 && (
-              <ChannelSection
-                title="Starred"
-                channels={groupedChannels.starred}
-                workspaceId={workspaceId}
-                activeChannelId={channelId}
-              />
-            )}
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <DroppableChannelSection
+              id="starred-drop-zone"
+              title="Starred"
+              channels={groupedChannels.starred}
+              workspaceId={workspaceId}
+              activeChannelId={channelId}
+              showWhenEmpty={activeChannel !== null}
+              isStarredSection
+            />
 
-            <ChannelSection
+            <DroppableChannelSection
+              id="channels-drop-zone"
               title="Channels"
-              channels={groupedChannels.public}
+              channels={groupedChannels.channels}
               workspaceId={workspaceId}
               activeChannelId={channelId}
               onAddClick={() => setIsCreateModalOpen(true)}
+              canDrop={activeChannel !== null && activeChannel.is_starred && !isDraggingDM}
             />
 
-            {groupedChannels.private.length > 0 && (
-              <ChannelSection
-                title="Private Channels"
-                channels={groupedChannels.private}
-                workspaceId={workspaceId}
-                activeChannelId={channelId}
-              />
-            )}
+            <DroppableDMSection
+              id="dms-drop-zone"
+              channels={groupedChannels.dm}
+              allChannels={channels}
+              workspaceId={workspaceId}
+              activeChannelId={channelId}
+              onAddClick={() => setIsNewDMModalOpen(true)}
+              canDrop={activeChannel !== null && activeChannel.is_starred && isDraggingDM}
+            />
 
-            <DMSection
-                channels={groupedChannels.dm}
-                workspaceId={workspaceId}
-                activeChannelId={channelId}
-                onAddClick={() => setIsNewDMModalOpen(true)}
-              />
-          </>
+            <DragOverlay>
+              {activeChannel && (
+                <div className="bg-white dark:bg-gray-800 shadow-lg rounded px-2 py-1.5 text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <ChannelItemContent channel={activeChannel} />
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
         )}
       </div>
 
@@ -176,25 +270,48 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
   );
 }
 
-interface ChannelSectionProps {
+interface DroppableChannelSectionProps {
+  id: string;
   title: string;
   channels: ChannelWithMembership[];
   workspaceId: string;
   activeChannelId: string | undefined;
   onAddClick?: () => void;
+  showWhenEmpty?: boolean;
+  isStarredSection?: boolean;
+  canDrop?: boolean;
 }
 
-function ChannelSection({
+function DroppableChannelSection({
+  id,
   title,
   channels,
   workspaceId,
   activeChannelId,
   onAddClick,
-}: ChannelSectionProps) {
+  showWhenEmpty = false,
+  isStarredSection = false,
+  canDrop = true,
+}: DroppableChannelSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const { isOver, setNodeRef } = useDroppable({ id });
+
+  // Don't render section if empty and not configured to show when empty
+  // Starred section always shows when expanded
+  if (channels.length === 0 && !showWhenEmpty && !isStarredSection) {
+    return null;
+  }
+
+  const showDropHighlight = isOver && canDrop;
 
   return (
-    <div className="py-2">
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'py-2 transition-colors',
+        showDropHighlight && 'bg-primary-50 dark:bg-primary-900/20'
+      )}
+    >
       <div className="w-full flex items-center justify-between px-4 py-1 text-sm font-medium text-gray-500 dark:text-gray-400">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
@@ -217,8 +334,18 @@ function ChannelSection({
 
       {isExpanded && (
         <div className="mt-1 space-y-0.5 px-2">
+          {channels.length === 0 && showWhenEmpty && (
+            <div className="px-2 py-3 text-xs text-gray-400 dark:text-gray-500 text-center border border-dashed border-gray-300 dark:border-gray-600 rounded">
+              Drop here to star
+            </div>
+          )}
+          {channels.length === 0 && !showWhenEmpty && isStarredSection && (
+            <div className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
+              Drag important stuff here
+            </div>
+          )}
           {channels.map((channel) => (
-            <ChannelItem
+            <DraggableChannelItem
               key={channel.id}
               channel={channel}
               workspaceId={workspaceId}
@@ -231,23 +358,31 @@ function ChannelSection({
   );
 }
 
-interface DMSectionProps {
+interface DroppableDMSectionProps {
+  id: string;
   channels: ChannelWithMembership[];
+  allChannels: ChannelWithMembership[];
   workspaceId: string;
   activeChannelId: string | undefined;
   onAddClick?: () => void;
+  canDrop?: boolean;
 }
 
-function DMSection({
+function DroppableDMSection({
+  id,
   channels,
+  allChannels,
   workspaceId,
   activeChannelId,
   onAddClick,
-}: DMSectionProps) {
+  canDrop = true,
+}: DroppableDMSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const navigate = useNavigate();
   const { data: suggestionsData } = useDMSuggestions(workspaceId);
   const createDM = useCreateDM(workspaceId);
+  const { isOver, setNodeRef } = useDroppable({ id });
+  const showDropHighlight = isOver && canDrop;
 
   const handleSuggestedUserClick = async (userId: string) => {
     try {
@@ -258,16 +393,16 @@ function DMSection({
     }
   };
 
-  // Get user IDs that already have DM channels
+  // Get user IDs that already have DM channels (including starred DMs)
   const existingDMUserIds = useMemo(() => {
     const ids = new Set<string>();
-    channels.forEach((channel) => {
+    allChannels.forEach((channel) => {
       if (channel.type === 'dm' && channel.dm_participants) {
         channel.dm_participants.forEach((p) => ids.add(p.user_id));
       }
     });
     return ids;
-  }, [channels]);
+  }, [allChannels]);
 
   // Filter out suggested users who already have DMs
   const filteredSuggestions = useMemo(() => {
@@ -275,14 +410,20 @@ function DMSection({
     return suggestionsData.suggested_users.filter(
       (user) => !existingDMUserIds.has(user.id)
     );
-  }, [suggestionsData?.suggested_users, existingDMUserIds]);
+  }, [suggestionsData, existingDMUserIds]);
 
   // Show suggestions to fill up to ~5 total items
   const maxSuggestions = Math.max(0, 5 - channels.length);
   const suggestionsToShow = filteredSuggestions.slice(0, maxSuggestions);
 
   return (
-    <div className="py-2">
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'py-2 transition-colors',
+        showDropHighlight && 'bg-primary-50 dark:bg-primary-900/20'
+      )}
+    >
       <div className="w-full flex items-center justify-between px-4 py-1 text-sm font-medium text-gray-500 dark:text-gray-400">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
@@ -306,7 +447,7 @@ function DMSection({
       {isExpanded && (
         <div className="mt-1 space-y-0.5 px-2">
           {channels.map((channel) => (
-            <ChannelItem
+            <DraggableChannelItem
               key={channel.id}
               channel={channel}
               workspaceId={workspaceId}
@@ -357,30 +498,37 @@ function SuggestedUserItem({ user, onClick, isLoading }: SuggestedUserItemProps)
   );
 }
 
-interface ChannelItemProps {
+interface DraggableChannelItemProps {
   channel: ChannelWithMembership;
   workspaceId: string;
   isActive: boolean;
 }
 
-function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
-  const hasUnread = channel.unread_count > 0;
-  const isDM = channel.type === 'dm' || channel.type === 'group_dm';
-  const dmParticipant = isDM && channel.dm_participants?.[0];
+function DraggableChannelItem({ channel, workspaceId, isActive }: DraggableChannelItemProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: channel.id,
+  });
 
-  // Get presence for 1:1 DMs only (group DMs have multiple participants)
-  const rawPresence = useUserPresence(
-    channel.type === 'dm' && dmParticipant ? dmParticipant.user_id : ''
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn(isDragging && 'opacity-50')}
+    >
+      <ChannelItemLink channel={channel} workspaceId={workspaceId} isActive={isActive} />
+    </div>
   );
-  // Default to offline if not in presence store (only online users are tracked)
-  const participantPresence = channel.type === 'dm' && dmParticipant
-    ? (rawPresence ?? 'offline')
-    : undefined;
+}
 
-  // For DMs, show participant name; for group DMs, show all names
-  const displayName = isDM
-    ? channel.dm_participants?.map((p) => p.display_name).join(', ') || channel.name
-    : channel.name;
+interface ChannelItemLinkProps {
+  channel: ChannelWithMembership;
+  workspaceId: string;
+  isActive: boolean;
+}
+
+function ChannelItemLink({ channel, workspaceId, isActive }: ChannelItemLinkProps) {
+  const hasUnread = channel.unread_count > 0;
 
   return (
     <Link
@@ -392,6 +540,39 @@ function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
           : 'text-gray-700 dark:text-gray-300'
       )}
     >
+      <ChannelItemContent channel={channel} />
+      {hasUnread && (
+        <span className="ml-auto bg-primary-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+          {channel.unread_count}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+interface ChannelItemContentProps {
+  channel: ChannelWithMembership;
+}
+
+function ChannelItemContent({ channel }: ChannelItemContentProps) {
+  const isDM = channel.type === 'dm' || channel.type === 'group_dm';
+  const dmParticipant = isDM && channel.dm_participants?.[0];
+
+  const rawPresence = useUserPresence(
+    channel.type === 'dm' && dmParticipant ? dmParticipant.user_id : ''
+  );
+  const participantPresence = channel.type === 'dm' && dmParticipant
+    ? (rawPresence ?? 'offline')
+    : undefined;
+
+  const displayName = isDM
+    ? channel.dm_participants?.map((p) => p.display_name).join(', ') || channel.name
+    : channel.name;
+
+  const hasUnread = channel.unread_count > 0;
+
+  return (
+    <>
       {isDM && dmParticipant ? (
         <Avatar
           src={dmParticipant.avatar_url}
@@ -404,12 +585,7 @@ function ChannelItem({ channel, workspaceId, isActive }: ChannelItemProps) {
         <ChannelIcon type={channel.type} className="text-gray-500 dark:text-gray-400" />
       )}
       <span className={cn('truncate', hasUnread && 'font-semibold')}>{displayName}</span>
-      {hasUnread && (
-        <span className="ml-auto bg-primary-600 text-white text-xs px-1.5 py-0.5 rounded-full">
-          {channel.unread_count}
-        </span>
-      )}
-    </Link>
+    </>
   );
 }
 

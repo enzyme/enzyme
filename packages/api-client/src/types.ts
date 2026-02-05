@@ -31,6 +31,7 @@ export type Reaction = components['schemas']['Reaction'];
 export type ReactionSummary = components['schemas']['ReactionSummary'];
 export type MessageListResult = components['schemas']['MessageListResult'];
 export type Attachment = components['schemas']['Attachment'];
+export type ThreadParticipant = components['schemas']['ThreadParticipant'];
 
 // API types
 export type ApiError = components['schemas']['ApiError'];

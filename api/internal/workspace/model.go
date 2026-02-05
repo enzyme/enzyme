@@ -55,6 +55,7 @@ type Membership struct {
 	WorkspaceID         string    `json:"workspace_id"`
 	Role                string    `json:"role"`
 	DisplayNameOverride *string   `json:"display_name_override,omitempty"`
+	SortOrder           *int      `json:"sort_order,omitempty"`
 	CreatedAt           time.Time `json:"created_at"`
 	UpdatedAt           time.Time `json:"updated_at"`
 }

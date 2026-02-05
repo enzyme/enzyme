@@ -219,11 +219,11 @@ func (r *Repository) ListMembers(ctx context.Context, workspaceID string) ([]Mem
 
 func (r *Repository) GetWorkspacesForUser(req *http.Request, userID string) ([]auth.WorkspaceSummary, error) {
 	rows, err := r.db.QueryContext(req.Context(), `
-		SELECT w.id, w.name, w.icon_url, wm.role
+		SELECT w.id, w.name, w.icon_url, wm.role, wm.sort_order
 		FROM workspaces w
 		JOIN workspace_memberships wm ON wm.workspace_id = w.id
 		WHERE wm.user_id = ?
-		ORDER BY w.name
+		ORDER BY COALESCE(wm.sort_order, 999999), w.name
 	`, userID)
 	if err != nil {
 		return nil, err
@@ -234,8 +234,9 @@ func (r *Repository) GetWorkspacesForUser(req *http.Request, userID string) ([]a
 	for rows.Next() {
 		var ws auth.WorkspaceSummary
 		var iconURL sql.NullString
+		var sortOrder sql.NullInt64
 
-		err := rows.Scan(&ws.ID, &ws.Name, &iconURL, &ws.Role)
+		err := rows.Scan(&ws.ID, &ws.Name, &iconURL, &ws.Role, &sortOrder)
 		if err != nil {
 			return nil, err
 		}
@@ -243,10 +244,37 @@ func (r *Repository) GetWorkspacesForUser(req *http.Request, userID string) ([]a
 		if iconURL.Valid {
 			ws.IconURL = &iconURL.String
 		}
+		if sortOrder.Valid {
+			so := int(sortOrder.Int64)
+			ws.SortOrder = &so
+		}
 		workspaces = append(workspaces, ws)
 	}
 
 	return workspaces, rows.Err()
+}
+
+// ReorderWorkspaces updates the sort order of workspaces for a user
+func (r *Repository) ReorderWorkspaces(ctx context.Context, userID string, workspaceIDs []string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	now := time.Now().UTC()
+	for i, wsID := range workspaceIDs {
+		_, err := tx.ExecContext(ctx, `
+			UPDATE workspace_memberships
+			SET sort_order = ?, updated_at = ?
+			WHERE user_id = ? AND workspace_id = ?
+		`, i, now.Format(time.RFC3339), userID, wsID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 // Invite methods

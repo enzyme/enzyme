@@ -43,11 +43,24 @@ const (
 	Before ListMessagesInputDirection = "before"
 )
 
+// Defines values for MessageType.
+const (
+	MessageTypeSystem MessageType = "system"
+	MessageTypeUser   MessageType = "user"
+)
+
 // Defines values for NotifyLevel.
 const (
 	NotifyLevelAll      NotifyLevel = "all"
 	NotifyLevelMentions NotifyLevel = "mentions"
 	NotifyLevelNone     NotifyLevel = "none"
+)
+
+// Defines values for SystemEventType.
+const (
+	UserAdded  SystemEventType = "user_added"
+	UserJoined SystemEventType = "user_joined"
+	UserLeft   SystemEventType = "user_left"
 )
 
 // Defines values for ThreadSubscriptionStatus.
@@ -100,16 +113,19 @@ type AvatarUploadResponse struct {
 
 // Channel defines model for Channel.
 type Channel struct {
-	ArchivedAt        *time.Time  `json:"archived_at,omitempty"`
-	CreatedAt         time.Time   `json:"created_at"`
-	CreatedBy         *string     `json:"created_by,omitempty"`
-	Description       *string     `json:"description,omitempty"`
-	DmParticipantHash *string     `json:"dm_participant_hash,omitempty"`
-	Id                string      `json:"id"`
-	Name              string      `json:"name"`
-	Type              ChannelType `json:"type"`
-	UpdatedAt         time.Time   `json:"updated_at"`
-	WorkspaceId       string      `json:"workspace_id"`
+	ArchivedAt        *time.Time `json:"archived_at,omitempty"`
+	CreatedAt         time.Time  `json:"created_at"`
+	CreatedBy         *string    `json:"created_by,omitempty"`
+	Description       *string    `json:"description,omitempty"`
+	DmParticipantHash *string    `json:"dm_participant_hash,omitempty"`
+	Id                string     `json:"id"`
+
+	// IsDefault Whether this is the default channel (like
+	IsDefault   bool        `json:"is_default"`
+	Name        string      `json:"name"`
+	Type        ChannelType `json:"type"`
+	UpdatedAt   time.Time   `json:"updated_at"`
+	WorkspaceId string      `json:"workspace_id"`
 }
 
 // ChannelMember defines model for ChannelMember.
@@ -137,15 +153,18 @@ type ChannelWithMembership struct {
 	DmParticipantHash *string      `json:"dm_participant_hash,omitempty"`
 
 	// DmParticipants For DM channels, the other participants (excluding current user)
-	DmParticipants    *[]ChannelMember `json:"dm_participants,omitempty"`
-	Id                string           `json:"id"`
-	IsStarred         bool             `json:"is_starred"`
-	LastReadMessageId *string          `json:"last_read_message_id,omitempty"`
-	Name              string           `json:"name"`
-	Type              ChannelType      `json:"type"`
-	UnreadCount       int              `json:"unread_count"`
-	UpdatedAt         time.Time        `json:"updated_at"`
-	WorkspaceId       string           `json:"workspace_id"`
+	DmParticipants *[]ChannelMember `json:"dm_participants,omitempty"`
+	Id             string           `json:"id"`
+
+	// IsDefault Whether this is the default channel (like
+	IsDefault         bool        `json:"is_default"`
+	IsStarred         bool        `json:"is_starred"`
+	LastReadMessageId *string     `json:"last_read_message_id,omitempty"`
+	Name              string      `json:"name"`
+	Type              ChannelType `json:"type"`
+	UnreadCount       int         `json:"unread_count"`
+	UpdatedAt         time.Time   `json:"updated_at"`
+	WorkspaceId       string      `json:"workspace_id"`
 }
 
 // CreateChannelInput defines model for CreateChannelInput.
@@ -166,6 +185,15 @@ type CreateInviteInput struct {
 // CreateWorkspaceInput defines model for CreateWorkspaceInput.
 type CreateWorkspaceInput struct {
 	Name string `json:"name"`
+}
+
+// DMSuggestionsResponse defines model for DMSuggestionsResponse.
+type DMSuggestionsResponse struct {
+	// RecentDms DM channels with recent activity
+	RecentDms []ChannelWithMembership `json:"recent_dms"`
+
+	// SuggestedUsers Workspace members suggested for starting new conversations
+	SuggestedUsers []SuggestedUser `json:"suggested_users"`
 }
 
 // Invite defines model for Invite.
@@ -211,17 +239,19 @@ type MeResponse struct {
 
 // Message defines model for Message.
 type Message struct {
-	ChannelId      string     `json:"channel_id"`
-	Content        string     `json:"content"`
-	CreatedAt      time.Time  `json:"created_at"`
-	DeletedAt      *time.Time `json:"deleted_at,omitempty"`
-	EditedAt       *time.Time `json:"edited_at,omitempty"`
-	Id             string     `json:"id"`
-	LastReplyAt    *time.Time `json:"last_reply_at,omitempty"`
-	ReplyCount     int        `json:"reply_count"`
-	ThreadParentId *string    `json:"thread_parent_id,omitempty"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-	UserId         *string    `json:"user_id,omitempty"`
+	ChannelId      string           `json:"channel_id"`
+	Content        string           `json:"content"`
+	CreatedAt      time.Time        `json:"created_at"`
+	DeletedAt      *time.Time       `json:"deleted_at,omitempty"`
+	EditedAt       *time.Time       `json:"edited_at,omitempty"`
+	Id             string           `json:"id"`
+	LastReplyAt    *time.Time       `json:"last_reply_at,omitempty"`
+	ReplyCount     int              `json:"reply_count"`
+	SystemEvent    *SystemEventData `json:"system_event,omitempty"`
+	ThreadParentId *string          `json:"thread_parent_id,omitempty"`
+	Type           *MessageType     `json:"type,omitempty"`
+	UpdatedAt      time.Time        `json:"updated_at"`
+	UserId         *string          `json:"user_id,omitempty"`
 }
 
 // MessageListResult defines model for MessageListResult.
@@ -230,6 +260,9 @@ type MessageListResult struct {
 	Messages   []MessageWithUser `json:"messages"`
 	NextCursor *string           `json:"next_cursor,omitempty"`
 }
+
+// MessageType defines model for MessageType.
+type MessageType string
 
 // MessageWithUser defines model for MessageWithUser.
 type MessageWithUser struct {
@@ -243,8 +276,10 @@ type MessageWithUser struct {
 	LastReplyAt        *time.Time           `json:"last_reply_at,omitempty"`
 	Reactions          *[]Reaction          `json:"reactions,omitempty"`
 	ReplyCount         int                  `json:"reply_count"`
+	SystemEvent        *SystemEventData     `json:"system_event,omitempty"`
 	ThreadParentId     *string              `json:"thread_parent_id,omitempty"`
 	ThreadParticipants *[]ThreadParticipant `json:"thread_participants,omitempty"`
+	Type               *MessageType         `json:"type,omitempty"`
 	UpdatedAt          time.Time            `json:"updated_at"`
 	UserAvatarUrl      *string              `json:"user_avatar_url,omitempty"`
 	UserDisplayName    *string              `json:"user_display_name,omitempty"`
@@ -276,6 +311,12 @@ type RegisterInput struct {
 	Password    string              `json:"password"`
 }
 
+// ReorderWorkspacesInput defines model for ReorderWorkspacesInput.
+type ReorderWorkspacesInput struct {
+	// WorkspaceIds Ordered list of workspace IDs representing the new order
+	WorkspaceIds []string `json:"workspace_ids"`
+}
+
 // SendMessageInput defines model for SendMessageInput.
 type SendMessageInput struct {
 	// AttachmentIds IDs of uploaded attachments to include with this message
@@ -288,6 +329,36 @@ type SendMessageInput struct {
 type SuccessResponse struct {
 	Success bool `json:"success"`
 }
+
+// SuggestedUser defines model for SuggestedUser.
+type SuggestedUser struct {
+	AvatarUrl   *string              `json:"avatar_url,omitempty"`
+	DisplayName string               `json:"display_name"`
+	Email       *openapi_types.Email `json:"email,omitempty"`
+	Id          string               `json:"id"`
+}
+
+// SystemEventData defines model for SystemEventData.
+type SystemEventData struct {
+	// ActorDisplayName Display name of the actor
+	ActorDisplayName *string `json:"actor_display_name,omitempty"`
+
+	// ActorId The user who performed the action (for user_added)
+	ActorId *string `json:"actor_id,omitempty"`
+
+	// ChannelName Name of the channel
+	ChannelName string          `json:"channel_name"`
+	EventType   SystemEventType `json:"event_type"`
+
+	// UserDisplayName Display name of the user at the time of the event
+	UserDisplayName string `json:"user_display_name"`
+
+	// UserId The user who joined/left/was added
+	UserId string `json:"user_id"`
+}
+
+// SystemEventType defines model for SystemEventType.
+type SystemEventType string
 
 // ThreadParticipant defines model for ThreadParticipant.
 type ThreadParticipant struct {
@@ -313,8 +384,10 @@ type UnreadMessage struct {
 	LastReplyAt        *time.Time           `json:"last_reply_at,omitempty"`
 	Reactions          *[]Reaction          `json:"reactions,omitempty"`
 	ReplyCount         int                  `json:"reply_count"`
+	SystemEvent        *SystemEventData     `json:"system_event,omitempty"`
 	ThreadParentId     *string              `json:"thread_parent_id,omitempty"`
 	ThreadParticipants *[]ThreadParticipant `json:"thread_participants,omitempty"`
+	Type               *MessageType         `json:"type,omitempty"`
 	UpdatedAt          time.Time            `json:"updated_at"`
 	UserAvatarUrl      *string              `json:"user_avatar_url,omitempty"`
 	UserDisplayName    *string              `json:"user_display_name,omitempty"`
@@ -341,7 +414,8 @@ type UpdateProfileInput struct {
 
 // UpdateWorkspaceInput defines model for UpdateWorkspaceInput.
 type UpdateWorkspaceInput struct {
-	Name *string `json:"name,omitempty"`
+	Name     *string            `json:"name,omitempty"`
+	Settings *WorkspaceSettings `json:"settings,omitempty"`
 }
 
 // User defines model for User.
@@ -367,10 +441,13 @@ type UserProfile struct {
 
 // Workspace defines model for Workspace.
 type Workspace struct {
-	CreatedAt time.Time `json:"created_at"`
-	IconUrl   *string   `json:"icon_url,omitempty"`
-	Id        string    `json:"id"`
-	Name      string    `json:"name"`
+	CreatedAt      time.Time          `json:"created_at"`
+	IconUrl        *string            `json:"icon_url,omitempty"`
+	Id             string             `json:"id"`
+	Name           string             `json:"name"`
+	ParsedSettings *WorkspaceSettings `json:"parsed_settings,omitempty"`
+
+	// Settings JSON string containing workspace settings (for backward compatibility)
 	Settings  string    `json:"settings"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -408,12 +485,21 @@ type WorkspaceMembership struct {
 // WorkspaceRole defines model for WorkspaceRole.
 type WorkspaceRole string
 
+// WorkspaceSettings defines model for WorkspaceSettings.
+type WorkspaceSettings struct {
+	// ShowJoinLeaveMessages Whether to show system messages when users join or leave channels
+	ShowJoinLeaveMessages *bool `json:"show_join_leave_messages,omitempty"`
+}
+
 // WorkspaceSummary defines model for WorkspaceSummary.
 type WorkspaceSummary struct {
 	IconUrl *string       `json:"icon_url,omitempty"`
 	Id      string        `json:"id"`
 	Name    string        `json:"name"`
 	Role    WorkspaceRole `json:"role"`
+
+	// SortOrder User's custom sort order for this workspace
+	SortOrder *int `json:"sort_order,omitempty"`
 }
 
 // ChannelId defines model for channelId.
@@ -566,6 +652,9 @@ type UpdateProfileJSONRequestBody = UpdateProfileInput
 // CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
 type CreateWorkspaceJSONRequestBody = CreateWorkspaceInput
 
+// ReorderWorkspacesJSONRequestBody defines body for ReorderWorkspaces for application/json ContentType.
+type ReorderWorkspacesJSONRequestBody = ReorderWorkspacesInput
+
 // CreateChannelJSONRequestBody defines body for CreateChannel for application/json ContentType.
 type CreateChannelJSONRequestBody = CreateChannelInput
 
@@ -706,6 +795,9 @@ type ServerInterface interface {
 	// Create a new workspace
 	// (POST /workspaces/create)
 	CreateWorkspace(w http.ResponseWriter, r *http.Request)
+	// Reorder workspaces for current user
+	// (POST /workspaces/reorder)
+	ReorderWorkspaces(w http.ResponseWriter, r *http.Request)
 	// Get workspace details
 	// (GET /workspaces/{wid})
 	GetWorkspace(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
@@ -721,6 +813,9 @@ type ServerInterface interface {
 	// Mark all channels as read
 	// (POST /workspaces/{wid}/channels/mark-all-read)
 	MarkAllChannelsRead(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// Get DM suggestions for sidebar
+	// (POST /workspaces/{wid}/dm-suggestions)
+	GetDMSuggestions(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
 	// Remove workspace icon
 	// (DELETE /workspaces/{wid}/icon)
 	DeleteWorkspaceIcon(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
@@ -979,6 +1074,12 @@ func (_ Unimplemented) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Reorder workspaces for current user
+// (POST /workspaces/reorder)
+func (_ Unimplemented) ReorderWorkspaces(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Get workspace details
 // (GET /workspaces/{wid})
 func (_ Unimplemented) GetWorkspace(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
@@ -1006,6 +1107,12 @@ func (_ Unimplemented) ListChannels(w http.ResponseWriter, r *http.Request, wid 
 // Mark all channels as read
 // (POST /workspaces/{wid}/channels/mark-all-read)
 func (_ Unimplemented) MarkAllChannelsRead(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get DM suggestions for sidebar
+// (POST /workspaces/{wid}/dm-suggestions)
+func (_ Unimplemented) GetDMSuggestions(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2098,6 +2205,26 @@ func (siw *ServerInterfaceWrapper) CreateWorkspace(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ReorderWorkspaces operation middleware
+func (siw *ServerInterfaceWrapper) ReorderWorkspaces(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReorderWorkspaces(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetWorkspace operation middleware
 func (siw *ServerInterfaceWrapper) GetWorkspace(w http.ResponseWriter, r *http.Request) {
 
@@ -2244,6 +2371,37 @@ func (siw *ServerInterfaceWrapper) MarkAllChannelsRead(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.MarkAllChannelsRead(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDMSuggestions operation middleware
+func (siw *ServerInterfaceWrapper) GetDMSuggestions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDMSuggestions(w, r, wid)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2729,6 +2887,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/workspaces/create", wrapper.CreateWorkspace)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/reorder", wrapper.ReorderWorkspaces)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/workspaces/{wid}", wrapper.GetWorkspace)
 	})
 	r.Group(func(r chi.Router) {
@@ -2742,6 +2903,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/{wid}/channels/mark-all-read", wrapper.MarkAllChannelsRead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/dm-suggestions", wrapper.GetDMSuggestions)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/workspaces/{wid}/icon", wrapper.DeleteWorkspaceIcon)
@@ -3681,6 +3845,41 @@ func (response CreateWorkspace200JSONResponse) VisitCreateWorkspaceResponse(w ht
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ReorderWorkspacesRequestObject struct {
+	Body *ReorderWorkspacesJSONRequestBody
+}
+
+type ReorderWorkspacesResponseObject interface {
+	VisitReorderWorkspacesResponse(w http.ResponseWriter) error
+}
+
+type ReorderWorkspaces200JSONResponse SuccessResponse
+
+func (response ReorderWorkspaces200JSONResponse) VisitReorderWorkspacesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReorderWorkspaces400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReorderWorkspaces400JSONResponse) VisitReorderWorkspacesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReorderWorkspaces401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReorderWorkspaces401JSONResponse) VisitReorderWorkspacesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetWorkspaceRequestObject struct {
 	Wid WorkspaceId `json:"wid"`
 }
@@ -3770,6 +3969,23 @@ type MarkAllChannelsReadResponseObject interface {
 type MarkAllChannelsRead200JSONResponse SuccessResponse
 
 func (response MarkAllChannelsRead200JSONResponse) VisitMarkAllChannelsReadResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetDMSuggestionsRequestObject struct {
+	Wid WorkspaceId `json:"wid"`
+}
+
+type GetDMSuggestionsResponseObject interface {
+	VisitGetDMSuggestionsResponse(w http.ResponseWriter) error
+}
+
+type GetDMSuggestions200JSONResponse DMSuggestionsResponse
+
+func (response GetDMSuggestions200JSONResponse) VisitGetDMSuggestionsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -4085,6 +4301,9 @@ type StrictServerInterface interface {
 	// Create a new workspace
 	// (POST /workspaces/create)
 	CreateWorkspace(ctx context.Context, request CreateWorkspaceRequestObject) (CreateWorkspaceResponseObject, error)
+	// Reorder workspaces for current user
+	// (POST /workspaces/reorder)
+	ReorderWorkspaces(ctx context.Context, request ReorderWorkspacesRequestObject) (ReorderWorkspacesResponseObject, error)
 	// Get workspace details
 	// (GET /workspaces/{wid})
 	GetWorkspace(ctx context.Context, request GetWorkspaceRequestObject) (GetWorkspaceResponseObject, error)
@@ -4100,6 +4319,9 @@ type StrictServerInterface interface {
 	// Mark all channels as read
 	// (POST /workspaces/{wid}/channels/mark-all-read)
 	MarkAllChannelsRead(ctx context.Context, request MarkAllChannelsReadRequestObject) (MarkAllChannelsReadResponseObject, error)
+	// Get DM suggestions for sidebar
+	// (POST /workspaces/{wid}/dm-suggestions)
+	GetDMSuggestions(ctx context.Context, request GetDMSuggestionsRequestObject) (GetDMSuggestionsResponseObject, error)
 	// Remove workspace icon
 	// (DELETE /workspaces/{wid}/icon)
 	DeleteWorkspaceIcon(ctx context.Context, request DeleteWorkspaceIconRequestObject) (DeleteWorkspaceIconResponseObject, error)
@@ -5249,6 +5471,37 @@ func (sh *strictHandler) CreateWorkspace(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+// ReorderWorkspaces operation middleware
+func (sh *strictHandler) ReorderWorkspaces(w http.ResponseWriter, r *http.Request) {
+	var request ReorderWorkspacesRequestObject
+
+	var body ReorderWorkspacesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReorderWorkspaces(ctx, request.(ReorderWorkspacesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReorderWorkspaces")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReorderWorkspacesResponseObject); ok {
+		if err := validResponse.VisitReorderWorkspacesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetWorkspace operation middleware
 func (sh *strictHandler) GetWorkspace(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
 	var request GetWorkspaceRequestObject
@@ -5386,6 +5639,32 @@ func (sh *strictHandler) MarkAllChannelsRead(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(MarkAllChannelsReadResponseObject); ok {
 		if err := validResponse.VisitMarkAllChannelsReadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDMSuggestions operation middleware
+func (sh *strictHandler) GetDMSuggestions(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request GetDMSuggestionsRequestObject
+
+	request.Wid = wid
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDMSuggestions(ctx, request.(GetDMSuggestionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDMSuggestions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDMSuggestionsResponseObject); ok {
+		if err := validResponse.VisitGetDMSuggestionsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

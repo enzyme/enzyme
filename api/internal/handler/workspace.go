@@ -288,6 +288,30 @@ func (h *Handler) CreateWorkspaceInvite(ctx context.Context, request openapi.Cre
 	}, nil
 }
 
+// ReorderWorkspaces reorders workspaces for the current user
+func (h *Handler) ReorderWorkspaces(ctx context.Context, request openapi.ReorderWorkspacesRequestObject) (openapi.ReorderWorkspacesResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.ReorderWorkspaces401JSONResponse{
+			UnauthorizedJSONResponse: openapi.UnauthorizedJSONResponse(newErrorResponse(ErrCodeNotAuthenticated, "Not authenticated")),
+		}, nil
+	}
+
+	if request.Body == nil || len(request.Body.WorkspaceIds) == 0 {
+		return openapi.ReorderWorkspaces400JSONResponse{
+			BadRequestJSONResponse: openapi.BadRequestJSONResponse(newErrorResponse(ErrCodeValidationError, "workspace_ids is required")),
+		}, nil
+	}
+
+	if err := h.workspaceRepo.ReorderWorkspaces(ctx, userID, request.Body.WorkspaceIds); err != nil {
+		return nil, err
+	}
+
+	return openapi.ReorderWorkspaces200JSONResponse{
+		Success: true,
+	}, nil
+}
+
 // AcceptInvite accepts a workspace invite
 func (h *Handler) AcceptInvite(ctx context.Context, request openapi.AcceptInviteRequestObject) (openapi.AcceptInviteResponseObject, error) {
 	userID := h.getUserID(ctx)

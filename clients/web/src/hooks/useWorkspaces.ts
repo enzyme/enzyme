@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { workspacesApi, type CreateWorkspaceInput, type CreateInviteInput } from '../api/workspaces';
-import type { WorkspaceRole } from '@feather/api-client';
+import type { WorkspaceRole, WorkspaceSummary } from '@feather/api-client';
 
 export function useWorkspace(workspaceId: string | undefined) {
   return useQuery({
@@ -88,6 +88,59 @@ export function useDeleteWorkspaceIcon(workspaceId: string) {
     mutationFn: () => workspacesApi.deleteIcon(workspaceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+  });
+}
+
+export function useReorderWorkspaces() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (workspaceIds: string[]) => workspacesApi.reorder(workspaceIds),
+    onMutate: async (workspaceIds) => {
+      await queryClient.cancelQueries({ queryKey: ['auth', 'me'] });
+
+      const previousData = queryClient.getQueryData<{ user: unknown; workspaces: WorkspaceSummary[] }>(['auth', 'me']);
+
+      // Optimistically reorder workspaces
+      queryClient.setQueryData(
+        ['auth', 'me'],
+        (old: { user: unknown; workspaces: WorkspaceSummary[] } | undefined) => {
+          if (!old) return old;
+
+          // Create a map for quick lookup
+          const workspaceMap = new Map(old.workspaces.map((ws) => [ws.id, ws]));
+
+          // Reorder based on the new order
+          const reordered: WorkspaceSummary[] = [];
+          workspaceIds.forEach((id, index) => {
+            const ws = workspaceMap.get(id);
+            if (ws) {
+              reordered.push({ ...ws, sort_order: index });
+            }
+          });
+
+          // Add any workspaces not in the list (shouldn't happen but just in case)
+          const inList = new Set(workspaceIds);
+          old.workspaces.forEach((ws) => {
+            if (!inList.has(ws.id)) {
+              reordered.push(ws);
+            }
+          });
+
+          return { ...old, workspaces: reordered };
+        }
+      );
+
+      return { previousData };
+    },
+    onError: (_err, _workspaceIds, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['auth', 'me'], context.previousData);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
     },
   });

@@ -325,6 +325,31 @@ paths:
                   invite:
                     $ref: '#/components/schemas/Invite'
 
+  /workspaces/reorder:
+    post:
+      tags: [workspaces]
+      summary: Reorder workspaces for current user
+      operationId: reorderWorkspaces
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderWorkspacesInput'
+      responses:
+        '200':
+          description: Workspaces reordered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
   /invites/{code}/accept:
     post:
       tags: [workspaces]
@@ -1496,6 +1521,9 @@ components:
           type: string
         role:
           $ref: '#/components/schemas/WorkspaceRole'
+        sort_order:
+          type: integer
+          description: User's custom sort order for this workspace
 
     WorkspaceMembership:
       type: object
@@ -2375,3 +2403,13 @@ components:
         direction:
           type: string
           enum: [before, after]
+
+    ReorderWorkspacesInput:
+      type: object
+      required: [workspace_ids]
+      properties:
+        workspace_ids:
+          type: array
+          items:
+            type: string
+          description: Ordered list of workspace IDs representing the new order

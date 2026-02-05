@@ -311,6 +311,12 @@ type RegisterInput struct {
 	Password    string              `json:"password"`
 }
 
+// ReorderWorkspacesInput defines model for ReorderWorkspacesInput.
+type ReorderWorkspacesInput struct {
+	// WorkspaceIds Ordered list of workspace IDs representing the new order
+	WorkspaceIds []string `json:"workspace_ids"`
+}
+
 // SendMessageInput defines model for SendMessageInput.
 type SendMessageInput struct {
 	// AttachmentIds IDs of uploaded attachments to include with this message
@@ -491,6 +497,9 @@ type WorkspaceSummary struct {
 	Id      string        `json:"id"`
 	Name    string        `json:"name"`
 	Role    WorkspaceRole `json:"role"`
+
+	// SortOrder User's custom sort order for this workspace
+	SortOrder *int `json:"sort_order,omitempty"`
 }
 
 // ChannelId defines model for channelId.
@@ -643,6 +652,9 @@ type UpdateProfileJSONRequestBody = UpdateProfileInput
 // CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
 type CreateWorkspaceJSONRequestBody = CreateWorkspaceInput
 
+// ReorderWorkspacesJSONRequestBody defines body for ReorderWorkspaces for application/json ContentType.
+type ReorderWorkspacesJSONRequestBody = ReorderWorkspacesInput
+
 // CreateChannelJSONRequestBody defines body for CreateChannel for application/json ContentType.
 type CreateChannelJSONRequestBody = CreateChannelInput
 
@@ -783,6 +795,9 @@ type ServerInterface interface {
 	// Create a new workspace
 	// (POST /workspaces/create)
 	CreateWorkspace(w http.ResponseWriter, r *http.Request)
+	// Reorder workspaces for current user
+	// (POST /workspaces/reorder)
+	ReorderWorkspaces(w http.ResponseWriter, r *http.Request)
 	// Get workspace details
 	// (GET /workspaces/{wid})
 	GetWorkspace(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
@@ -1056,6 +1071,12 @@ func (_ Unimplemented) GetUser(w http.ResponseWriter, r *http.Request, id string
 // Create a new workspace
 // (POST /workspaces/create)
 func (_ Unimplemented) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reorder workspaces for current user
+// (POST /workspaces/reorder)
+func (_ Unimplemented) ReorderWorkspaces(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2184,6 +2205,26 @@ func (siw *ServerInterfaceWrapper) CreateWorkspace(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ReorderWorkspaces operation middleware
+func (siw *ServerInterfaceWrapper) ReorderWorkspaces(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReorderWorkspaces(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetWorkspace operation middleware
 func (siw *ServerInterfaceWrapper) GetWorkspace(w http.ResponseWriter, r *http.Request) {
 
@@ -2844,6 +2885,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/create", wrapper.CreateWorkspace)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/reorder", wrapper.ReorderWorkspaces)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/workspaces/{wid}", wrapper.GetWorkspace)
@@ -3801,6 +3845,41 @@ func (response CreateWorkspace200JSONResponse) VisitCreateWorkspaceResponse(w ht
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ReorderWorkspacesRequestObject struct {
+	Body *ReorderWorkspacesJSONRequestBody
+}
+
+type ReorderWorkspacesResponseObject interface {
+	VisitReorderWorkspacesResponse(w http.ResponseWriter) error
+}
+
+type ReorderWorkspaces200JSONResponse SuccessResponse
+
+func (response ReorderWorkspaces200JSONResponse) VisitReorderWorkspacesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReorderWorkspaces400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReorderWorkspaces400JSONResponse) VisitReorderWorkspacesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReorderWorkspaces401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReorderWorkspaces401JSONResponse) VisitReorderWorkspacesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetWorkspaceRequestObject struct {
 	Wid WorkspaceId `json:"wid"`
 }
@@ -4222,6 +4301,9 @@ type StrictServerInterface interface {
 	// Create a new workspace
 	// (POST /workspaces/create)
 	CreateWorkspace(ctx context.Context, request CreateWorkspaceRequestObject) (CreateWorkspaceResponseObject, error)
+	// Reorder workspaces for current user
+	// (POST /workspaces/reorder)
+	ReorderWorkspaces(ctx context.Context, request ReorderWorkspacesRequestObject) (ReorderWorkspacesResponseObject, error)
 	// Get workspace details
 	// (GET /workspaces/{wid})
 	GetWorkspace(ctx context.Context, request GetWorkspaceRequestObject) (GetWorkspaceResponseObject, error)
@@ -5382,6 +5464,37 @@ func (sh *strictHandler) CreateWorkspace(w http.ResponseWriter, r *http.Request)
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateWorkspaceResponseObject); ok {
 		if err := validResponse.VisitCreateWorkspaceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReorderWorkspaces operation middleware
+func (sh *strictHandler) ReorderWorkspaces(w http.ResponseWriter, r *http.Request) {
+	var request ReorderWorkspacesRequestObject
+
+	var body ReorderWorkspacesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReorderWorkspaces(ctx, request.(ReorderWorkspacesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReorderWorkspaces")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReorderWorkspacesResponseObject); ok {
+		if err := validResponse.VisitReorderWorkspacesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

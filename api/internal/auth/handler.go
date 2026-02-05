@@ -19,10 +19,11 @@ type WorkspaceRepoForAuth interface {
 }
 
 type WorkspaceSummary struct {
-	ID      string  `json:"id"`
-	Name    string  `json:"name"`
-	IconURL *string `json:"icon_url,omitempty"`
-	Role    string  `json:"role"`
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	IconURL   *string `json:"icon_url,omitempty"`
+	Role      string  `json:"role"`
+	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
 func NewHandler(service *Service, sessionManager *SessionManager, workspaceRepo WorkspaceRepoForAuth) *Handler {

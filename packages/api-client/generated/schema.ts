@@ -225,6 +225,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reorder workspaces for current user */
+        post: operations["reorderWorkspaces"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/invites/{code}/accept": {
         parameters: {
             query?: never;
@@ -937,6 +954,8 @@ export interface components {
             name: string;
             icon_url?: string;
             role: components["schemas"]["WorkspaceRole"];
+            /** @description User's custom sort order for this workspace */
+            sort_order?: number;
         };
         WorkspaceMembership: {
             id: string;
@@ -1385,6 +1404,10 @@ export interface components {
             /** @enum {string} */
             direction?: "before" | "after";
         };
+        ReorderWorkspacesInput: {
+            /** @description Ordered list of workspace IDs representing the new order */
+            workspace_ids: string[];
+        };
     };
     responses: {
         /** @description Bad request */
@@ -1777,6 +1800,32 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    reorderWorkspaces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderWorkspacesInput"];
+            };
+        };
+        responses: {
+            /** @description Workspaces reordered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
         };
     };
     acceptInvite: {
