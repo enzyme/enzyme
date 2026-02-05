@@ -1,16 +1,13 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { Button as AriaButton } from "react-aria-components";
-import {
-  FaceSmileIcon,
-  ChatBubbleBottomCenterTextIcon,
-  EllipsisVerticalIcon,
-  LinkIcon,
-  EyeSlashIcon,
-} from "@heroicons/react/24/outline";
-import { Avatar, Tooltip, Menu, MenuItem, toast } from "../ui";
-import { ReactionPicker } from "./ReactionPicker";
+import { Avatar, toast } from "../ui";
 import { ThreadRepliesIndicator } from "./ThreadRepliesIndicator";
+import { MessageActionBar } from "./MessageActionBar";
+import {
+  ReactionsDisplay,
+  groupReactionsByEmoji,
+  createMemberNamesMap,
+} from "./ReactionsDisplay";
 import {
   useAuth,
   useAddReaction,
@@ -40,45 +37,15 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
   const markUnread = useMarkMessageUnread(workspaceId || "");
   const { data: membersData } = useWorkspaceMembers(workspaceId);
 
+  const memberNames = createMemberNamesMap(membersData?.members);
+  const reactionGroups = groupReactionsByEmoji(message.reactions, user?.id);
+
   const handleCopyLink = () => {
     const url = `${window.location.origin}/w/${workspaceId}/c/${channelId}?msg=${message.id}`;
     navigator.clipboard.writeText(url);
     toast("Link copied to clipboard", "success");
     setShowDropdown(false);
   };
-
-  // Create a lookup map from user ID to display name
-  const memberNames = (membersData?.members || []).reduce(
-    (acc, member) => {
-      acc[member.user_id] = member.display_name;
-      return acc;
-    },
-    {} as Record<string, string>,
-  );
-
-  // Group reactions by emoji
-  const reactionGroups = (message.reactions || []).reduce(
-    (acc, reaction) => {
-      if (!acc[reaction.emoji]) {
-        acc[reaction.emoji] = {
-          emoji: reaction.emoji,
-          count: 0,
-          userIds: [],
-          hasOwn: false,
-        };
-      }
-      acc[reaction.emoji].count++;
-      acc[reaction.emoji].userIds.push(reaction.user_id);
-      if (reaction.user_id === user?.id) {
-        acc[reaction.emoji].hasOwn = true;
-      }
-      return acc;
-    },
-    {} as Record<
-      string,
-      { emoji: string; count: number; userIds: string[]; hasOwn: boolean }
-    >,
-  );
 
   const handleReactionClick = (emoji: string, hasOwn: boolean) => {
     if (hasOwn) {
@@ -177,35 +144,11 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
           </div>
 
           {/* Reactions */}
-          {Object.values(reactionGroups).length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1">
-              {Object.values(reactionGroups).map(
-                ({ emoji, count, userIds, hasOwn }) => {
-                  const userNamesStr = userIds
-                    .map((id) => memberNames[id] || "Unknown")
-                    .join(", ");
-                  return (
-                    <Tooltip key={emoji} content={userNamesStr}>
-                      <AriaButton
-                        onPress={() => handleReactionClick(emoji, hasOwn)}
-                        className={cn(
-                          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm border transition-colors",
-                          hasOwn
-                            ? "bg-primary-100 dark:bg-primary-900/30 border-primary-300 dark:border-primary-700"
-                            : "bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600",
-                        )}
-                      >
-                        <span>{emoji}</span>
-                        <span className="text-xs text-gray-600 dark:text-gray-300">
-                          {count}
-                        </span>
-                      </AriaButton>
-                    </Tooltip>
-                  );
-                },
-              )}
-            </div>
-          )}
+          <ReactionsDisplay
+            reactions={reactionGroups}
+            memberNames={memberNames}
+            onReactionClick={handleReactionClick}
+          />
 
           {/* Thread replies indicator */}
           <ThreadRepliesIndicator
@@ -219,69 +162,16 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
 
       {/* Action buttons */}
       {showActions && (
-        <div
-          className={cn(
-            "absolute right-4 top-0 -translate-y-1/2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm flex items-center",
-            showDropdown && "bg-gray-50 dark:bg-gray-800/50",
-          )}
-        >
-          <Tooltip content="Add reaction">
-            <AriaButton
-              onPress={() => setShowReactionPicker(!showReactionPicker)}
-              className="group/btn p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg"
-            >
-              <FaceSmileIcon className="w-4 h-4 text-gray-500 transition-transform group-hover/btn:scale-110 group-hover/btn:text-gray-700 dark:group-hover/btn:text-gray-300" />
-            </AriaButton>
-          </Tooltip>
-
-          <Tooltip content="Reply in thread">
-            <AriaButton
-              onPress={() => openThread(message.id)}
-              className="group/btn p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <ChatBubbleBottomCenterTextIcon className="w-4 h-4 text-gray-500 transition-transform group-hover/btn:scale-110 group-hover/btn:text-gray-700 dark:group-hover/btn:text-gray-300" />
-            </AriaButton>
-          </Tooltip>
-
-          <Tooltip content="More options">
-            <Menu
-              open={showDropdown}
-              onOpenChange={setShowDropdown}
-              align="end"
-              trigger={
-                <AriaButton
-                  className={cn(
-                    "group/btn p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-r-lg",
-                    showDropdown && "bg-gray-100 dark:bg-gray-700",
-                  )}
-                  aria-label="More options"
-                >
-                  <EllipsisVerticalIcon className="w-4 h-4 text-gray-500 transition-transform group-hover/btn:scale-110 group-hover/btn:text-gray-700 dark:group-hover/btn:text-gray-300" />
-                </AriaButton>
-              }
-            >
-              <MenuItem
-                onAction={handleCopyLink}
-                icon={<LinkIcon className="w-4 h-4" />}
-              >
-                Copy link to message
-              </MenuItem>
-              <MenuItem
-                onAction={() => markUnread.mutate(message.id)}
-                icon={<EyeSlashIcon className="w-4 h-4" />}
-              >
-                Mark unread
-              </MenuItem>
-            </Menu>
-          </Tooltip>
-        </div>
-      )}
-
-      {/* Reaction picker */}
-      {showReactionPicker && (
-        <div className="absolute right-4 top-8 z-10">
-          <ReactionPicker onSelect={handleAddReaction} />
-        </div>
+        <MessageActionBar
+          showReactionPicker={showReactionPicker}
+          onReactionPickerToggle={() => setShowReactionPicker(!showReactionPicker)}
+          onReactionSelect={handleAddReaction}
+          onReplyClick={() => openThread(message.id)}
+          onCopyLink={handleCopyLink}
+          onMarkUnread={() => markUnread.mutate(message.id)}
+          showDropdown={showDropdown}
+          onDropdownChange={setShowDropdown}
+        />
       )}
     </div>
   );
