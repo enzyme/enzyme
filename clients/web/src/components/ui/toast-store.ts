@@ -2,7 +2,7 @@ import { UNSTABLE_ToastQueue as ToastQueue } from 'react-aria-components';
 
 export interface ToastContent {
   message: string;
-  type: 'success' | 'error' | 'info';
+  type: 'success' | 'error' | 'warning' | 'info';
 }
 
 export const toastQueue = new ToastQueue<ToastContent>({
