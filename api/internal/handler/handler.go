@@ -6,6 +6,7 @@ import (
 
 	"github.com/feather/api/internal/auth"
 	"github.com/feather/api/internal/channel"
+	"github.com/feather/api/internal/emoji"
 	"github.com/feather/api/internal/file"
 	"github.com/feather/api/internal/message"
 	"github.com/feather/api/internal/notification"
@@ -29,6 +30,7 @@ type Handler struct {
 	messageRepo         *message.Repository
 	fileRepo            *file.Repository
 	threadRepo          *thread.Repository
+	emojiRepo           *emoji.Repository
 	notificationService *notification.Service
 	hub                 *sse.Hub
 	storagePath         string
@@ -45,6 +47,7 @@ type Dependencies struct {
 	MessageRepo         *message.Repository
 	FileRepo            *file.Repository
 	ThreadRepo          *thread.Repository
+	EmojiRepo           *emoji.Repository
 	NotificationService *notification.Service
 	Hub                 *sse.Hub
 	StoragePath         string
@@ -62,6 +65,7 @@ func New(deps Dependencies) *Handler {
 		messageRepo:         deps.MessageRepo,
 		fileRepo:            deps.FileRepo,
 		threadRepo:          deps.ThreadRepo,
+		emojiRepo:           deps.EmojiRepo,
 		notificationService: deps.NotificationService,
 		hub:                 deps.Hub,
 		storagePath:         deps.StoragePath,

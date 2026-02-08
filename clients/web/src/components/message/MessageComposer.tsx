@@ -6,6 +6,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useSendMessage, useSendThreadReply, useTyping, useUploadFile, useAuth, useWorkspaceMembers, useChannels } from '../../hooks';
+import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useTypingUsers } from '../../lib/presenceStore';
 import { cn } from '../../lib/utils';
 import { RichTextEditor, type RichTextEditorRef } from '../editor';
@@ -62,6 +63,7 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
   const { user } = useAuth();
   const { data: membersData } = useWorkspaceMembers(workspaceId);
   const { data: channelsData } = useChannels(workspaceId);
+  const { data: customEmojis } = useCustomEmojis(workspaceId);
 
   const isThreadVariant = variant === 'thread';
   const activeMutation = parentMessageId ? sendThreadReply : sendMessage;
@@ -293,6 +295,7 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
             onBlur={isThreadVariant ? undefined : onStopTyping}
             workspaceMembers={workspaceMembers}
             workspaceChannels={workspaceChannels}
+            customEmojis={customEmojis}
             showToolbar
             disabled={activeMutation.isPending}
             isPending={activeMutation.isPending || isUploading}

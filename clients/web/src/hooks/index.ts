@@ -16,3 +16,4 @@ export { useMentions } from './useMentions';
 export { useChannelNotifications, useUpdateChannelNotifications } from './useChannelNotifications';
 export { useAutoFocusComposer } from './useAutoFocusComposer';
 export { useUserThreads, useMarkThreadRead } from './useThreads';
+export { useCustomEmojis, useCustomEmojiMap, useUploadCustomEmoji, useDeleteCustomEmoji } from './useCustomEmojis';

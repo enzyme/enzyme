@@ -12,6 +12,7 @@ import {
   useWorkspaceMembers,
 } from "../../hooks";
 import { useMarkMessageUnread } from "../../hooks/useMessages";
+import { useCustomEmojiMap, useCustomEmojis } from "../../hooks/useCustomEmojis";
 import { useThreadPanel, useProfilePanel } from "../../hooks/usePanel";
 import { cn, formatTime } from "../../lib/utils";
 import type { MessageWithUser } from "@feather/api-client";
@@ -23,6 +24,8 @@ interface SystemMessageProps {
 
 export function SystemMessage({ message, channelId }: SystemMessageProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const customEmojiMap = useCustomEmojiMap(workspaceId);
+  const { data: customEmojis } = useCustomEmojis(workspaceId);
   const [showActions, setShowActions] = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -143,6 +146,7 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
             reactions={reactionGroups}
             memberNames={memberNames}
             onReactionClick={handleReactionClick}
+            customEmojiMap={customEmojiMap}
           />
 
           {/* Thread replies indicator */}
@@ -166,6 +170,7 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
           onMarkUnread={() => markUnread.mutate(message.id)}
           showDropdown={showDropdown}
           onDropdownChange={setShowDropdown}
+          customEmojis={customEmojis}
         />
       )}
     </div>

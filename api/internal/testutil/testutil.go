@@ -179,6 +179,45 @@ type TestMessage struct {
 	UpdatedAt time.Time
 }
 
+// TestEmoji represents a test custom emoji
+type TestEmoji struct {
+	ID          string
+	WorkspaceID string
+	Name        string
+	CreatedBy   string
+	ContentType string
+	SizeBytes   int64
+	StoragePath string
+	CreatedAt   time.Time
+}
+
+// CreateTestEmoji creates a custom emoji directly in the database
+func CreateTestEmoji(t *testing.T, db *sql.DB, workspaceID, createdBy, name string) *TestEmoji {
+	t.Helper()
+
+	id := ulid.Make().String()
+	now := time.Now().UTC()
+
+	_, err := db.ExecContext(context.Background(), `
+		INSERT INTO custom_emojis (id, workspace_id, name, created_by, content_type, size_bytes, storage_path, created_at)
+		VALUES (?, ?, ?, ?, 'image/png', 1024, '/emojis/test.png', ?)
+	`, id, workspaceID, name, createdBy, now.Format(time.RFC3339))
+	if err != nil {
+		t.Fatalf("creating test emoji: %v", err)
+	}
+
+	return &TestEmoji{
+		ID:          id,
+		WorkspaceID: workspaceID,
+		Name:        name,
+		CreatedBy:   createdBy,
+		ContentType: "image/png",
+		SizeBytes:   1024,
+		StoragePath: "/emojis/test.png",
+		CreatedAt:   now,
+	}
+}
+
 // CreateTestMessage creates a message directly in the database
 func CreateTestMessage(t *testing.T, db *sql.DB, channelID, userID, content string) *TestMessage {
 	t.Helper()

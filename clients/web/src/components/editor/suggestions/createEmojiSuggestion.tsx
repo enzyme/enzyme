@@ -1,18 +1,29 @@
+import type { MutableRefObject } from 'react';
 import type { SuggestionOptions, SuggestionProps } from '@tiptap/suggestion';
 import { EmojiSuggestionList, type EmojiOption, type EmojiSuggestionRef } from './EmojiSuggestionList';
-import { searchEmojis } from '../../../lib/emoji';
+import { searchAllEmojis } from '../../../lib/emoji';
+import type { CustomEmoji } from '@feather/api-client';
 
 /**
  * Create suggestion configuration for TipTap emoji extension.
  * Triggers on : character for :emoji: typeahead.
  */
-export function createEmojiSuggestion(): Omit<SuggestionOptions<EmojiOption>, 'editor'> {
+export function createEmojiSuggestion(
+  customEmojisRef?: MutableRefObject<CustomEmoji[]>,
+): Omit<SuggestionOptions<EmojiOption>, 'editor'> {
   return {
     char: ':',
     allowSpaces: false,
 
     items: ({ query }) => {
-      return searchEmojis(query, 10);
+      const customEmojis = customEmojisRef?.current || [];
+      const customItems = customEmojis.map((e) => ({ name: e.name, url: e.url }));
+      return searchAllEmojis(query, 10, customItems).map((r) => ({
+        shortcode: r.shortcode,
+        emoji: r.emoji || '',
+        isCustom: r.isCustom,
+        imageUrl: r.imageUrl,
+      }));
     },
 
     render: () => {

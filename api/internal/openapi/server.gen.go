@@ -187,6 +187,18 @@ type CreateWorkspaceInput struct {
 	Name string `json:"name"`
 }
 
+// CustomEmoji defines model for CustomEmoji.
+type CustomEmoji struct {
+	ContentType string    `json:"content_type"`
+	CreatedAt   time.Time `json:"created_at"`
+	CreatedBy   string    `json:"created_by"`
+	Id          string    `json:"id"`
+	Name        string    `json:"name"`
+	SizeBytes   int64     `json:"size_bytes"`
+	Url         string    `json:"url"`
+	WorkspaceId string    `json:"workspace_id"`
+}
+
 // DMSuggestionsResponse defines model for DMSuggestionsResponse.
 type DMSuggestionsResponse struct {
 	// RecentDms DM channels with recent activity
@@ -615,6 +627,12 @@ type CreateDMJSONBody struct {
 	UserIds []string `json:"user_ids"`
 }
 
+// UploadCustomEmojiMultipartBody defines parameters for UploadCustomEmoji.
+type UploadCustomEmojiMultipartBody struct {
+	File openapi_types.File `json:"file"`
+	Name string             `json:"name"`
+}
+
 // UploadWorkspaceIconMultipartBody defines parameters for UploadWorkspaceIcon.
 type UploadWorkspaceIconMultipartBody struct {
 	File openapi_types.File `json:"file"`
@@ -709,6 +727,9 @@ type CreateChannelJSONRequestBody = CreateChannelInput
 // CreateDMJSONRequestBody defines body for CreateDM for application/json ContentType.
 type CreateDMJSONRequestBody CreateDMJSONBody
 
+// UploadCustomEmojiMultipartRequestBody defines body for UploadCustomEmoji for multipart/form-data ContentType.
+type UploadCustomEmojiMultipartRequestBody UploadCustomEmojiMultipartBody
+
 // UploadWorkspaceIconMultipartRequestBody defines body for UploadWorkspaceIcon for multipart/form-data ContentType.
 type UploadWorkspaceIconMultipartRequestBody UploadWorkspaceIconMultipartBody
 
@@ -792,6 +813,9 @@ type ServerInterface interface {
 	// Update channel
 	// (POST /channels/{id}/update)
 	UpdateChannel(w http.ResponseWriter, r *http.Request, id ChannelId)
+	// Delete a custom emoji
+	// (POST /emojis/{id}/delete)
+	DeleteCustomEmoji(w http.ResponseWriter, r *http.Request, id string)
 	// Delete a file
 	// (POST /files/{id}/delete)
 	DeleteFile(w http.ResponseWriter, r *http.Request, id string)
@@ -870,6 +894,12 @@ type ServerInterface interface {
 	// Get DM suggestions for sidebar
 	// (POST /workspaces/{wid}/dm-suggestions)
 	GetDMSuggestions(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// List custom emojis for a workspace
+	// (POST /workspaces/{wid}/emojis/list)
+	ListCustomEmojis(w http.ResponseWriter, r *http.Request, wid string)
+	// Upload a custom emoji
+	// (POST /workspaces/{wid}/emojis/upload)
+	UploadCustomEmoji(w http.ResponseWriter, r *http.Request, wid string)
 	// Remove workspace icon
 	// (DELETE /workspaces/{wid}/icon)
 	DeleteWorkspaceIcon(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
@@ -1020,6 +1050,12 @@ func (_ Unimplemented) StarChannel(w http.ResponseWriter, r *http.Request, id Ch
 // Update channel
 // (POST /channels/{id}/update)
 func (_ Unimplemented) UpdateChannel(w http.ResponseWriter, r *http.Request, id ChannelId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a custom emoji
+// (POST /emojis/{id}/delete)
+func (_ Unimplemented) DeleteCustomEmoji(w http.ResponseWriter, r *http.Request, id string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1176,6 +1212,18 @@ func (_ Unimplemented) MarkAllChannelsRead(w http.ResponseWriter, r *http.Reques
 // Get DM suggestions for sidebar
 // (POST /workspaces/{wid}/dm-suggestions)
 func (_ Unimplemented) GetDMSuggestions(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List custom emojis for a workspace
+// (POST /workspaces/{wid}/emojis/list)
+func (_ Unimplemented) ListCustomEmojis(w http.ResponseWriter, r *http.Request, wid string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Upload a custom emoji
+// (POST /workspaces/{wid}/emojis/upload)
+func (_ Unimplemented) UploadCustomEmoji(w http.ResponseWriter, r *http.Request, wid string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1751,6 +1799,37 @@ func (siw *ServerInterfaceWrapper) UpdateChannel(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateChannel(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCustomEmoji operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCustomEmoji(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCustomEmoji(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2511,6 +2590,68 @@ func (siw *ServerInterfaceWrapper) GetDMSuggestions(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ListCustomEmojis operation middleware
+func (siw *ServerInterfaceWrapper) ListCustomEmojis(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCustomEmojis(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadCustomEmoji operation middleware
+func (siw *ServerInterfaceWrapper) UploadCustomEmoji(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadCustomEmoji(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteWorkspaceIcon operation middleware
 func (siw *ServerInterfaceWrapper) DeleteWorkspaceIcon(w http.ResponseWriter, r *http.Request) {
 
@@ -2964,6 +3105,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/channels/{id}/update", wrapper.UpdateChannel)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/emojis/{id}/delete", wrapper.DeleteCustomEmoji)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/files/{id}/delete", wrapper.DeleteFile)
 	})
 	r.Group(func(r chi.Router) {
@@ -3040,6 +3184,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/{wid}/dm-suggestions", wrapper.GetDMSuggestions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/emojis/list", wrapper.ListCustomEmojis)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/emojis/upload", wrapper.UploadCustomEmoji)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/workspaces/{wid}/icon", wrapper.DeleteWorkspaceIcon)
@@ -3504,6 +3654,41 @@ type UpdateChannel200JSONResponse struct {
 func (response UpdateChannel200JSONResponse) VisitUpdateChannelResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCustomEmojiRequestObject struct {
+	Id string `json:"id"`
+}
+
+type DeleteCustomEmojiResponseObject interface {
+	VisitDeleteCustomEmojiResponse(w http.ResponseWriter) error
+}
+
+type DeleteCustomEmoji200JSONResponse SuccessResponse
+
+func (response DeleteCustomEmoji200JSONResponse) VisitDeleteCustomEmojiResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCustomEmoji401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteCustomEmoji401JSONResponse) VisitDeleteCustomEmojiResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCustomEmoji403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteCustomEmoji403JSONResponse) VisitDeleteCustomEmojiResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -4165,6 +4350,72 @@ func (response GetDMSuggestions200JSONResponse) VisitGetDMSuggestionsResponse(w 
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListCustomEmojisRequestObject struct {
+	Wid string `json:"wid"`
+}
+
+type ListCustomEmojisResponseObject interface {
+	VisitListCustomEmojisResponse(w http.ResponseWriter) error
+}
+
+type ListCustomEmojis200JSONResponse struct {
+	Emojis []CustomEmoji `json:"emojis"`
+}
+
+func (response ListCustomEmojis200JSONResponse) VisitListCustomEmojisResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCustomEmojis401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListCustomEmojis401JSONResponse) VisitListCustomEmojisResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UploadCustomEmojiRequestObject struct {
+	Wid  string `json:"wid"`
+	Body *multipart.Reader
+}
+
+type UploadCustomEmojiResponseObject interface {
+	VisitUploadCustomEmojiResponse(w http.ResponseWriter) error
+}
+
+type UploadCustomEmoji200JSONResponse struct {
+	Emoji CustomEmoji `json:"emoji"`
+}
+
+func (response UploadCustomEmoji200JSONResponse) VisitUploadCustomEmojiResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UploadCustomEmoji400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UploadCustomEmoji400JSONResponse) VisitUploadCustomEmojiResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UploadCustomEmoji401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UploadCustomEmoji401JSONResponse) VisitUploadCustomEmojiResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type DeleteWorkspaceIconRequestObject struct {
 	Wid WorkspaceId `json:"wid"`
 }
@@ -4447,6 +4698,9 @@ type StrictServerInterface interface {
 	// Update channel
 	// (POST /channels/{id}/update)
 	UpdateChannel(ctx context.Context, request UpdateChannelRequestObject) (UpdateChannelResponseObject, error)
+	// Delete a custom emoji
+	// (POST /emojis/{id}/delete)
+	DeleteCustomEmoji(ctx context.Context, request DeleteCustomEmojiRequestObject) (DeleteCustomEmojiResponseObject, error)
 	// Delete a file
 	// (POST /files/{id}/delete)
 	DeleteFile(ctx context.Context, request DeleteFileRequestObject) (DeleteFileResponseObject, error)
@@ -4525,6 +4779,12 @@ type StrictServerInterface interface {
 	// Get DM suggestions for sidebar
 	// (POST /workspaces/{wid}/dm-suggestions)
 	GetDMSuggestions(ctx context.Context, request GetDMSuggestionsRequestObject) (GetDMSuggestionsResponseObject, error)
+	// List custom emojis for a workspace
+	// (POST /workspaces/{wid}/emojis/list)
+	ListCustomEmojis(ctx context.Context, request ListCustomEmojisRequestObject) (ListCustomEmojisResponseObject, error)
+	// Upload a custom emoji
+	// (POST /workspaces/{wid}/emojis/upload)
+	UploadCustomEmoji(ctx context.Context, request UploadCustomEmojiRequestObject) (UploadCustomEmojiResponseObject, error)
 	// Remove workspace icon
 	// (DELETE /workspaces/{wid}/icon)
 	DeleteWorkspaceIcon(ctx context.Context, request DeleteWorkspaceIconRequestObject) (DeleteWorkspaceIconResponseObject, error)
@@ -5161,6 +5421,32 @@ func (sh *strictHandler) UpdateChannel(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateChannelResponseObject); ok {
 		if err := validResponse.VisitUpdateChannelResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCustomEmoji operation middleware
+func (sh *strictHandler) DeleteCustomEmoji(w http.ResponseWriter, r *http.Request, id string) {
+	var request DeleteCustomEmojiRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCustomEmoji(ctx, request.(DeleteCustomEmojiRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCustomEmoji")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCustomEmojiResponseObject); ok {
+		if err := validResponse.VisitDeleteCustomEmojiResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -5904,6 +6190,65 @@ func (sh *strictHandler) GetDMSuggestions(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetDMSuggestionsResponseObject); ok {
 		if err := validResponse.VisitGetDMSuggestionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCustomEmojis operation middleware
+func (sh *strictHandler) ListCustomEmojis(w http.ResponseWriter, r *http.Request, wid string) {
+	var request ListCustomEmojisRequestObject
+
+	request.Wid = wid
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCustomEmojis(ctx, request.(ListCustomEmojisRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCustomEmojis")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCustomEmojisResponseObject); ok {
+		if err := validResponse.VisitListCustomEmojisResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UploadCustomEmoji operation middleware
+func (sh *strictHandler) UploadCustomEmoji(w http.ResponseWriter, r *http.Request, wid string) {
+	var request UploadCustomEmojiRequestObject
+
+	request.Wid = wid
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UploadCustomEmoji(ctx, request.(UploadCustomEmojiRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadCustomEmoji")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UploadCustomEmojiResponseObject); ok {
+		if err := validResponse.VisitUploadCustomEmojiResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

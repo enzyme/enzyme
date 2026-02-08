@@ -1,18 +1,53 @@
 import { Button as AriaButton } from "react-aria-components";
-import { Tooltip } from "../ui";
+import { Tooltip, CustomEmojiImg } from "../ui";
 import { cn } from "../../lib/utils";
+import { resolveStandardShortcode } from "../../lib/emoji";
 import type { ReactionGroup } from "./reactionUtils";
+import type { CustomEmoji } from "@feather/api-client";
+
+/**
+ * Render an emoji string which may be:
+ * 1. A shortcode like `:thumbsup:` (standard or custom)
+ * 2. A raw Unicode character (legacy)
+ */
+export function EmojiDisplay({
+  emoji,
+  customEmojiMap,
+  size = "sm",
+}: {
+  emoji: string;
+  customEmojiMap?: Map<string, CustomEmoji>;
+  size?: "sm" | "md";
+}) {
+  // Check if it's a shortcode format :name:
+  const shortcodeMatch = emoji.match(/^:([a-zA-Z0-9_+-]+):$/);
+  if (shortcodeMatch) {
+    const name = shortcodeMatch[1];
+    // Try standard emoji
+    const standard = resolveStandardShortcode(name);
+    if (standard) return <>{standard}</>;
+    // Try custom emoji
+    const custom = customEmojiMap?.get(name);
+    if (custom) return <CustomEmojiImg name={custom.name} url={custom.url} size={size} />;
+    // Fallback: render the shortcode as text
+    return <>{emoji}</>;
+  }
+  // Raw Unicode (legacy)
+  return <>{emoji}</>;
+}
 
 interface ReactionsDisplayProps {
   reactions: ReactionGroup[];
   memberNames: Record<string, string>;
   onReactionClick: (emoji: string, hasOwn: boolean) => void;
+  customEmojiMap?: Map<string, CustomEmoji>;
 }
 
 export function ReactionsDisplay({
   reactions,
   memberNames,
   onReactionClick,
+  customEmojiMap,
 }: ReactionsDisplayProps) {
   if (reactions.length === 0) {
     return null;
@@ -35,7 +70,7 @@ export function ReactionsDisplay({
                   : "bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600",
               )}
             >
-              <span>{emoji}</span>
+              <span><EmojiDisplay emoji={emoji} customEmojiMap={customEmojiMap} size="md" /></span>
               <span className="text-xs text-gray-600 dark:text-gray-300">
                 {count}
               </span>

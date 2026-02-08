@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
 } from 'react';
 import { tv } from 'tailwind-variants';
+import { CustomEmojiImg } from '../../ui/CustomEmojiImg';
 
 const styles = tv({
   slots: {
@@ -33,6 +34,8 @@ const styles = tv({
 export interface EmojiOption {
   shortcode: string;
   emoji: string;
+  isCustom?: boolean;
+  imageUrl?: string;
 }
 
 export interface EmojiSuggestionRef {
@@ -131,7 +134,11 @@ export const EmojiSuggestionList = forwardRef<EmojiSuggestionRef, EmojiSuggestio
             role="option"
             aria-selected={index === safeSelectedIndex}
           >
-            <span className={s.emoji()}>{item.emoji}</span>
+            <span className={s.emoji()}>
+              {item.isCustom && item.imageUrl
+                ? <CustomEmojiImg name={item.shortcode} url={item.imageUrl} size="md" />
+                : item.emoji}
+            </span>
             <span className={s.shortcode()}>:{item.shortcode}:</span>
           </div>
         ))}

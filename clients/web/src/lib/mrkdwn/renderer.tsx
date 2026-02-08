@@ -3,7 +3,9 @@ import { tv } from 'tailwind-variants';
 import { parseMrkdwn, type MrkdwnSegment } from './parser';
 import { UserMentionBadge, SpecialMentionBadge } from '../../components/message/MentionBadge';
 import { ChannelMentionBadge } from '../../components/message/ChannelMentionBadge';
-import type { WorkspaceMemberWithUser, ChannelWithMembership } from '@feather/api-client';
+import type { WorkspaceMemberWithUser, ChannelWithMembership, CustomEmoji } from '@feather/api-client';
+import { resolveStandardShortcode } from '../emoji';
+import { CustomEmojiImg } from '../../components/ui/CustomEmojiImg';
 
 const styles = tv({
   slots: {
@@ -40,9 +42,10 @@ interface MrkdwnRendererProps {
   content: string;
   members?: WorkspaceMemberWithUser[];
   channels?: ChannelWithMembership[];
+  customEmojiMap?: Map<string, CustomEmoji>;
 }
 
-export function MrkdwnRenderer({ content, members = [], channels = [] }: MrkdwnRendererProps) {
+export function MrkdwnRenderer({ content, members = [], channels = [], customEmojiMap }: MrkdwnRendererProps) {
   const memberMap = useMemo(() => {
     return members.reduce((acc, member) => {
       acc[member.user_id] = member;
@@ -52,13 +55,14 @@ export function MrkdwnRenderer({ content, members = [], channels = [] }: MrkdwnR
 
   const segments = useMemo(() => parseMrkdwn(content), [content]);
 
-  return <>{renderSegments(segments, memberMap, channels)}</>;
+  return <>{renderSegments(segments, memberMap, channels, customEmojiMap)}</>;
 }
 
 function renderSegments(
   segments: MrkdwnSegment[],
   memberMap: Record<string, WorkspaceMemberWithUser>,
-  channels: ChannelWithMembership[]
+  channels: ChannelWithMembership[],
+  customEmojiMap?: Map<string, CustomEmoji>,
 ): React.ReactNode[] {
   const s = styles();
 
@@ -91,7 +95,7 @@ function renderSegments(
       case 'blockquote':
         return (
           <blockquote key={key} className={s.blockquote()}>
-            {renderSegments(segment.segments, memberMap, channels)}
+            {renderSegments(segment.segments, memberMap, channels, customEmojiMap)}
           </blockquote>
         );
 
@@ -99,7 +103,7 @@ function renderSegments(
         return (
           <ul key={key} className={`${s.list()} list-disc`}>
             {segment.items.map((item, i) => (
-              <li key={i}>{renderSegments(item, memberMap, channels)}</li>
+              <li key={i}>{renderSegments(item, memberMap, channels, customEmojiMap)}</li>
             ))}
           </ul>
         );
@@ -108,7 +112,7 @@ function renderSegments(
         return (
           <ol key={key} className={`${s.list()} list-decimal`}>
             {segment.items.map((item, i) => (
-              <li key={i}>{renderSegments(item, memberMap, channels)}</li>
+              <li key={i}>{renderSegments(item, memberMap, channels, customEmojiMap)}</li>
             ))}
           </ol>
         );
@@ -138,6 +142,18 @@ function renderSegments(
             channels={channels}
           />
         );
+
+      case 'emoji_shortcode': {
+        const standardEmoji = resolveStandardShortcode(segment.name);
+        if (standardEmoji) {
+          return <span key={key} title={`:${segment.name}:`}>{standardEmoji}</span>;
+        }
+        const customEmoji = customEmojiMap?.get(segment.name);
+        if (customEmoji) {
+          return <CustomEmojiImg key={key} name={customEmoji.name} url={customEmoji.url} size="sm" />;
+        }
+        return <span key={key}>:{segment.name}:</span>;
+      }
 
       case 'link':
         return (

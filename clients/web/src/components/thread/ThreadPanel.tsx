@@ -19,6 +19,8 @@ import {
 } from "../../hooks/useMessages";
 import { useThreadPanel, useProfilePanel } from "../../hooks/usePanel";
 import { Avatar, MessageSkeleton, Modal, Button, toast } from "../ui";
+import { EmojiDisplay } from "../message/ReactionsDisplay";
+import { useCustomEmojiMap, useCustomEmojis } from "../../hooks/useCustomEmojis";
 import { ThreadNotificationButton } from "./ThreadNotificationButton";
 import { MessageActionBar } from "../message/MessageActionBar";
 import { AttachmentDisplay } from "../message/AttachmentDisplay";
@@ -200,6 +202,8 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
 
 function ParentMessage({ message, members, channels }: { message: MessageWithUser; members?: WorkspaceMemberWithUser[]; channels?: ChannelWithMembership[] }) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const customEmojiMap = useCustomEmojiMap(workspaceId);
+  const { data: customEmojis } = useCustomEmojis(workspaceId);
   const { openProfile } = useProfilePanel();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -478,7 +482,7 @@ function ParentMessage({ message, members, channels }: { message: MessageWithUse
             <>
               {message.content && (
                 <div className="text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
-                  <MessageContent content={message.content} members={members} channels={channels} />
+                  <MessageContent content={message.content} members={members} channels={channels} customEmojiMap={customEmojiMap} />
                 </div>
               )}
               {message.attachments && message.attachments.length > 0 && (
@@ -501,7 +505,7 @@ function ParentMessage({ message, members, channels }: { message: MessageWithUse
                       : "bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600",
                   )}
                 >
-                  <span>{emoji}</span>
+                  <span><EmojiDisplay emoji={emoji} customEmojiMap={customEmojiMap} /></span>
                   <span className="text-xs text-gray-600 dark:text-gray-300">
                     {count}
                   </span>
@@ -524,6 +528,7 @@ function ParentMessage({ message, members, channels }: { message: MessageWithUse
           onDropdownChange={setShowDropdown}
           onEdit={isOwnMessage ? handleStartEdit : undefined}
           onDelete={isOwnMessage ? handleDeleteClick : undefined}
+          customEmojis={customEmojis}
         />
       )}
 
@@ -565,6 +570,8 @@ interface ThreadMessageProps {
 
 function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMessageProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const customEmojiMap = useCustomEmojiMap(workspaceId);
+  const { data: customEmojis } = useCustomEmojis(workspaceId);
   const { openProfile } = useProfilePanel();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -831,7 +838,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
             <>
               {message.content && (
                 <div className="text-sm text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
-                  <MessageContent content={message.content} members={members} channels={channels} />
+                  <MessageContent content={message.content} members={members} channels={channels} customEmojiMap={customEmojiMap} />
                 </div>
               )}
               {message.attachments && message.attachments.length > 0 && (
@@ -854,7 +861,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
                       : "bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600",
                   )}
                 >
-                  <span>{emoji}</span>
+                  <span><EmojiDisplay emoji={emoji} customEmojiMap={customEmojiMap} /></span>
                   <span className="text-gray-600 dark:text-gray-300">
                     {count}
                   </span>
@@ -877,6 +884,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
           onDropdownChange={setShowDropdown}
           onEdit={isOwnMessage ? handleStartEdit : undefined}
           onDelete={isOwnMessage ? handleDeleteClick : undefined}
+          customEmojis={customEmojis}
         />
       )}
 

@@ -29,6 +29,7 @@ export type MrkdwnSegment =
   | { type: 'special_mention'; mentionType: string }
   | { type: 'channel_mention'; channelId: string }
   | { type: 'link'; url: string; text: string }
+  | { type: 'emoji_shortcode'; name: string }
   | { type: 'line_break' };
 
 /**
@@ -190,6 +191,15 @@ function parseInline(text: string): MrkdwnSegment[] {
       continue;
     }
 
+    // Emoji shortcode: :name:
+    const emojiMatch = remaining.match(/^:([a-zA-Z0-9_+-]+):/);
+    if (emojiMatch) {
+      segments.push({ type: 'emoji_shortcode', name: emojiMatch[1] });
+      remaining = remaining.slice(emojiMatch[0].length);
+      matched = true;
+      continue;
+    }
+
     // Bold: *text* (must not be followed by another *)
     const boldMatch = remaining.match(/^\*([^*]+)\*/);
     if (boldMatch) {
@@ -219,7 +229,7 @@ function parseInline(text: string): MrkdwnSegment[] {
 
     // If no pattern matched, consume plain text until next special character
     if (!matched) {
-      const nextSpecial = remaining.search(/[<`*_~]/);
+      const nextSpecial = remaining.search(/[<`*_~:]/);
       if (nextSpecial === -1) {
         // No more special characters, consume rest as text
         appendText(segments, remaining);

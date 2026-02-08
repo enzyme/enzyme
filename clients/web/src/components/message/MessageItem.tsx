@@ -19,6 +19,7 @@ import {
   useUpdateMessage,
   useDeleteMessage,
 } from "../../hooks/useMessages";
+import { useCustomEmojiMap, useCustomEmojis } from "../../hooks/useCustomEmojis";
 import { useThreadPanel, useProfilePanel } from "../../hooks/usePanel";
 import { cn, formatTime } from "../../lib/utils";
 import type { MessageWithUser, ChannelWithMembership } from "@feather/api-client";
@@ -59,6 +60,8 @@ interface MessageItemProps {
 
 export function MessageItem({ message, channelId, channels }: MessageItemProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const customEmojiMap = useCustomEmojiMap(workspaceId);
+  const { data: customEmojis } = useCustomEmojis(workspaceId);
   const [showActions, setShowActions] = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -292,6 +295,7 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
                     content={message.content}
                     members={membersData?.members}
                     channels={channels}
+                    customEmojiMap={customEmojiMap}
                   />
                 </div>
               )}
@@ -306,6 +310,7 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
             reactions={reactionGroups}
             memberNames={memberNames}
             onReactionClick={handleReactionClick}
+            customEmojiMap={customEmojiMap}
           />
 
           {/* Thread replies indicator */}
@@ -331,6 +336,7 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
           onDropdownChange={setShowDropdown}
           onEdit={isOwnMessage ? handleStartEdit : undefined}
           onDelete={isOwnMessage ? handleDeleteClick : undefined}
+          customEmojis={customEmojis}
         />
       )}
 

@@ -4,6 +4,7 @@ import { XMarkIcon, PhotoIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useWorkspace, useWorkspaceMembers, useUpdateMemberRole, useRemoveMember, useUploadWorkspaceIcon, useDeleteWorkspaceIcon } from '../hooks/useWorkspaces';
 import { useAuth } from '../hooks';
 import { Avatar, Button, Spinner, toast } from '../components/ui';
+import { CustomEmojiManager } from '../components/settings/CustomEmojiManager';
 import { cn, getAvatarColor } from '../lib/utils';
 import type { WorkspaceRole } from '@feather/api-client';
 
@@ -17,7 +18,7 @@ export function WorkspaceSettingsPage() {
   const uploadIcon = useUploadWorkspaceIcon(workspaceId!);
   const deleteIcon = useDeleteWorkspaceIcon(workspaceId!);
 
-  const [activeTab, setActiveTab] = useState<'general' | 'members'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'members' | 'emoji'>('general');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -141,6 +142,17 @@ export function WorkspaceSettingsPage() {
               )}
             >
               Members ({members.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('emoji')}
+              className={cn(
+                'py-2 px-1 border-b-2 font-medium text-sm',
+                activeTab === 'emoji'
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+              )}
+            >
+              Emoji
             </button>
           </nav>
         </div>
@@ -306,6 +318,10 @@ export function WorkspaceSettingsPage() {
               </div>
             ))}
           </div>
+        )}
+
+        {activeTab === 'emoji' && workspaceId && (
+          <CustomEmojiManager workspaceId={workspaceId} />
         )}
       </div>
     </div>

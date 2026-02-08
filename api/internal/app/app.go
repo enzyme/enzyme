@@ -9,6 +9,7 @@ import (
 	"github.com/feather/api/internal/config"
 	"github.com/feather/api/internal/database"
 	"github.com/feather/api/internal/email"
+	"github.com/feather/api/internal/emoji"
 	"github.com/feather/api/internal/file"
 	"github.com/feather/api/internal/handler"
 	"github.com/feather/api/internal/message"
@@ -65,6 +66,7 @@ func New(cfg *config.Config) (*App, error) {
 	channelRepo := channel.NewRepository(db.DB)
 	messageRepo := message.NewRepository(db.DB)
 	fileRepo := file.NewRepository(db.DB)
+	emojiRepo := emoji.NewRepository(db.DB)
 	threadRepo := thread.NewRepository(db.DB)
 
 	// Initialize services
@@ -98,6 +100,7 @@ func New(cfg *config.Config) (*App, error) {
 		MessageRepo:         messageRepo,
 		FileRepo:            fileRepo,
 		ThreadRepo:          threadRepo,
+		EmojiRepo:           emojiRepo,
 		NotificationService: notificationService,
 		Hub:                 hub,
 		StoragePath:         cfg.Files.StoragePath,

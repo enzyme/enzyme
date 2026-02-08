@@ -2109,3 +2109,58 @@ export function searchEmojis(
     .slice(0, limit)
     .map(({ shortcode, emoji }) => ({ shortcode, emoji }));
 }
+
+/**
+ * Resolve a standard emoji shortcode to its Unicode character.
+ * Returns undefined if the shortcode doesn't match any standard emoji.
+ */
+export function resolveStandardShortcode(name: string): string | undefined {
+  return EMOJI_MAP[name];
+}
+
+export interface SearchResult {
+  shortcode: string;
+  emoji?: string;
+  isCustom: boolean;
+  imageUrl?: string;
+}
+
+/**
+ * Search both standard and custom emojis.
+ * Returns merged results with custom emojis marked.
+ */
+export function searchAllEmojis(
+  query: string,
+  limit: number,
+  customEmojis: Array<{ name: string; url: string }>,
+): SearchResult[] {
+  const standardResults = searchEmojis(query, limit).map((r) => ({
+    shortcode: r.shortcode,
+    emoji: r.emoji,
+    isCustom: false,
+  }));
+
+  if (!customEmojis.length) return standardResults;
+
+  const lowerQuery = query.toLowerCase();
+  const customResults: SearchResult[] = customEmojis
+    .filter((e) => !query || e.name.includes(lowerQuery))
+    .map((e) => ({
+      shortcode: e.name,
+      isCustom: true,
+      imageUrl: e.url,
+    }));
+
+  // Interleave: custom matches first if exact, then standard, then partial custom
+  const exact: SearchResult[] = [];
+  const startsWith: SearchResult[] = [];
+  const contains: SearchResult[] = [];
+
+  for (const r of customResults) {
+    if (r.shortcode === lowerQuery) exact.push(r);
+    else if (r.shortcode.startsWith(lowerQuery)) startsWith.push(r);
+    else contains.push(r);
+  }
+
+  return [...exact, ...startsWith, ...standardResults, ...contains].slice(0, limit);
+}

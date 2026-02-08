@@ -14,6 +14,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { Tooltip, Menu, MenuItem, EmojiGrid } from "../ui";
 import { cn } from "../../lib/utils";
+import type { CustomEmoji } from "@feather/api-client";
 
 interface MessageActionBarProps {
   reactionPickerOpen: boolean;
@@ -28,6 +29,7 @@ interface MessageActionBarProps {
   onEdit?: () => void;
   /** If provided, shows delete option in dropdown */
   onDelete?: () => void;
+  customEmojis?: CustomEmoji[];
 }
 
 export function MessageActionBar({
@@ -41,6 +43,7 @@ export function MessageActionBar({
   onDropdownChange,
   onEdit,
   onDelete,
+  customEmojis,
 }: MessageActionBarProps) {
   const handleEmojiSelect = (emoji: string) => {
     onReactionSelect(emoji);
@@ -64,7 +67,7 @@ export function MessageActionBar({
           </AriaButton>
         </Tooltip>
         <Popover placement="bottom end">
-          <EmojiGrid onSelect={handleEmojiSelect} />
+          <EmojiGrid onSelect={handleEmojiSelect} customEmojis={customEmojis} />
         </Popover>
       </DialogTrigger>
 

@@ -49,8 +49,13 @@ export async function post<T>(endpoint: string, data?: unknown): Promise<T> {
   return handleResponse<T>(response);
 }
 
-export async function uploadFile(endpoint: string, file: File): Promise<unknown> {
+export async function uploadFile(endpoint: string, file: File, fields?: Record<string, string>): Promise<unknown> {
   const formData = new FormData();
+  if (fields) {
+    for (const [key, value] of Object.entries(fields)) {
+      formData.append(key, value);
+    }
+  }
   formData.append('file', file);
 
   const response = await fetch(`${API_BASE}${endpoint}`, {

@@ -19,6 +19,8 @@ const (
 	EventPresenceChanged = "presence.changed"
 	EventPresenceInitial = "presence.initial"
 	EventNotification    = "notification"
+	EventEmojiCreated    = "emoji.created"
+	EventEmojiDeleted    = "emoji.deleted"
 )
 
 type Event struct {

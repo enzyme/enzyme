@@ -57,3 +57,6 @@ export type UnreadMessagesResult = components['schemas']['UnreadMessagesResult']
 // Thread types
 export type ThreadMessage = components['schemas']['ThreadMessage'];
 export type ThreadListResult = components['schemas']['ThreadListResult'];
+
+// Custom emoji types
+export type CustomEmoji = components['schemas']['CustomEmoji'];

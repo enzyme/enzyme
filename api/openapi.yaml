@@ -21,6 +21,8 @@ tags:
     description: Message operations
   - name: files
     description: File uploads and downloads
+  - name: emojis
+    description: Custom emoji management
   - name: sse
     description: Server-Sent Events
 
@@ -1191,6 +1193,103 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
+  # Emoji endpoints
+  /workspaces/{wid}/emojis/upload:
+    post:
+      tags: [emojis]
+      summary: Upload a custom emoji
+      operationId: uploadCustomEmoji
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: wid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, name]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Emoji uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [emoji]
+                properties:
+                  emoji:
+                    $ref: '#/components/schemas/CustomEmoji'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /workspaces/{wid}/emojis/list:
+    post:
+      tags: [emojis]
+      summary: List custom emojis for a workspace
+      operationId: listCustomEmojis
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: wid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of custom emojis
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [emojis]
+                properties:
+                  emojis:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomEmoji'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /emojis/{id}/delete:
+    post:
+      tags: [emojis]
+      summary: Delete a custom emoji
+      operationId: deleteCustomEmoji
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Emoji deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   # User endpoints
   /users/{id}:
     get:
@@ -1988,6 +2087,29 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
+    CustomEmoji:
+      type: object
+      required: [id, workspace_id, name, created_by, content_type, size_bytes, url, created_at]
+      properties:
+        id:
+          type: string
+        workspace_id:
+          type: string
+        name:
+          type: string
+        created_by:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+          format: int64
+        url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
     SuccessResponse:
       type: object
       required: [success]
@@ -2033,6 +2155,8 @@ components:
         - presence.changed
         - presence.initial
         - notification
+        - emoji.created
+        - emoji.deleted
 
     SSEEvent:
       oneOf:
@@ -2054,6 +2178,8 @@ components:
         - $ref: '#/components/schemas/SSEEventPresenceChanged'
         - $ref: '#/components/schemas/SSEEventPresenceInitial'
         - $ref: '#/components/schemas/SSEEventNotification'
+        - $ref: '#/components/schemas/SSEEventEmojiCreated'
+        - $ref: '#/components/schemas/SSEEventEmojiDeleted'
       discriminator:
         propertyName: type
         mapping:
@@ -2075,6 +2201,8 @@ components:
           presence.changed: '#/components/schemas/SSEEventPresenceChanged'
           presence.initial: '#/components/schemas/SSEEventPresenceInitial'
           notification: '#/components/schemas/SSEEventNotification'
+          emoji.created: '#/components/schemas/SSEEventEmojiCreated'
+          emoji.deleted: '#/components/schemas/SSEEventEmojiDeleted'
 
     SSEEventConnected:
       type: object
@@ -2317,6 +2445,36 @@ components:
           enum: [notification]
         data:
           $ref: '#/components/schemas/NotificationData'
+
+    SSEEventEmojiCreated:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [emoji.created]
+        data:
+          $ref: '#/components/schemas/CustomEmoji'
+
+    SSEEventEmojiDeleted:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [emoji.deleted]
+        data:
+          type: object
+          required: [id, name]
+          properties:
+            id:
+              type: string
+            name:
+              type: string
 
     NotificationData:
       type: object

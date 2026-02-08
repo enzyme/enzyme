@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { SSEConnection } from '../lib/sse';
 import { addTypingUser, removeTypingUser, setUserPresence } from '../lib/presenceStore';
 import { playNotificationSound, showBrowserNotification, unlockAudio } from '../lib/notificationSound';
-import type { MessageListResult, MessageWithUser, ChannelWithMembership, Channel, NotificationData } from '@feather/api-client';
+import type { MessageListResult, MessageWithUser, ChannelWithMembership, Channel, NotificationData, CustomEmoji } from '@feather/api-client';
 
 export function useSSE(workspaceId: string | undefined) {
   const [isConnected, setIsConnected] = useState(false);
@@ -318,6 +318,31 @@ export function useSSE(workspaceId: string | undefined) {
                 : c
             ),
           };
+        }
+      );
+    });
+
+    // Handle custom emoji events
+    connection.on('emoji.created', (event) => {
+      const emoji = event.data as CustomEmoji;
+      queryClient.setQueryData(
+        ['custom-emojis', workspaceId],
+        (old: { emojis: CustomEmoji[] } | undefined) => {
+          if (!old) return old;
+          // Avoid duplicates
+          if (old.emojis.some((e) => e.id === emoji.id)) return old;
+          return { ...old, emojis: [...old.emojis, emoji].sort((a, b) => a.name.localeCompare(b.name)) };
+        }
+      );
+    });
+
+    connection.on('emoji.deleted', (event) => {
+      const { id } = event.data as { id: string; name: string };
+      queryClient.setQueryData(
+        ['custom-emojis', workspaceId],
+        (old: { emojis: CustomEmoji[] } | undefined) => {
+          if (!old) return old;
+          return { ...old, emojis: old.emojis.filter((e) => e.id !== id) };
         }
       );
     });

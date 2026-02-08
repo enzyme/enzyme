@@ -808,6 +808,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{wid}/emojis/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a custom emoji */
+        post: operations["uploadCustomEmoji"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{wid}/emojis/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** List custom emojis for a workspace */
+        post: operations["listCustomEmojis"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/emojis/{id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete a custom emoji */
+        post: operations["deleteCustomEmoji"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}": {
         parameters: {
             query?: never;
@@ -1180,6 +1231,18 @@ export interface components {
         ApiErrorResponse: {
             error: components["schemas"]["ApiError"];
         };
+        CustomEmoji: {
+            id: string;
+            workspace_id: string;
+            name: string;
+            created_by: string;
+            content_type: string;
+            /** Format: int64 */
+            size_bytes: number;
+            url: string;
+            /** Format: date-time */
+            created_at: string;
+        };
         SuccessResponse: {
             success: boolean;
         };
@@ -1191,8 +1254,8 @@ export interface components {
             last_read_message_id: string;
         };
         /** @enum {string} */
-        SSEEventType: "connected" | "heartbeat" | "message.new" | "message.updated" | "message.deleted" | "reaction.added" | "reaction.removed" | "channel.created" | "channel.updated" | "channel.archived" | "channel.member_added" | "channel.member_removed" | "channel.read" | "typing.start" | "typing.stop" | "presence.changed" | "presence.initial" | "notification";
-        SSEEvent: components["schemas"]["SSEEventConnected"] | components["schemas"]["SSEEventHeartbeat"] | components["schemas"]["SSEEventMessageNew"] | components["schemas"]["SSEEventMessageUpdated"] | components["schemas"]["SSEEventMessageDeleted"] | components["schemas"]["SSEEventReactionAdded"] | components["schemas"]["SSEEventReactionRemoved"] | components["schemas"]["SSEEventChannelCreated"] | components["schemas"]["SSEEventChannelUpdated"] | components["schemas"]["SSEEventChannelArchived"] | components["schemas"]["SSEEventChannelMemberAdded"] | components["schemas"]["SSEEventChannelMemberRemoved"] | components["schemas"]["SSEEventChannelRead"] | components["schemas"]["SSEEventTypingStart"] | components["schemas"]["SSEEventTypingStop"] | components["schemas"]["SSEEventPresenceChanged"] | components["schemas"]["SSEEventPresenceInitial"] | components["schemas"]["SSEEventNotification"];
+        SSEEventType: "connected" | "heartbeat" | "message.new" | "message.updated" | "message.deleted" | "reaction.added" | "reaction.removed" | "channel.created" | "channel.updated" | "channel.archived" | "channel.member_added" | "channel.member_removed" | "channel.read" | "typing.start" | "typing.stop" | "presence.changed" | "presence.initial" | "notification" | "emoji.created" | "emoji.deleted";
+        SSEEvent: components["schemas"]["SSEEventConnected"] | components["schemas"]["SSEEventHeartbeat"] | components["schemas"]["SSEEventMessageNew"] | components["schemas"]["SSEEventMessageUpdated"] | components["schemas"]["SSEEventMessageDeleted"] | components["schemas"]["SSEEventReactionAdded"] | components["schemas"]["SSEEventReactionRemoved"] | components["schemas"]["SSEEventChannelCreated"] | components["schemas"]["SSEEventChannelUpdated"] | components["schemas"]["SSEEventChannelArchived"] | components["schemas"]["SSEEventChannelMemberAdded"] | components["schemas"]["SSEEventChannelMemberRemoved"] | components["schemas"]["SSEEventChannelRead"] | components["schemas"]["SSEEventTypingStart"] | components["schemas"]["SSEEventTypingStop"] | components["schemas"]["SSEEventPresenceChanged"] | components["schemas"]["SSEEventPresenceInitial"] | components["schemas"]["SSEEventNotification"] | components["schemas"]["SSEEventEmojiCreated"] | components["schemas"]["SSEEventEmojiDeleted"];
         SSEEventConnected: {
             id?: string;
             /**
@@ -1366,6 +1429,27 @@ export interface components {
              */
             type: "notification";
             data: components["schemas"]["NotificationData"];
+        };
+        SSEEventEmojiCreated: {
+            id?: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "emoji.created";
+            data: components["schemas"]["CustomEmoji"];
+        };
+        SSEEventEmojiDeleted: {
+            id?: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "emoji.deleted";
+            data: {
+                id: string;
+                name: string;
+            };
         };
         NotificationData: {
             /** @enum {string} */
@@ -2817,6 +2901,89 @@ export interface operations {
                     "application/json": components["schemas"]["SuccessResponse"];
                 };
             };
+        };
+    };
+    uploadCustomEmoji: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    name: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Emoji uploaded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        emoji: components["schemas"]["CustomEmoji"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listCustomEmojis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of custom emojis */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        emojis: components["schemas"]["CustomEmoji"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    deleteCustomEmoji: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Emoji deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getUser: {
