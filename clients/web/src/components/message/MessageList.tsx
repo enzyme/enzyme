@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { useMessages } from '../../hooks';
+import { useParams } from 'react-router-dom';
+import { useMessages, useChannels } from '../../hooks';
 import { MessageItem } from './MessageItem';
 import { SystemMessage } from './SystemMessage';
 import { MessageSkeleton } from '../ui';
@@ -14,6 +15,7 @@ interface MessageListProps {
 }
 
 export function MessageList({ channelId, lastReadMessageId, unreadCount = 0, onAtBottomChange }: MessageListProps) {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
   const {
     data,
     isLoading,
@@ -21,6 +23,7 @@ export function MessageList({ channelId, lastReadMessageId, unreadCount = 0, onA
     hasNextPage,
     fetchNextPage,
   } = useMessages(channelId);
+  const { data: channelsData } = useChannels(workspaceId);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -186,6 +189,7 @@ export function MessageList({ channelId, lastReadMessageId, unreadCount = 0, onA
                     <MessageItem
                       message={message}
                       channelId={channelId}
+                      channels={channelsData?.channels}
                     />
                   )}
                   {showUnreadDivider && (

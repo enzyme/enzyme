@@ -177,10 +177,18 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     const submittingRef = useRef(false);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
-    // Build mention options from workspace members
-    const getMentionOptions = useCallback(
-      (query: string): MentionOption[] => {
-        const memberOptions: MentionOption[] = workspaceMembers.map((member) => ({
+    // Use refs so suggestion closures (captured by TipTap on mount) always see latest data
+    const membersRef = useRef(workspaceMembers);
+    const channelsRef = useRef(workspaceChannels);
+    useEffect(() => { membersRef.current = workspaceMembers; }, [workspaceMembers]);
+    useEffect(() => { channelsRef.current = workspaceChannels; }, [workspaceChannels]);
+
+    // Stable suggestion configs — refs are only read at query time (user interaction),
+    // not during render, so the lint warning is a false positive here.
+    /* eslint-disable react-hooks/refs */
+    const mentionSuggestion = useMemo(
+      () => createMentionSuggestion((query: string): MentionOption[] => {
+        const memberOptions: MentionOption[] = membersRef.current.map((member) => ({
           type: 'user' as const,
           id: member.user_id,
           displayName: member.display_name,
@@ -203,15 +211,15 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
 
           return a.displayName.localeCompare(b.displayName);
         });
-      },
-      [workspaceMembers]
+      }),
+      []
     );
 
-    // Build channel options from workspace channels
-    const getChannelOptions = useCallback(
-      (query: string): ChannelOption[] => {
-        // Filter out DMs and archived channels
-        const channels = workspaceChannels
+    const emojiSuggestion = useMemo(() => createEmojiSuggestion(), []);
+
+    const channelSuggestion = useMemo(
+      () => createChannelSuggestion((query: string): ChannelOption[] => {
+        const channels = channelsRef.current
           .filter(c => c.type !== 'dm')
           .map(c => ({
             id: c.id,
@@ -233,22 +241,10 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
 
           return a.name.localeCompare(b.name);
         });
-      },
-      [workspaceChannels]
+      }),
+      []
     );
-
-    // Create suggestion configurations
-    const mentionSuggestion = useMemo(
-      () => createMentionSuggestion(getMentionOptions),
-      [getMentionOptions]
-    );
-
-    const emojiSuggestion = useMemo(() => createEmojiSuggestion(), []);
-
-    const channelSuggestion = useMemo(
-      () => createChannelSuggestion(getChannelOptions),
-      [getChannelOptions]
-    );
+    /* eslint-enable react-hooks/refs */
 
     const editor = useEditor({
       immediatelyRender: false,

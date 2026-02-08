@@ -2,17 +2,30 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button as AriaButton, Popover, DialogTrigger } from 'react-aria-components';
 import { HashtagIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import { tv } from 'tailwind-variants';
-import { useChannels } from '../../hooks';
 import type { ChannelWithMembership } from '@feather/api-client';
 
 const mentionBadge = tv({
   base: [
-    'inline rounded px-0.5 -mx-0.5 cursor-pointer',
-    'text-blue-600 dark:text-blue-400',
-    'bg-blue-50 dark:bg-blue-900/30',
-    'hover:bg-blue-100 dark:hover:bg-blue-900/50',
+    'inline rounded px-0.5 -mx-0.5',
     'transition-colors',
   ],
+  variants: {
+    variant: {
+      known: [
+        'text-blue-600 dark:text-blue-400',
+        'bg-blue-50 dark:bg-blue-900/30',
+        'cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/50',
+      ],
+      private: [
+        'text-gray-500 dark:text-gray-400',
+        'bg-gray-100 dark:bg-gray-700/50',
+        'cursor-default',
+      ],
+    },
+  },
+  defaultVariants: {
+    variant: 'known',
+  },
 });
 
 const popoverStyles = tv({
@@ -36,9 +49,11 @@ const popoverStyles = tv({
   },
 });
 
+const inlineIcon = 'inline w-3.5 h-3.5 align-[-0.1em] mr-px';
+
 interface ChannelMentionBadgeProps {
   channelId: string;
-  channels?: ChannelWithMembership[];
+  channels: ChannelWithMembership[];
 }
 
 export function ChannelMentionBadge({ channelId, channels }: ChannelMentionBadgeProps) {
@@ -46,13 +61,19 @@ export function ChannelMentionBadge({ channelId, channels }: ChannelMentionBadge
   const navigate = useNavigate();
   const styles = popoverStyles();
 
-  // Use provided channels or fetch from hook
-  const { data: channelsData } = useChannels(channels ? undefined : workspaceId);
-  const channelList = channels || channelsData?.channels || [];
-  const channel = channelList.find(c => c.id === channelId);
+  const channel = channels.find(c => c.id === channelId);
 
-  const channelName = channel?.name || 'unknown-channel';
-  const isPrivate = channel?.type === 'private';
+  // Channel not found — user is not a member, treat as private
+  if (!channel) {
+    return (
+      <span className={mentionBadge({ variant: 'private' })}>
+        <LockClosedIcon className={inlineIcon} />
+        private-channel
+      </span>
+    );
+  }
+
+  const isPrivate = channel.type === 'private';
 
   const handleGoToChannel = () => {
     if (workspaceId) {
@@ -62,8 +83,13 @@ export function ChannelMentionBadge({ channelId, channels }: ChannelMentionBadge
 
   return (
     <DialogTrigger>
-      <AriaButton className={mentionBadge()}>
-        #{channelName}
+      <AriaButton className={mentionBadge({ variant: 'known' })}>
+        {isPrivate ? (
+          <LockClosedIcon className={inlineIcon} />
+        ) : (
+          <HashtagIcon className={inlineIcon} />
+        )}
+        {channel.name}
       </AriaButton>
       <Popover placement="top" className={styles.popover()}>
         <div className={styles.header()}>
@@ -72,9 +98,9 @@ export function ChannelMentionBadge({ channelId, channels }: ChannelMentionBadge
           ) : (
             <HashtagIcon className={styles.icon()} />
           )}
-          <span className={styles.name()}>{channelName}</span>
+          <span className={styles.name()}>{channel.name}</span>
         </div>
-        {channel?.description && (
+        {channel.description && (
           <div className={styles.description()}>{channel.description}</div>
         )}
         <button

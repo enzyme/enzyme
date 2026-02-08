@@ -21,7 +21,7 @@ import {
 } from "../../hooks/useMessages";
 import { useThreadPanel, useProfilePanel } from "../../hooks/usePanel";
 import { cn, formatTime } from "../../lib/utils";
-import type { MessageWithUser } from "@feather/api-client";
+import type { MessageWithUser, ChannelWithMembership } from "@feather/api-client";
 
 function ClickableName({
   userId,
@@ -54,9 +54,10 @@ function ClickableName({
 interface MessageItemProps {
   message: MessageWithUser;
   channelId: string;
+  channels?: ChannelWithMembership[];
 }
 
-export function MessageItem({ message, channelId }: MessageItemProps) {
+export function MessageItem({ message, channelId, channels }: MessageItemProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const [showActions, setShowActions] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -292,6 +293,7 @@ export function MessageItem({ message, channelId }: MessageItemProps) {
                   <MessageContent
                     content={message.content}
                     members={membersData?.members}
+                    channels={channels}
                   />
                 </div>
               )}

@@ -9,6 +9,7 @@ import {
   useMessage,
   useAuth,
   useWorkspaceMembers,
+  useChannels,
   useAutoFocusComposer,
 } from "../../hooks";
 import {
@@ -26,7 +27,7 @@ import { MessageComposer, type MessageComposerRef } from "../message/MessageComp
 import { cn, formatTime } from "../../lib/utils";
 import { messagesApi } from "../../api/messages";
 import { useMarkThreadRead } from "../../hooks/useThreads";
-import type { MessageWithUser, MessageListResult, WorkspaceMemberWithUser } from "@feather/api-client";
+import type { MessageWithUser, MessageListResult, WorkspaceMemberWithUser, ChannelWithMembership } from "@feather/api-client";
 
 function ClickableName({
   userId,
@@ -67,6 +68,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useThreadMessages(messageId);
   const { data: membersData } = useWorkspaceMembers(workspaceId);
+  const { data: channelsData } = useChannels(workspaceId);
   const composerRef = useRef<MessageComposerRef>(null);
   const markThreadRead = useMarkThreadRead(workspaceId || '');
 
@@ -132,7 +134,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
 
         {/* Parent message */}
         {parentMessage && <div className="h-5" />}
-        {parentMessage && <ParentMessage message={parentMessage} members={membersData?.members} />}
+        {parentMessage && <ParentMessage message={parentMessage} members={membersData?.members} channels={channelsData?.channels} />}
 
         {/* Spacer below parent when no replies */}
         {parentMessage && parentMessage.reply_count === 0 && <div className="h-4" />}
@@ -171,6 +173,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
                 message={message}
                 parentMessageId={messageId}
                 members={membersData?.members}
+                channels={channelsData?.channels}
               />
             ))}
 
@@ -195,7 +198,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
   );
 }
 
-function ParentMessage({ message, members }: { message: MessageWithUser; members?: WorkspaceMemberWithUser[] }) {
+function ParentMessage({ message, members, channels }: { message: MessageWithUser; members?: WorkspaceMemberWithUser[]; channels?: ChannelWithMembership[] }) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { openProfile } = useProfilePanel();
   const { user } = useAuth();
@@ -477,7 +480,7 @@ function ParentMessage({ message, members }: { message: MessageWithUser; members
             <>
               {message.content && (
                 <div className="text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
-                  <MessageContent content={message.content} members={members} />
+                  <MessageContent content={message.content} members={members} channels={channels} />
                 </div>
               )}
               {message.attachments && message.attachments.length > 0 && (
@@ -559,9 +562,10 @@ interface ThreadMessageProps {
   message: MessageWithUser;
   parentMessageId: string;
   members?: WorkspaceMemberWithUser[];
+  channels?: ChannelWithMembership[];
 }
 
-function ThreadMessage({ message, parentMessageId, members }: ThreadMessageProps) {
+function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMessageProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { openProfile } = useProfilePanel();
   const { user } = useAuth();
@@ -831,7 +835,7 @@ function ThreadMessage({ message, parentMessageId, members }: ThreadMessageProps
             <>
               {message.content && (
                 <div className="text-sm text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
-                  <MessageContent content={message.content} members={members} />
+                  <MessageContent content={message.content} members={members} channels={channels} />
                 </div>
               )}
               {message.attachments && message.attachments.length > 0 && (
