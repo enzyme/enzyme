@@ -204,7 +204,7 @@ function ParentMessage({ message, members, channels }: { message: MessageWithUse
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showActions, setShowActions] = useState(false);
-  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
@@ -347,7 +347,6 @@ function ParentMessage({ message, members, channels }: { message: MessageWithUse
 
   const handleAddReaction = (emoji: string) => {
     addReaction.mutate(emoji);
-    setShowReactionPicker(false);
   };
 
   const handleStartEdit = () => {
@@ -415,10 +414,9 @@ function ParentMessage({ message, members, channels }: { message: MessageWithUse
       )}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
-        if (!showDropdown) {
+        if (!showDropdown && !reactionPickerOpen) {
           setShowActions(false);
         }
-        setShowReactionPicker(false);
       }}
     >
       <div className="flex items-start gap-3">
@@ -517,8 +515,8 @@ function ParentMessage({ message, members, channels }: { message: MessageWithUse
       {/* Action bar */}
       {showActions && !isEditing && (
         <MessageActionBar
-          showReactionPicker={showReactionPicker}
-          onReactionPickerToggle={() => setShowReactionPicker(!showReactionPicker)}
+          reactionPickerOpen={reactionPickerOpen}
+          onReactionPickerOpenChange={setReactionPickerOpen}
           onReactionSelect={handleAddReaction}
           onCopyLink={handleCopyLink}
           onMarkUnread={() => markUnread.mutate(message.id)}
@@ -571,7 +569,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showActions, setShowActions] = useState(false);
-  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
@@ -699,7 +697,6 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
 
   const handleAddReaction = (emoji: string) => {
     addReaction.mutate(emoji);
-    setShowReactionPicker(false);
   };
 
   const handleStartEdit = () => {
@@ -769,10 +766,9 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
       )}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
-        if (!showDropdown) {
+        if (!showDropdown && !reactionPickerOpen) {
           setShowActions(false);
         }
-        setShowReactionPicker(false);
       }}
     >
       <div className="flex items-start gap-3">
@@ -872,8 +868,8 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
       {/* Action bar */}
       {showActions && !isEditing && (
         <MessageActionBar
-          showReactionPicker={showReactionPicker}
-          onReactionPickerToggle={() => setShowReactionPicker(!showReactionPicker)}
+          reactionPickerOpen={reactionPickerOpen}
+          onReactionPickerOpenChange={setReactionPickerOpen}
           onReactionSelect={handleAddReaction}
           onCopyLink={handleCopyLink}
           onMarkUnread={() => markUnread.mutate(message.id)}

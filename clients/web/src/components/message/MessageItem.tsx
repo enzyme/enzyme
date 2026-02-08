@@ -60,7 +60,7 @@ interface MessageItemProps {
 export function MessageItem({ message, channelId, channels }: MessageItemProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const [showActions, setShowActions] = useState(false);
-  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
@@ -95,7 +95,6 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
 
   const handleAddReaction = (emoji: string) => {
     addReaction.mutate({ messageId: message.id, emoji });
-    setShowReactionPicker(false);
   };
 
   const handleStartEdit = () => {
@@ -220,10 +219,9 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
       style={isDeleting ? { marginTop: 0, marginBottom: 0 } : undefined}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
-        if (!showDropdown) {
+        if (!showDropdown && !reactionPickerOpen) {
           setShowActions(false);
         }
-        setShowReactionPicker(false);
       }}
     >
       <div className="flex items-start gap-3">
@@ -323,8 +321,8 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
       {/* Action buttons */}
       {showActions && !isEditing && (
         <MessageActionBar
-          showReactionPicker={showReactionPicker}
-          onReactionPickerToggle={() => setShowReactionPicker(!showReactionPicker)}
+          reactionPickerOpen={reactionPickerOpen}
+          onReactionPickerOpenChange={setReactionPickerOpen}
           onReactionSelect={handleAddReaction}
           onReplyClick={() => openThread(message.id)}
           onCopyLink={handleCopyLink}

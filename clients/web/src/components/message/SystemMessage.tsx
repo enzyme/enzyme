@@ -24,7 +24,7 @@ interface SystemMessageProps {
 export function SystemMessage({ message, channelId }: SystemMessageProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const [showActions, setShowActions] = useState(false);
-  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const { user } = useAuth();
   const { openThread } = useThreadPanel();
@@ -54,7 +54,6 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
 
   const handleAddReaction = (emoji: string) => {
     addReaction.mutate({ messageId: message.id, emoji });
-    setShowReactionPicker(false);
   };
 
   // Build the system message content
@@ -88,10 +87,9 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
       )}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
-        if (!showDropdown) {
+        if (!showDropdown && !reactionPickerOpen) {
           setShowActions(false);
         }
-        setShowReactionPicker(false);
       }}
     >
       <div className="flex items-start gap-3">
@@ -160,8 +158,8 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
       {/* Action buttons */}
       {showActions && (
         <MessageActionBar
-          showReactionPicker={showReactionPicker}
-          onReactionPickerToggle={() => setShowReactionPicker(!showReactionPicker)}
+          reactionPickerOpen={reactionPickerOpen}
+          onReactionPickerOpenChange={setReactionPickerOpen}
           onReactionSelect={handleAddReaction}
           onReplyClick={() => openThread(message.id)}
           onCopyLink={handleCopyLink}
