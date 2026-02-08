@@ -44,7 +44,7 @@ func Load(configPath string, flags *pflag.FlagSet) (*Config, error) {
 
 	// 3. Load from environment variables (FEATHER_ prefix)
 	if err := k.Load(env.Provider("FEATHER_", ".", func(s string) string {
-		return strings.Replace(strings.ToLower(strings.TrimPrefix(s, "FEATHER_")), "_", ".", -1)
+		return strings.ReplaceAll(strings.ToLower(strings.TrimPrefix(s, "FEATHER_")), "_", ".")
 	}), nil); err != nil {
 		return nil, fmt.Errorf("loading env vars: %w", err)
 	}

@@ -95,7 +95,7 @@ type NotificationEvent struct {
 
 // Notify processes a message and sends notifications to appropriate recipients
 func (s *Service) Notify(ctx context.Context, channel *ChannelInfo, msg *MessageInfo) error {
-	recipients, notificationTypes := s.determineRecipients(ctx, channel, msg)
+	_, notificationTypes := s.determineRecipients(ctx, channel, msg)
 
 	for userID, notifType := range notificationTypes {
 		// Skip the sender
@@ -140,7 +140,6 @@ func (s *Service) Notify(ctx context.Context, channel *ChannelInfo, msg *Message
 		}
 	}
 
-	_ = recipients // Used only in the loop above via notificationTypes
 	return nil
 }
 

@@ -28,7 +28,7 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, authHandler *auth.Ha
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	// Create strict middleware that adds request to context
@@ -45,7 +45,7 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, authHandler *auth.Ha
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(openapi.ApiErrorResponse{
+			_ = json.NewEncoder(w).Encode(openapi.ApiErrorResponse{
 				Error: openapi.ApiError{Code: "BAD_REQUEST", Message: err.Error()},
 			})
 		},
@@ -57,7 +57,7 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, authHandler *auth.Ha
 			)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(openapi.ApiErrorResponse{
+			_ = json.NewEncoder(w).Encode(openapi.ApiErrorResponse{
 				Error: openapi.ApiError{Code: "INTERNAL_ERROR", Message: "An internal error occurred"},
 			})
 		},

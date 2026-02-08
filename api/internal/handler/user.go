@@ -158,13 +158,13 @@ func (h *Handler) UploadAvatar(ctx context.Context, request openapi.UploadAvatar
 	// Copy file content with size limit
 	size, err := io.Copy(dst, io.LimitReader(part, maxAvatarSize+1))
 	if err != nil {
-		os.Remove(storagePath)
+		_ = os.Remove(storagePath)
 		return nil, err
 	}
 
 	// Check if file exceeds max size
 	if size > maxAvatarSize {
-		os.Remove(storagePath)
+		_ = os.Remove(storagePath)
 		return openapi.UploadAvatar400JSONResponse{
 			BadRequestJSONResponse: openapi.BadRequestJSONResponse(newErrorResponse(ErrCodeValidationError, "File too large. Maximum size is 5MB")),
 		}, nil
@@ -174,14 +174,14 @@ func (h *Handler) UploadAvatar(ctx context.Context, request openapi.UploadAvatar
 	if u.AvatarURL != nil && strings.HasPrefix(*u.AvatarURL, "/api/avatars/") {
 		oldFilename := strings.TrimPrefix(*u.AvatarURL, "/api/avatars/")
 		oldPath := filepath.Join(avatarDir, oldFilename)
-		os.Remove(oldPath) // Ignore errors - file may not exist
+		_ = os.Remove(oldPath) // Ignore errors - file may not exist
 	}
 
 	// Update user's avatar URL
 	avatarURL := "/api/avatars/" + filename
 	u.AvatarURL = &avatarURL
 	if err := h.userRepo.Update(ctx, u); err != nil {
-		os.Remove(storagePath)
+		_ = os.Remove(storagePath)
 		return nil, err
 	}
 
@@ -214,7 +214,7 @@ func (h *Handler) DeleteAvatar(ctx context.Context, request openapi.DeleteAvatar
 	if u.AvatarURL != nil && strings.HasPrefix(*u.AvatarURL, "/api/avatars/") {
 		filename := strings.TrimPrefix(*u.AvatarURL, "/api/avatars/")
 		avatarPath := filepath.Join(h.storagePath, "avatars", filename)
-		os.Remove(avatarPath) // Ignore errors - file may not exist
+		_ = os.Remove(avatarPath) // Ignore errors - file may not exist
 	}
 
 	// Clear user's avatar URL

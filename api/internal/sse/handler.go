@@ -59,7 +59,7 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 
 	// Disable write deadline for SSE (otherwise server's WriteTimeout kills the connection)
 	rc := http.NewResponseController(w)
-	rc.SetWriteDeadline(time.Time{}) // Zero time = no deadline
+	_ = rc.SetWriteDeadline(time.Time{}) // Zero time = no deadline
 
 	// Create client
 	client := &Client{
@@ -129,16 +129,16 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) writeEvent(w http.ResponseWriter, flusher http.Flusher, event Event) {
 	if event.ID != "" {
-		fmt.Fprintf(w, "id: %s\n", event.ID)
+		_, _ = fmt.Fprintf(w, "id: %s\n", event.ID)
 	}
 
 	// Marshal the full event (including type) so the client can dispatch by type
 	data, err := json.Marshal(event)
 	if err == nil {
-		fmt.Fprintf(w, "data: %s\n", data)
+		_, _ = fmt.Fprintf(w, "data: %s\n", data)
 	}
 
-	fmt.Fprintf(w, "\n")
+	_, _ = fmt.Fprintf(w, "\n")
 	flusher.Flush()
 }
 
@@ -195,13 +195,13 @@ func (h *Handler) StopTyping(w http.ResponseWriter, r *http.Request) {
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	_ = json.NewEncoder(w).Encode(data)
 }
 
 func writeError(w http.ResponseWriter, status int, code string, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": map[string]string{
 			"code":    code,
 			"message": message,

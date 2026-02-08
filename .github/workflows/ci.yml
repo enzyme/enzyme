@@ -44,7 +44,10 @@ jobs:
         run: make generate-types
 
       - name: Lint Go
-        run: cd api && make lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.1
+          working-directory: api
 
       - name: Test Go
         run: cd api && make test

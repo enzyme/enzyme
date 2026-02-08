@@ -39,7 +39,7 @@ func Open(path string) (*DB, error) {
 
 	for _, pragma := range pragmas {
 		if _, err := db.Exec(pragma); err != nil {
-			db.Close()
+			_ = db.Close()
 			return nil, fmt.Errorf("executing %s: %w", pragma, err)
 		}
 	}
@@ -52,7 +52,7 @@ func (db *DB) Close() error {
 }
 
 func (db *DB) Ping(ctx context.Context) error {
-	return db.DB.PingContext(ctx)
+	return db.PingContext(ctx)
 }
 
 // Transaction helper

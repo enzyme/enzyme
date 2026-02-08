@@ -79,7 +79,7 @@ func (h *Handler) UploadFile(ctx context.Context, request openapi.UploadFileRequ
 	// Copy file content with size limit
 	size, err := io.Copy(dst, io.LimitReader(part, h.maxUploadSize))
 	if err != nil {
-		os.Remove(storagePath)
+		_ = os.Remove(storagePath)
 		return nil, err
 	}
 
@@ -98,7 +98,7 @@ func (h *Handler) UploadFile(ctx context.Context, request openapi.UploadFileRequ
 	}
 
 	if err := h.fileRepo.Create(ctx, attachment); err != nil {
-		os.Remove(storagePath)
+		_ = os.Remove(storagePath)
 		return nil, err
 	}
 
@@ -196,7 +196,7 @@ func (h *Handler) DeleteFile(ctx context.Context, request openapi.DeleteFileRequ
 	}
 
 	// Delete file from disk
-	os.Remove(attachment.StoragePath)
+	_ = os.Remove(attachment.StoragePath)
 
 	// Delete from database
 	if err := h.fileRepo.Delete(ctx, request.Id); err != nil {

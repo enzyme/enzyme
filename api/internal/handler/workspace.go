@@ -44,7 +44,6 @@ func (h *Handler) CreateWorkspace(ctx context.Context, request openapi.CreateWor
 	if err != nil {
 		// Log but don't fail workspace creation
 		// The channel can be created later if needed
-		_ = err
 	} else if h.hub != nil {
 		// Update SSE hub cache with creator as first member
 		h.hub.AddChannelMember(defaultChannel.ID, userID)
@@ -477,13 +476,13 @@ func (h *Handler) UploadWorkspaceIcon(ctx context.Context, request openapi.Uploa
 	// Copy file content with size limit
 	size, err := io.Copy(dst, io.LimitReader(part, maxIconSize+1))
 	if err != nil {
-		os.Remove(storagePath)
+		_ = os.Remove(storagePath)
 		return nil, err
 	}
 
 	// Check if file exceeds max size
 	if size > maxIconSize {
-		os.Remove(storagePath)
+		_ = os.Remove(storagePath)
 		return openapi.UploadWorkspaceIcon400JSONResponse{
 			BadRequestJSONResponse: openapi.BadRequestJSONResponse(newErrorResponse(ErrCodeValidationError, "File too large. Maximum size is 5MB")),
 		}, nil
@@ -493,14 +492,14 @@ func (h *Handler) UploadWorkspaceIcon(ctx context.Context, request openapi.Uploa
 	if ws.IconURL != nil && strings.HasPrefix(*ws.IconURL, "/api/workspace-icons/") {
 		oldPath := strings.TrimPrefix(*ws.IconURL, "/api/workspace-icons/")
 		oldFullPath := filepath.Join(h.storagePath, "workspace-icons", oldPath)
-		os.Remove(oldFullPath) // Ignore errors - file may not exist
+		_ = os.Remove(oldFullPath) // Ignore errors - file may not exist
 	}
 
 	// Update workspace's icon URL
 	iconURL := "/api/workspace-icons/" + workspaceID + "/" + filename
 	ws.IconURL = &iconURL
 	if err := h.workspaceRepo.Update(ctx, ws); err != nil {
-		os.Remove(storagePath)
+		_ = os.Remove(storagePath)
 		return nil, err
 	}
 
@@ -542,7 +541,7 @@ func (h *Handler) DeleteWorkspaceIcon(ctx context.Context, request openapi.Delet
 	if ws.IconURL != nil && strings.HasPrefix(*ws.IconURL, "/api/workspace-icons/") {
 		oldPath := strings.TrimPrefix(*ws.IconURL, "/api/workspace-icons/")
 		oldFullPath := filepath.Join(h.storagePath, "workspace-icons", oldPath)
-		os.Remove(oldFullPath) // Ignore errors - file may not exist
+		_ = os.Remove(oldFullPath) // Ignore errors - file may not exist
 	}
 
 	// Clear workspace's icon URL

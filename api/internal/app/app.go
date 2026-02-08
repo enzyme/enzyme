@@ -42,7 +42,7 @@ func New(cfg *config.Config) (*App, error) {
 
 	// Run migrations
 	if err := db.Migrate(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 
@@ -55,7 +55,7 @@ func New(cfg *config.Config) (*App, error) {
 	// Initialize email service
 	emailService, err := email.NewService(cfg.Email, cfg.Server.PublicURL)
 	if err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 

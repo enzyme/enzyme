@@ -22,12 +22,12 @@ func TestDB(t *testing.T) *sql.DB {
 	}
 
 	if err := db.Migrate(); err != nil {
-		db.Close()
+		_ = db.Close()
 		t.Fatalf("running migrations: %v", err)
 	}
 
 	t.Cleanup(func() {
-		db.Close()
+		_ = db.Close()
 	})
 
 	return db.DB

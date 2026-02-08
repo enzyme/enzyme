@@ -296,7 +296,10 @@ func (h *Hub) GetEventsSince(workspaceID, lastEventID string) ([]Event, error) {
 		}
 
 		var data interface{}
-		json.Unmarshal([]byte(payload), &data)
+		if err := json.Unmarshal([]byte(payload), &data); err != nil {
+			// TODO: log corrupt event payload
+			continue
+		}
 
 		events = append(events, Event{
 			ID:   id,

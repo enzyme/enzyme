@@ -1,0 +1,26 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+  exclusions:
+    paths:
+      - ".*\\.gen\\.go$"
+    rules:
+      # Ignore errcheck in test files (setup calls use t.Fatal on failure)
+      - linters: [errcheck]
+        path: ".*_test\\.go$"
+      # Ignore unchecked Close/Rollback in defer statements
+      - linters: [errcheck]
+        source: "defer .*\\.(Close|Rollback)\\(\\)"
+      # Ignore unchecked rand.Read (deprecated error in Go 1.20+, never fails)
+      - linters: [errcheck]
+        source: "rand\\.Read\\("

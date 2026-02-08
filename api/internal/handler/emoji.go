@@ -81,7 +81,7 @@ func (h *Handler) UploadCustomEmoji(ctx context.Context, request openapi.UploadC
 		case "name":
 			data, err := io.ReadAll(io.LimitReader(part, 128))
 			if err != nil {
-				part.Close()
+				_ = part.Close()
 				return openapi.UploadCustomEmoji400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Failed to read name field")}, nil
 			}
 			name = string(data)
@@ -92,12 +92,12 @@ func (h *Handler) UploadCustomEmoji(ctx context.Context, request openapi.UploadC
 			}
 			data, err := io.ReadAll(io.LimitReader(part, maxEmojiSize+1))
 			if err != nil {
-				part.Close()
+				_ = part.Close()
 				return openapi.UploadCustomEmoji400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Failed to read file")}, nil
 			}
 			fileData = data
 		}
-		part.Close()
+		_ = part.Close()
 	}
 
 	if name == "" {
@@ -151,7 +151,7 @@ func (h *Handler) UploadCustomEmoji(ctx context.Context, request openapi.UploadC
 	filePath := filepath.Join(storagePath, e.ID+ext)
 	if err := os.WriteFile(filePath, fileData, 0644); err != nil {
 		// Clean up DB record on file write failure
-		h.emojiRepo.Delete(ctx, e.ID)
+		_ = h.emojiRepo.Delete(ctx, e.ID)
 		return nil, err
 	}
 
@@ -238,7 +238,7 @@ func (h *Handler) DeleteCustomEmoji(ctx context.Context, request openapi.DeleteC
 		ext = ".gif"
 	}
 	filePath := filepath.Join(h.storagePath, "emojis", e.WorkspaceID, e.ID+ext)
-	os.Remove(filePath)
+	_ = os.Remove(filePath)
 
 	// Delete from database
 	if err := h.emojiRepo.Delete(ctx, request.Id); err != nil {
