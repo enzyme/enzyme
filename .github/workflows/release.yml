@@ -82,7 +82,8 @@ jobs:
         run: make install
 
       - name: Install oapi-codegen
-        run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+        # Version must match server.gen.go header
+        run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.1
 
       - name: Generate types
         run: make generate-types
