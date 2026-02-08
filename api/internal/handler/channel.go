@@ -322,6 +322,9 @@ func (h *Handler) ListChannelMembers(ctx context.Context, request openapi.ListCh
 	if ch.Type == channel.TypePrivate {
 		_, err = h.channelRepo.GetMembership(ctx, userID, string(request.Id))
 		if err != nil {
+			if errors.Is(err, channel.ErrNotChannelMember) {
+				return openapi.ListChannelMembers404JSONResponse{NotFoundJSONResponse: notFoundResponse("Channel not found")}, nil
+			}
 			return nil, err
 		}
 	}

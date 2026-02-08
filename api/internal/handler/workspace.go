@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -65,6 +66,9 @@ func (h *Handler) GetWorkspace(ctx context.Context, request openapi.GetWorkspace
 	// Check membership
 	_, err := h.workspaceRepo.GetMembership(ctx, userID, string(request.Wid))
 	if err != nil {
+		if errors.Is(err, workspace.ErrNotAMember) {
+			return openapi.GetWorkspace404JSONResponse{NotFoundJSONResponse: notFoundResponse("Workspace not found")}, nil
+		}
 		return nil, err
 	}
 
