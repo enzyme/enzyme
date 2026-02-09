@@ -1,10 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import {
-  XMarkIcon,
-  HashtagIcon,
-} from "@heroicons/react/24/outline";
+import { XMarkIcon, HashtagIcon } from "@heroicons/react/24/outline";
 import {
   useThreadMessages,
   useMessage,
@@ -21,16 +18,27 @@ import {
 import { useThreadPanel, useProfilePanel } from "../../hooks/usePanel";
 import { Avatar, MessageSkeleton, Modal, Button, toast } from "../ui";
 import { EmojiDisplay } from "../message/ReactionsDisplay";
-import { useCustomEmojiMap, useCustomEmojis } from "../../hooks/useCustomEmojis";
+import {
+  useCustomEmojiMap,
+  useCustomEmojis,
+} from "../../hooks/useCustomEmojis";
 import { ThreadNotificationButton } from "./ThreadNotificationButton";
 import { MessageActionBar } from "../message/MessageActionBar";
 import { AttachmentDisplay } from "../message/AttachmentDisplay";
 import { MessageContent } from "../message/MessageContent";
-import { MessageComposer, type MessageComposerRef } from "../message/MessageComposer";
+import {
+  MessageComposer,
+  type MessageComposerRef,
+} from "../message/MessageComposer";
 import { cn, formatTime } from "../../lib/utils";
 import { messagesApi } from "../../api/messages";
 import { useMarkThreadRead } from "../../hooks/useThreads";
-import type { MessageWithUser, MessageListResult, WorkspaceMemberWithUser, ChannelWithMembership } from "@feather/api-client";
+import type {
+  MessageWithUser,
+  MessageListResult,
+  WorkspaceMemberWithUser,
+  ChannelWithMembership,
+} from "@feather/api-client";
 
 function ClickableName({
   userId,
@@ -73,7 +81,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
   const { data: membersData } = useWorkspaceMembers(workspaceId);
   const { data: channelsData } = useChannels(workspaceId);
   const composerRef = useRef<MessageComposerRef>(null);
-  const markThreadRead = useMarkThreadRead(workspaceId || '');
+  const markThreadRead = useMarkThreadRead(workspaceId || "");
 
   // Try to get parent message from cache first
   const cachedMessage = getParentMessageFromCache(queryClient, messageId);
@@ -90,7 +98,9 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
 
   // Flatten thread messages (already in chronological order from API)
   const threadMessages = data?.pages.flatMap((page) => page.messages) || [];
-  const parentChannel = channelsData?.channels.find((c) => c.id === parentMessage?.channel_id);
+  const parentChannel = channelsData?.channels.find(
+    (c) => c.id === parentMessage?.channel_id,
+  );
 
   // Focus composer and mark thread as read when thread opens
   useEffect(() => {
@@ -138,17 +148,26 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
 
         {/* Parent message */}
         {parentMessage && <div className="h-5" />}
-        {parentMessage && <ParentMessage message={parentMessage} members={membersData?.members} channels={channelsData?.channels} />}
+        {parentMessage && (
+          <ParentMessage
+            message={parentMessage}
+            members={membersData?.members}
+            channels={channelsData?.channels}
+          />
+        )}
 
         {/* Spacer below parent when no replies */}
-        {parentMessage && parentMessage.reply_count === 0 && <div className="h-4" />}
+        {parentMessage && parentMessage.reply_count === 0 && (
+          <div className="h-4" />
+        )}
 
         {/* Replies divider */}
         {parentMessage && parentMessage.reply_count > 0 && (
           <div className="flex items-center gap-4 px-4 py-3">
             <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              {parentMessage.reply_count} {parentMessage.reply_count === 1 ? "reply" : "replies"}
+              {parentMessage.reply_count}{" "}
+              {parentMessage.reply_count === 1 ? "reply" : "replies"}
             </span>
             <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
           </div>
@@ -204,7 +223,15 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
   );
 }
 
-function ParentMessage({ message, members, channels }: { message: MessageWithUser; members?: WorkspaceMemberWithUser[]; channels?: ChannelWithMembership[] }) {
+function ParentMessage({
+  message,
+  members,
+  channels,
+}: {
+  message: MessageWithUser;
+  members?: WorkspaceMemberWithUser[];
+  channels?: ChannelWithMembership[];
+}) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const customEmojiMap = useCustomEmojiMap(workspaceId);
   const { data: customEmojis } = useCustomEmojis(workspaceId);
@@ -486,7 +513,12 @@ function ParentMessage({ message, members, channels }: { message: MessageWithUse
             <>
               {message.content && (
                 <div className="text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
-                  <MessageContent content={message.content} members={members} channels={channels} customEmojiMap={customEmojiMap} />
+                  <MessageContent
+                    content={message.content}
+                    members={members}
+                    channels={channels}
+                    customEmojiMap={customEmojiMap}
+                  />
                 </div>
               )}
               {message.attachments && message.attachments.length > 0 && (
@@ -509,7 +541,12 @@ function ParentMessage({ message, members, channels }: { message: MessageWithUse
                       : "bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600",
                   )}
                 >
-                  <span><EmojiDisplay emoji={emoji} customEmojiMap={customEmojiMap} /></span>
+                  <span>
+                    <EmojiDisplay
+                      emoji={emoji}
+                      customEmojiMap={customEmojiMap}
+                    />
+                  </span>
                   <span className="text-xs text-gray-600 dark:text-gray-300">
                     {count}
                   </span>
@@ -560,7 +597,6 @@ function ParentMessage({ message, members, channels }: { message: MessageWithUse
           </Button>
         </div>
       </Modal>
-
     </div>
   );
 }
@@ -572,7 +608,12 @@ interface ThreadMessageProps {
   channels?: ChannelWithMembership[];
 }
 
-function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMessageProps) {
+function ThreadMessage({
+  message,
+  parentMessageId,
+  members,
+  channels,
+}: ThreadMessageProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const customEmojiMap = useCustomEmojiMap(workspaceId);
   const { data: customEmojis } = useCustomEmojis(workspaceId);
@@ -593,7 +634,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
   const isOwnMessage = user?.id === message.user_id;
   const isDeleted = !!message.deleted_at;
   const channel = channels?.find((c) => c.id === message.channel_id);
-  const isDM = channel?.type === 'dm' || channel?.type === 'group_dm';
+  const isDM = channel?.type === "dm" || channel?.type === "group_dm";
   const isEdited = !!message.edited_at;
 
   // Group reactions by emoji
@@ -783,7 +824,9 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
         message.also_send_to_channel
           ? "bg-yellow-50 dark:bg-yellow-900/10"
           : "hover:bg-gray-50 dark:hover:bg-gray-800/50",
-        showDropdown && !message.also_send_to_channel && "bg-gray-50 dark:bg-gray-800/50",
+        showDropdown &&
+          !message.also_send_to_channel &&
+          "bg-gray-50 dark:bg-gray-800/50",
       )}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
@@ -796,7 +839,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
       {message.also_send_to_channel && (
         <div className="flex items-center gap-1.5 pb-1 mb-1 text-xs text-gray-500 dark:text-gray-400">
           <HashtagIcon className="w-3 h-3 flex-shrink-0" />
-          <span>Also sent to {isDM ? 'the direct message' : 'the channel'}</span>
+          <span>Also sent {isDM ? "as direct message" : "to the channel"}</span>
         </div>
       )}
       <div className="flex items-start gap-3">
@@ -859,7 +902,12 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
             <>
               {message.content && (
                 <div className="text-sm text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
-                  <MessageContent content={message.content} members={members} channels={channels} customEmojiMap={customEmojiMap} />
+                  <MessageContent
+                    content={message.content}
+                    members={members}
+                    channels={channels}
+                    customEmojiMap={customEmojiMap}
+                  />
                 </div>
               )}
               {message.attachments && message.attachments.length > 0 && (
@@ -882,7 +930,12 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
                       : "bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600",
                   )}
                 >
-                  <span><EmojiDisplay emoji={emoji} customEmojiMap={customEmojiMap} /></span>
+                  <span>
+                    <EmojiDisplay
+                      emoji={emoji}
+                      customEmojiMap={customEmojiMap}
+                    />
+                  </span>
                   <span className="text-gray-600 dark:text-gray-300">
                     {count}
                   </span>
