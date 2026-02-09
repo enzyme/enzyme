@@ -182,6 +182,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
   ) => {
     const s = editorStyles();
     const submittingRef = useRef(false);
+    const suggestionOpenRef = useRef(false);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
     // Use refs so suggestion closures (captured by TipTap on mount) always see latest data
@@ -195,6 +196,10 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     // Stable suggestion configs — refs are only read at query time (user interaction),
     // not during render, so the lint warning is a false positive here.
     /* eslint-disable react-hooks/refs */
+    const handleSuggestionOpenChange = (open: boolean) => {
+      suggestionOpenRef.current = open;
+    };
+
     const mentionSuggestion = useMemo(
       () => createMentionSuggestion((query: string): MentionOption[] => {
         const memberOptions: MentionOption[] = membersRef.current.map((member) => ({
@@ -220,11 +225,11 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
 
           return a.displayName.localeCompare(b.displayName);
         });
-      }),
+      }, { onOpenChange: handleSuggestionOpenChange }),
       []
     );
 
-    const emojiSuggestion = useMemo(() => createEmojiSuggestion(customEmojisRef), []);
+    const emojiSuggestion = useMemo(() => createEmojiSuggestion(customEmojisRef, handleSuggestionOpenChange), []);
 
     const channelSuggestion = useMemo(
       () => createChannelSuggestion((query: string): ChannelOption[] => {
@@ -250,7 +255,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
 
           return a.name.localeCompare(b.name);
         });
-      }),
+      }, handleSuggestionOpenChange),
       []
     );
     /* eslint-enable react-hooks/refs */
@@ -456,18 +461,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
           }
 
           if (event.key === 'Enter' && !event.shiftKey) {
-            const { state } = view;
-            const { selection } = state;
-            const text = state.doc.textBetween(
-              Math.max(0, selection.from - 20),
-              selection.from
-            );
-
-            // Check if we're typing a mention, emoji, or channel
-            const hasPendingMention = text.includes('@') && !text.includes(' ');
-            const hasPendingEmoji = text.includes(':') && !text.includes(' ');
-            const hasPendingChannel = text.includes('#') && !text.includes(' ');
-            if (hasPendingMention || hasPendingEmoji || hasPendingChannel) {
+            // If a suggestion popup is open, let TipTap's suggestion handle Enter
+            if (suggestionOpenRef.current) {
               return false;
             }
 

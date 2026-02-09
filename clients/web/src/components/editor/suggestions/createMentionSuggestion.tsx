@@ -7,8 +7,12 @@ import { MentionSuggestionList, type MentionSuggestionRef } from './MentionSugge
  */
 export function createMentionSuggestion(
   getItems: (query: string) => MentionOption[],
-  onMentionSelect?: (item: MentionOption) => void
+  options?: {
+    onMentionSelect?: (item: MentionOption) => void;
+    onOpenChange?: (open: boolean) => void;
+  },
 ): Omit<SuggestionOptions<MentionOption>, 'editor'> {
+  const { onMentionSelect, onOpenChange } = options ?? {};
   return {
     char: '@',
     allowSpaces: false,
@@ -24,6 +28,7 @@ export function createMentionSuggestion(
 
       return {
         onStart: (props: SuggestionProps<MentionOption>) => {
+          onOpenChange?.(true);
           popup = document.createElement('div');
           popup.style.position = 'fixed';
           popup.style.zIndex = '9999';
@@ -144,6 +149,7 @@ export function createMentionSuggestion(
         },
 
         onExit: () => {
+          onOpenChange?.(false);
           popup?.remove();
           popup = null;
           component?.unmount();

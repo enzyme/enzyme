@@ -6,7 +6,8 @@ import { ChannelSuggestionList, type ChannelOption, type ChannelSuggestionRef } 
  * Triggers on # character for #channel typeahead.
  */
 export function createChannelSuggestion(
-  getChannels: (query: string) => ChannelOption[]
+  getChannels: (query: string) => ChannelOption[],
+  onOpenChange?: (open: boolean) => void,
 ): Omit<SuggestionOptions<ChannelOption>, 'editor'> {
   return {
     char: '#',
@@ -23,6 +24,7 @@ export function createChannelSuggestion(
 
       return {
         onStart: (props: SuggestionProps<ChannelOption>) => {
+          onOpenChange?.(true);
           popup = document.createElement('div');
           popup.style.position = 'fixed';
           popup.style.zIndex = '9999';
@@ -140,6 +142,7 @@ export function createChannelSuggestion(
         },
 
         onExit: () => {
+          onOpenChange?.(false);
           popup?.remove();
           popup = null;
           component?.unmount();

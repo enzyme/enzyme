@@ -10,6 +10,7 @@ import type { CustomEmoji } from '@feather/api-client';
  */
 export function createEmojiSuggestion(
   customEmojisRef?: MutableRefObject<CustomEmoji[]>,
+  onOpenChange?: (open: boolean) => void,
 ): Omit<SuggestionOptions<EmojiOption>, 'editor'> {
   return {
     char: ':',
@@ -33,6 +34,7 @@ export function createEmojiSuggestion(
 
       return {
         onStart: (props: SuggestionProps<EmojiOption>) => {
+          onOpenChange?.(true);
           popup = document.createElement('div');
           popup.style.position = 'fixed';
           popup.style.zIndex = '9999';
@@ -143,6 +145,7 @@ export function createEmojiSuggestion(
         },
 
         onExit: () => {
+          onOpenChange?.(false);
           popup?.remove();
           popup = null;
           component?.unmount();
