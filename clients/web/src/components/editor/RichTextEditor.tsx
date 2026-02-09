@@ -83,6 +83,7 @@ const editorStyles = tv({
       '[&_.ProseMirror_pre]:rounded-lg',
       '[&_.ProseMirror_pre]:overflow-x-auto',
       '[&_.ProseMirror_pre_code]:bg-transparent',
+      '[&_.ProseMirror_pre_code]:dark:bg-transparent',
       '[&_.ProseMirror_pre_code]:p-0',
       '[&_.ProseMirror_pre_code]:text-gray-900',
       '[&_.ProseMirror_pre_code]:dark:text-gray-100',

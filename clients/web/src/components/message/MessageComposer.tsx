@@ -9,7 +9,7 @@ import { useSendMessage, useSendThreadReply, useTyping, useUploadFile, useAuth, 
 import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useTypingUsers } from '../../lib/presenceStore';
 import { cn } from '../../lib/utils';
-import { RichTextEditor, type RichTextEditorRef } from '../editor';
+import { LazyRichTextEditor, type RichTextEditorRef } from '../editor';
 import { AddEmojiModal } from '../editor/AddEmojiModal';
 
 export interface MessageComposerRef {
@@ -289,7 +289,7 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
           </div>
         )}
         <form onSubmit={handleFormSubmit}>
-          <RichTextEditor
+          <LazyRichTextEditor
             ref={editorRef}
             placeholder={placeholder}
             onSubmit={handleSubmit}
