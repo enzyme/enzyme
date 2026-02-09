@@ -111,6 +111,25 @@ func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 			"password": d.defaults.Email.Password,
 			"from":     d.defaults.Email.From,
 		},
+		"rate_limit": map[string]interface{}{
+			"enabled": d.defaults.RateLimit.Enabled,
+			"login": map[string]interface{}{
+				"limit":  d.defaults.RateLimit.Login.Limit,
+				"window": d.defaults.RateLimit.Login.Window.String(),
+			},
+			"register": map[string]interface{}{
+				"limit":  d.defaults.RateLimit.Register.Limit,
+				"window": d.defaults.RateLimit.Register.Window.String(),
+			},
+			"forgot_password": map[string]interface{}{
+				"limit":  d.defaults.RateLimit.ForgotPassword.Limit,
+				"window": d.defaults.RateLimit.ForgotPassword.Window.String(),
+			},
+			"reset_password": map[string]interface{}{
+				"limit":  d.defaults.RateLimit.ResetPassword.Limit,
+				"window": d.defaults.RateLimit.ResetPassword.Window.String(),
+			},
+		},
 	}, nil
 }
 

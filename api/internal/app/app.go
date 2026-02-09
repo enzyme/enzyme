@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/feather/api/internal/auth"
 	"github.com/feather/api/internal/channel"
@@ -15,6 +16,7 @@ import (
 	"github.com/feather/api/internal/message"
 	"github.com/feather/api/internal/notification"
 	"github.com/feather/api/internal/presence"
+	"github.com/feather/api/internal/ratelimit"
 	"github.com/feather/api/internal/server"
 	"github.com/feather/api/internal/sse"
 	"github.com/feather/api/internal/thread"
@@ -31,6 +33,7 @@ type App struct {
 	EmailService        *email.Service
 	NotificationService *notification.Service
 	EmailWorker         *notification.EmailWorker
+	RateLimiter         *ratelimit.Limiter
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -107,8 +110,20 @@ func New(cfg *config.Config) (*App, error) {
 		MaxUploadSize:       cfg.Files.MaxUploadSize,
 	})
 
+	// Build rate limiter (nil if disabled)
+	var limiter *ratelimit.Limiter
+	if cfg.RateLimit.Enabled {
+		rules := []ratelimit.Rule{
+			{Method: "POST", Path: "/api/auth/login", Limit: cfg.RateLimit.Login.Limit, Window: cfg.RateLimit.Login.Window},
+			{Method: "POST", Path: "/api/auth/register", Limit: cfg.RateLimit.Register.Limit, Window: cfg.RateLimit.Register.Window},
+			{Method: "POST", Path: "/api/auth/forgot-password", Limit: cfg.RateLimit.ForgotPassword.Limit, Window: cfg.RateLimit.ForgotPassword.Window},
+			{Method: "POST", Path: "/api/auth/reset-password", Limit: cfg.RateLimit.ResetPassword.Limit, Window: cfg.RateLimit.ResetPassword.Window},
+		}
+		limiter = ratelimit.NewLimiter(rules)
+	}
+
 	// Create router with generated handlers
-	router := server.NewRouter(h, sseHandler, authHandler, sessionManager)
+	router := server.NewRouter(h, sseHandler, authHandler, sessionManager, limiter)
 
 	// Create server
 	srv := server.New(cfg.Server.Host, cfg.Server.Port, router)
@@ -122,6 +137,7 @@ func New(cfg *config.Config) (*App, error) {
 		EmailService:        emailService,
 		NotificationService: notificationService,
 		EmailWorker:         emailWorker,
+		RateLimiter:         limiter,
 	}, nil
 }
 
@@ -134,6 +150,22 @@ func (a *App) Start(ctx context.Context) error {
 
 	// Start email worker
 	go a.EmailWorker.Start(ctx)
+
+	// Start rate limiter cleanup
+	if a.RateLimiter != nil {
+		go func() {
+			ticker := time.NewTicker(10 * time.Minute)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					a.RateLimiter.Cleanup()
+				}
+			}
+		}()
+	}
 
 	log.Printf("Feather backend starting on %s", a.Server.Addr())
 	log.Printf("Database: %s", a.Config.Database.Path)

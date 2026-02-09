@@ -3,11 +3,12 @@ package config
 import "time"
 
 type Config struct {
-	Server   ServerConfig   `koanf:"server"`
-	Database DatabaseConfig `koanf:"database"`
-	Auth     AuthConfig     `koanf:"auth"`
-	Files    FilesConfig    `koanf:"files"`
-	Email    EmailConfig    `koanf:"email"`
+	Server    ServerConfig    `koanf:"server"`
+	Database  DatabaseConfig  `koanf:"database"`
+	Auth      AuthConfig      `koanf:"auth"`
+	Files     FilesConfig     `koanf:"files"`
+	Email     EmailConfig     `koanf:"email"`
+	RateLimit RateLimitConfig `koanf:"rate_limit"`
 }
 
 type ServerConfig struct {
@@ -40,6 +41,19 @@ type EmailConfig struct {
 	From     string `koanf:"from"`
 }
 
+type RateLimitConfig struct {
+	Enabled       bool              `koanf:"enabled"`
+	Login         RateLimitEndpoint `koanf:"login"`
+	Register      RateLimitEndpoint `koanf:"register"`
+	ForgotPassword RateLimitEndpoint `koanf:"forgot_password"`
+	ResetPassword RateLimitEndpoint `koanf:"reset_password"`
+}
+
+type RateLimitEndpoint struct {
+	Limit  int           `koanf:"limit"`
+	Window time.Duration `koanf:"window"`
+}
+
 func Defaults() *Config {
 	return &Config{
 		Server: ServerConfig{
@@ -62,6 +76,13 @@ func Defaults() *Config {
 		Email: EmailConfig{
 			Enabled: false,
 			Port:    587,
+		},
+		RateLimit: RateLimitConfig{
+			Enabled:        true,
+			Login:          RateLimitEndpoint{Limit: 10, Window: time.Minute},
+			Register:       RateLimitEndpoint{Limit: 5, Window: time.Hour},
+			ForgotPassword: RateLimitEndpoint{Limit: 5, Window: 15 * time.Minute},
+			ResetPassword:  RateLimitEndpoint{Limit: 10, Window: 15 * time.Minute},
 		},
 	}
 }

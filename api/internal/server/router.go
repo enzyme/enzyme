@@ -9,6 +9,7 @@ import (
 	"github.com/feather/api/internal/auth"
 	"github.com/feather/api/internal/handler"
 	"github.com/feather/api/internal/openapi"
+	"github.com/feather/api/internal/ratelimit"
 	"github.com/feather/api/internal/sse"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -16,13 +17,14 @@ import (
 )
 
 // NewRouter creates a new HTTP router with all routes registered
-func NewRouter(h *handler.Handler, sseHandler *sse.Handler, authHandler *auth.Handler, sessionManager *auth.SessionManager) http.Handler {
+func NewRouter(h *handler.Handler, sseHandler *sse.Handler, authHandler *auth.Handler, sessionManager *auth.SessionManager, limiter *ratelimit.Limiter) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RealIP)
+	r.Use(ratelimit.Middleware(limiter))
 	r.Use(sessionManager.LoadAndSave)
 
 	// Health check

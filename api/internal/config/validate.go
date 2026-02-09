@@ -54,6 +54,26 @@ func Validate(cfg *Config) error {
 		}
 	}
 
+	// Rate limit validation (only when enabled)
+	if cfg.RateLimit.Enabled {
+		for _, ep := range []struct {
+			name string
+			cfg  RateLimitEndpoint
+		}{
+			{"rate_limit.login", cfg.RateLimit.Login},
+			{"rate_limit.register", cfg.RateLimit.Register},
+			{"rate_limit.forgot_password", cfg.RateLimit.ForgotPassword},
+			{"rate_limit.reset_password", cfg.RateLimit.ResetPassword},
+		} {
+			if ep.cfg.Limit < 1 {
+				errs = append(errs, fmt.Errorf("%s.limit must be at least 1", ep.name))
+			}
+			if ep.cfg.Window < time.Second {
+				errs = append(errs, fmt.Errorf("%s.window must be at least 1s", ep.name))
+			}
+		}
+	}
+
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
