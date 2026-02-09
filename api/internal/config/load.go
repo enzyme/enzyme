@@ -130,6 +130,10 @@ func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 				"window": d.defaults.RateLimit.ResetPassword.Window.String(),
 			},
 		},
+		"sse": map[string]interface{}{
+			"event_retention":  d.defaults.SSE.EventRetention.String(),
+			"cleanup_interval": d.defaults.SSE.CleanupInterval.String(),
+		},
 	}, nil
 }
 

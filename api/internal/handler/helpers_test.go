@@ -37,7 +37,7 @@ func testHandler(t *testing.T) (*Handler, *sql.DB) {
 	fileRepo := file.NewRepository(db)
 	threadRepo := thread.NewRepository(db)
 	emojiRepo := emoji.NewRepository(db)
-	hub := sse.NewHub(db)
+	hub := sse.NewHub(db, 24*time.Hour, time.Hour)
 
 	passwordResets := auth.NewPasswordResetRepo(db)
 	authService := auth.NewService(userRepo, passwordResets, 4)

@@ -50,7 +50,7 @@ func New(cfg *config.Config) (*App, error) {
 	}
 
 	// Initialize SSE hub
-	hub := sse.NewHub(db.DB)
+	hub := sse.NewHub(db.DB, cfg.SSE.EventRetention, cfg.SSE.CleanupInterval)
 
 	// Initialize presence manager
 	presenceManager := presence.NewManager(db.DB, hub)

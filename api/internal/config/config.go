@@ -9,6 +9,7 @@ type Config struct {
 	Files     FilesConfig     `koanf:"files"`
 	Email     EmailConfig     `koanf:"email"`
 	RateLimit RateLimitConfig `koanf:"rate_limit"`
+	SSE       SSEConfig       `koanf:"sse"`
 }
 
 type ServerConfig struct {
@@ -54,6 +55,11 @@ type RateLimitEndpoint struct {
 	Window time.Duration `koanf:"window"`
 }
 
+type SSEConfig struct {
+	EventRetention  time.Duration `koanf:"event_retention"`
+	CleanupInterval time.Duration `koanf:"cleanup_interval"`
+}
+
 func Defaults() *Config {
 	return &Config{
 		Server: ServerConfig{
@@ -83,6 +89,10 @@ func Defaults() *Config {
 			Register:       RateLimitEndpoint{Limit: 5, Window: time.Hour},
 			ForgotPassword: RateLimitEndpoint{Limit: 5, Window: 15 * time.Minute},
 			ResetPassword:  RateLimitEndpoint{Limit: 10, Window: 15 * time.Minute},
+		},
+		SSE: SSEConfig{
+			EventRetention:  24 * time.Hour,
+			CleanupInterval: time.Hour,
 		},
 	}
 }

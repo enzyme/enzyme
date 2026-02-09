@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log"
 	"sync"
 	"time"
 
@@ -29,21 +30,38 @@ type Hub struct {
 
 	db *sql.DB
 
+	retention       time.Duration
+	cleanupInterval time.Duration
+
 	register   chan *Client
 	unregister chan *Client
 }
 
-func NewHub(db *sql.DB) *Hub {
+func NewHub(db *sql.DB, retention, cleanupInterval time.Duration) *Hub {
 	return &Hub{
-		workspaces:     make(map[string]map[string][]*Client),
-		channelMembers: make(map[string]map[string]bool),
-		db:             db,
-		register:       make(chan *Client, 256),
-		unregister:     make(chan *Client, 256),
+		workspaces:      make(map[string]map[string][]*Client),
+		channelMembers:  make(map[string]map[string]bool),
+		db:              db,
+		retention:       retention,
+		cleanupInterval: cleanupInterval,
+		register:        make(chan *Client, 256),
+		unregister:      make(chan *Client, 256),
 	}
 }
 
 func (h *Hub) Run(ctx context.Context) {
+	var cleanupTicker *time.Ticker
+	var cleanupCh <-chan time.Time
+
+	if h.cleanupInterval > 0 && h.retention > 0 {
+		cleanupTicker = time.NewTicker(h.cleanupInterval)
+		cleanupCh = cleanupTicker.C
+		defer cleanupTicker.Stop()
+
+		// Clean up on startup so stale events from downtime don't linger until the first tick
+		h.deleteOldEvents()
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -72,6 +90,8 @@ func (h *Hub) Run(ctx context.Context) {
 					},
 				})
 			}
+		case <-cleanupCh:
+			h.deleteOldEvents()
 		}
 	}
 }
@@ -269,6 +289,23 @@ func (h *Hub) storeEvent(workspaceID string, event Event) {
 		INSERT INTO workspace_events (id, workspace_id, event_type, payload, created_at)
 		VALUES (?, ?, ?, ?, ?)
 	`, event.ID, workspaceID, event.Type, string(data), now.Format(time.RFC3339))
+}
+
+func (h *Hub) deleteOldEvents() {
+	if h.db == nil || h.retention <= 0 {
+		return
+	}
+
+	cutoff := time.Now().UTC().Add(-h.retention).Format(time.RFC3339)
+	result, err := h.db.Exec(`DELETE FROM workspace_events WHERE created_at < ?`, cutoff)
+	if err != nil {
+		log.Printf("SSE event cleanup error: %v", err)
+		return
+	}
+
+	if deleted, err := result.RowsAffected(); err == nil && deleted > 0 {
+		log.Printf("SSE event cleanup: deleted %d old events", deleted)
+	}
 }
 
 func (h *Hub) GetEventsSince(workspaceID, lastEventID string) ([]Event, error) {
