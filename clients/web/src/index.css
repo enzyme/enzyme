@@ -57,5 +57,16 @@
   width: 1.2em;
   object-fit: contain;
   display: inline;
-  vertical-align: middle;
+  vertical-align: -0.15em;
+}
+
+/* Emoji-only messages in editor: 1-3 emoji with no text */
+.emoji-only .emoji-node {
+  font-size: 2.25rem;
+  line-height: normal;
+}
+
+.emoji-only .emoji-custom {
+  height: 2.5rem;
+  width: 2.5rem;
 }

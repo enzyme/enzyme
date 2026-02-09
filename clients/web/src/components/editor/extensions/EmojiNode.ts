@@ -1,4 +1,31 @@
 import { Node, mergeAttributes } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import type { Node as PmNode } from '@tiptap/pm/model';
+import { EMOJI_NAME, UNICODE_EMOJI_RE } from '../../../lib/emoji';
+
+function isDocEmojiOnly(doc: PmNode): boolean {
+  // Must be a single paragraph
+  if (doc.childCount !== 1 || doc.firstChild?.type.name !== 'paragraph') return false;
+  const para = doc.firstChild!;
+
+  let emojiCount = 0;
+  let hasNonEmoji = false;
+
+  para.forEach((child) => {
+    if (hasNonEmoji) return;
+    if (child.type.name === 'emojiNode') {
+      emojiCount++;
+    } else if (child.isText) {
+      if (child.text && child.text.trim() !== '') {
+        hasNonEmoji = true;
+      }
+    } else {
+      hasNonEmoji = true;
+    }
+  });
+
+  return !hasNonEmoji && emojiCount >= 1 && emojiCount <= 3;
+}
 
 export interface EmojiNodeOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -118,4 +145,52 @@ export const EmojiNode = Node.create<EmojiNodeOptions>({
         },
     };
   },
+
+  addProseMirrorPlugins() {
+    const emojiNodeType = this.type;
+    return [
+      new Plugin({
+        key: new PluginKey('emojiUnicodeReplace'),
+        view(editorView) {
+          const update = () => {
+            editorView.dom.classList.toggle('emoji-only', isDocEmojiOnly(editorView.state.doc));
+          };
+          update();
+          return { update };
+        },
+        appendTransaction(_transactions, _oldState, newState) {
+          const { tr } = newState;
+          const re = new RegExp(UNICODE_EMOJI_RE.source, 'g');
+          let modified = false;
+
+          newState.doc.descendants((node, pos) => {
+            if (!node.isText || !node.text) return;
+
+            re.lastIndex = 0;
+            let match;
+            while ((match = re.exec(node.text)) !== null) {
+              const shortcode = EMOJI_NAME[match[0]];
+              if (!shortcode) continue;
+
+              const from = pos + match.index;
+              const to = from + match[0].length;
+              const emojiNode = emojiNodeType.create({
+                shortcode,
+                unicode: match[0],
+              });
+              tr.replaceWith(
+                tr.mapping.map(from),
+                tr.mapping.map(to),
+                emojiNode,
+              );
+              modified = true;
+            }
+          });
+
+          return modified ? tr : null;
+        },
+      }),
+    ];
+  },
+
 });

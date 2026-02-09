@@ -332,6 +332,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
                     imageUrl: emojiProps.imageUrl || null,
                   },
                 })
+                .insertContent(' ')
                 .run();
             },
           },

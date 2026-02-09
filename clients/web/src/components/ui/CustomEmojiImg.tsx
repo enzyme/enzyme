@@ -4,12 +4,13 @@ const sizeClasses = {
   sm: 'w-4 h-4',
   md: 'w-5 h-5',
   lg: 'w-7 h-7',
+  xl: 'w-10 h-10',
 };
 
 interface CustomEmojiImgProps {
   name: string;
   url: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 

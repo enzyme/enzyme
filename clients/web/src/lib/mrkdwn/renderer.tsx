@@ -6,6 +6,7 @@ import { ChannelMentionBadge } from '../../components/message/ChannelMentionBadg
 import type { WorkspaceMemberWithUser, ChannelWithMembership, CustomEmoji } from '@feather/api-client';
 import { resolveStandardShortcode } from '../emoji';
 import { CustomEmojiImg } from '../../components/ui/CustomEmojiImg';
+import { isEmojiOnly } from './isEmojiOnly';
 
 const styles = tv({
   slots: {
@@ -54,8 +55,15 @@ export function MrkdwnRenderer({ content, members = [], channels = [], customEmo
   }, [members]);
 
   const segments = useMemo(() => parseMrkdwn(content), [content]);
+  const emojiOnly = useMemo(() => isEmojiOnly(segments), [segments]);
 
-  return <>{renderSegments(segments, memberMap, channels, customEmojiMap)}</>;
+  const rendered = renderSegments(segments, memberMap, channels, customEmojiMap, emojiOnly);
+
+  if (emojiOnly) {
+    return <span className="text-4xl leading-normal">{rendered}</span>;
+  }
+
+  return <>{rendered}</>;
 }
 
 function renderSegments(
@@ -63,6 +71,7 @@ function renderSegments(
   memberMap: Record<string, WorkspaceMemberWithUser>,
   channels: ChannelWithMembership[],
   customEmojiMap?: Map<string, CustomEmoji>,
+  emojiOnly = false,
 ): React.ReactNode[] {
   const s = styles();
 
@@ -150,7 +159,7 @@ function renderSegments(
         }
         const customEmoji = customEmojiMap?.get(segment.name);
         if (customEmoji) {
-          return <CustomEmojiImg key={key} name={customEmoji.name} url={customEmoji.url} size="sm" />;
+          return <CustomEmojiImg key={key} name={customEmoji.name} url={customEmoji.url} size={emojiOnly ? 'xl' : 'sm'} />;
         }
         return <span key={key}>:{segment.name}:</span>;
       }

@@ -1977,6 +1977,14 @@ export const EMOJI_NAME: Record<string, string> = (() => {
   return map;
 })();
 
+/** Regex matching any known Unicode emoji (longest-first for correct multi-codepoint matching). */
+export const UNICODE_EMOJI_RE: RegExp = (() => {
+  const escaped = Object.keys(EMOJI_NAME)
+    .sort((a, b) => b.length - a.length)
+    .map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`(?:${escaped.join('|')})`);
+})();
+
 /** Unicode skin-tone modifiers (Fitzpatrick scale). */
 export type SkinTone = '' | '\u{1F3FB}' | '\u{1F3FC}' | '\u{1F3FD}' | '\u{1F3FE}' | '\u{1F3FF}';
 export const SKIN_TONES: { tone: SkinTone; label: string; swatch: string }[] = [
