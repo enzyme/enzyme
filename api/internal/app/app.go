@@ -2,7 +2,10 @@ package app
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/feather/api/internal/auth"
@@ -18,6 +21,7 @@ import (
 	"github.com/feather/api/internal/presence"
 	"github.com/feather/api/internal/ratelimit"
 	"github.com/feather/api/internal/server"
+	"github.com/feather/api/internal/signing"
 	"github.com/feather/api/internal/sse"
 	"github.com/feather/api/internal/thread"
 	"github.com/feather/api/internal/user"
@@ -34,6 +38,7 @@ type App struct {
 	NotificationService *notification.Service
 	EmailWorker         *notification.EmailWorker
 	RateLimiter         *ratelimit.Limiter
+	SessionStore        *auth.SessionStore
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -84,19 +89,31 @@ func New(cfg *config.Config) (*App, error) {
 	// Initialize email worker
 	emailWorker := notification.NewEmailWorker(notificationPendingRepo, userRepo, emailService, hub)
 
-	// Initialize session manager
-	sessionManager := auth.NewSessionManager(db.DB, cfg.Auth.SessionDuration, cfg.Auth.SecureCookies)
+	// Initialize session store
+	sessionStore := auth.NewSessionStore(db.DB, cfg.Auth.SessionDuration)
+
+	// Initialize file URL signer
+	if cfg.Files.SigningSecret == "" {
+		b := make([]byte, 32)
+		if _, err := rand.Read(b); err != nil {
+			_ = db.Close()
+			return nil, err
+		}
+		cfg.Files.SigningSecret = hex.EncodeToString(b)
+		log.Printf("No files.signing_secret configured; generated a random one (set FEATHER_FILES_SIGNING_SECRET for persistence across restarts)")
+	}
+	signer := signing.NewSigner(cfg.Files.SigningSecret)
+
+	// Normalize publicURL to avoid double slashes in constructed URLs
+	cfg.Server.PublicURL = strings.TrimRight(cfg.Server.PublicURL, "/")
 
 	// Initialize SSE handler (kept separate as it requires streaming)
 	sseHandler := sse.NewHandler(hub, workspaceRepo)
 
-	// Initialize auth handler (needed for RequireAuth middleware on SSE routes)
-	authHandler := auth.NewHandler(authService, sessionManager, workspaceRepo)
-
 	// Initialize main handler implementing StrictServerInterface
 	h := handler.New(handler.Dependencies{
 		AuthService:         authService,
-		SessionManager:      sessionManager,
+		SessionStore:        sessionStore,
 		UserRepo:            userRepo,
 		WorkspaceRepo:       workspaceRepo,
 		ChannelRepo:         channelRepo,
@@ -106,8 +123,10 @@ func New(cfg *config.Config) (*App, error) {
 		EmojiRepo:           emojiRepo,
 		NotificationService: notificationService,
 		Hub:                 hub,
+		Signer:              signer,
 		StoragePath:         cfg.Files.StoragePath,
 		MaxUploadSize:       cfg.Files.MaxUploadSize,
+		PublicURL:           cfg.Server.PublicURL,
 	})
 
 	// Build rate limiter (nil if disabled)
@@ -123,7 +142,7 @@ func New(cfg *config.Config) (*App, error) {
 	}
 
 	// Create router with generated handlers
-	router := server.NewRouter(h, sseHandler, authHandler, sessionManager, limiter)
+	router := server.NewRouter(h, sseHandler, sessionStore, limiter)
 
 	// Create server
 	srv := server.New(cfg.Server.Host, cfg.Server.Port, router)
@@ -138,6 +157,7 @@ func New(cfg *config.Config) (*App, error) {
 		NotificationService: notificationService,
 		EmailWorker:         emailWorker,
 		RateLimiter:         limiter,
+		SessionStore:        sessionStore,
 	}, nil
 }
 
@@ -166,6 +186,20 @@ func (a *App) Start(ctx context.Context) error {
 			}
 		}()
 	}
+
+	// Start expired session cleanup
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				_ = a.SessionStore.DeleteExpired()
+			}
+		}
+	}()
 
 	log.Printf("Feather backend starting on %s", a.Server.Addr())
 	log.Printf("Database: %s", a.Config.Database.Path)

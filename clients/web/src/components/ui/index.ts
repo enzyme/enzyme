@@ -24,3 +24,4 @@ export { Tooltip } from './Tooltip';
 export { MentionPopover } from './MentionPopover';
 export { EmojiGrid, type EmojiSelectAttrs } from './EmojiGrid';
 export { CustomEmojiImg } from './CustomEmojiImg';
+export { AuthImage } from './AuthImage';

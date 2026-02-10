@@ -791,6 +791,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/files/{id}/sign-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Get a signed download URL for a file */
+        post: operations["signFileUrl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/files/sign-urls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Get signed download URLs for multiple files */
+        post: operations["signFileUrls"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/files/{id}/delete": {
         parameters: {
             query?: never;
@@ -1244,6 +1278,12 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        SignedUrl: {
+            file_id: string;
+            url: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
         SuccessResponse: {
             success: boolean;
         };
@@ -1495,6 +1535,7 @@ export interface components {
         };
         AuthResponse: {
             user: components["schemas"]["User"];
+            token: string;
         };
         MeResponse: {
             user: components["schemas"]["User"];
@@ -2952,7 +2993,14 @@ export interface operations {
     };
     downloadFile: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Unix timestamp when the signed URL expires */
+                expires?: number;
+                /** @description User ID for signed URL verification */
+                uid?: string;
+                /** @description HMAC-SHA256 signature for signed URL verification */
+                sig?: string;
+            };
             header?: never;
             path: {
                 id: string;
@@ -2973,6 +3021,60 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    signFileUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed URL */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignedUrl"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    signFileUrls: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    file_ids: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Signed URLs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        urls: components["schemas"]["SignedUrl"][];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
         };
     };
     deleteFile: {

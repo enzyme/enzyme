@@ -32,6 +32,8 @@ vi.mock('@feather/api-client', async (importOriginal) => {
         this.status = status;
       }
     },
+    setAuthToken: vi.fn(),
+    getAuthToken: vi.fn(),
   };
 });
 
@@ -53,6 +55,8 @@ function createWrapper() {
 describe('useAuth', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Set a token in localStorage so the query is enabled
+    localStorage.setItem('feather_auth_token', 'test-token');
   });
 
   it('returns loading state initially', () => {
@@ -100,7 +104,7 @@ describe('useAuth', () => {
   it('exposes login mutation', async () => {
     const user = createMockUser();
     mockAuthApi.me.mockRejectedValue(new Error('Not logged in'));
-    mockAuthApi.login.mockResolvedValue({ user });
+    mockAuthApi.login.mockResolvedValue({ user, token: 'test-token' });
 
     const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
 

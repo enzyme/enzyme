@@ -38,6 +38,8 @@ function TestApp() {
 describe('RequireAuth', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Set a token in localStorage so the auth query is enabled
+    localStorage.setItem('feather_auth_token', 'test-token');
   });
 
   it('shows loading spinner while checking auth', async () => {

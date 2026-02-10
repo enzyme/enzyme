@@ -161,7 +161,7 @@ paths:
       summary: Create a new workspace
       operationId: createWorkspace
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -189,7 +189,7 @@ paths:
       summary: Get workspace details
       operationId: getWorkspace
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       responses:
@@ -213,7 +213,7 @@ paths:
       summary: Update workspace
       operationId: updateWorkspace
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       requestBody:
@@ -247,7 +247,7 @@ paths:
       summary: List workspace members
       operationId: listWorkspaceMembers
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       responses:
@@ -273,7 +273,7 @@ paths:
       summary: Remove a member from workspace
       operationId: removeWorkspaceMember
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       requestBody:
@@ -306,7 +306,7 @@ paths:
       summary: Update member role
       operationId: updateWorkspaceMemberRole
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       requestBody:
@@ -343,7 +343,7 @@ paths:
       summary: Create an invite
       operationId: createWorkspaceInvite
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       requestBody:
@@ -373,7 +373,7 @@ paths:
       summary: Reorder workspaces for current user
       operationId: reorderWorkspaces
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -398,7 +398,7 @@ paths:
       summary: Accept an invite
       operationId: acceptInvite
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - name: code
           in: path
@@ -427,7 +427,7 @@ paths:
       summary: Create a channel
       operationId: createChannel
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       requestBody:
@@ -459,7 +459,7 @@ paths:
       summary: List channels in workspace
       operationId: listChannels
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       responses:
@@ -483,7 +483,7 @@ paths:
       summary: Create or get DM channel
       operationId: createDM
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       requestBody:
@@ -520,7 +520,7 @@ paths:
       description: Returns recent DMs and suggested users to start conversations with
       operationId: getDMSuggestions
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       responses:
@@ -539,7 +539,7 @@ paths:
       summary: Update channel
       operationId: updateChannel
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       requestBody:
@@ -573,7 +573,7 @@ paths:
       summary: Archive channel
       operationId: archiveChannel
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       responses:
@@ -598,7 +598,7 @@ paths:
       summary: Add member to channel
       operationId: addChannelMember
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       requestBody:
@@ -633,7 +633,7 @@ paths:
       summary: List channel members
       operationId: listChannelMembers
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       responses:
@@ -659,7 +659,7 @@ paths:
       summary: Join a channel
       operationId: joinChannel
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       responses:
@@ -682,7 +682,7 @@ paths:
       summary: Leave a channel
       operationId: leaveChannel
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       responses:
@@ -705,7 +705,7 @@ paths:
       summary: Star a channel
       operationId: starChannel
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       responses:
@@ -724,7 +724,7 @@ paths:
       summary: Unstar a channel
       operationId: unstarChannel
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       responses:
@@ -745,7 +745,7 @@ paths:
       summary: Mark channel as read
       operationId: markChannelRead
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       requestBody:
@@ -775,7 +775,7 @@ paths:
       summary: Get channel notification preferences
       operationId: getChannelNotifications
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       responses:
@@ -797,7 +797,7 @@ paths:
       summary: Update channel notification preferences
       operationId: updateChannelNotifications
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       requestBody:
@@ -829,7 +829,7 @@ paths:
       summary: Mark all channels as read
       operationId: markAllChannelsRead
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       responses:
@@ -848,7 +848,7 @@ paths:
       summary: List all unread messages across channels
       operationId: listAllUnreads
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       requestBody:
@@ -878,7 +878,7 @@ paths:
       summary: List threads user is subscribed to
       operationId: listUserThreads
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       requestBody:
@@ -909,7 +909,7 @@ paths:
       summary: Get a single message
       operationId: getMessage
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/messageId'
       responses:
@@ -933,7 +933,7 @@ paths:
       summary: Send a message
       operationId: sendMessage
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       requestBody:
@@ -967,7 +967,7 @@ paths:
       summary: List messages in channel
       operationId: listMessages
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       requestBody:
@@ -995,7 +995,7 @@ paths:
       summary: Update a message
       operationId: updateMessage
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/messageId'
       requestBody:
@@ -1033,7 +1033,7 @@ paths:
       summary: Delete a message
       operationId: deleteMessage
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/messageId'
       responses:
@@ -1056,7 +1056,7 @@ paths:
       summary: Add reaction to message
       operationId: addReaction
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/messageId'
       requestBody:
@@ -1094,7 +1094,7 @@ paths:
       summary: Remove reaction from message
       operationId: removeReaction
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/messageId'
       requestBody:
@@ -1125,7 +1125,7 @@ paths:
       summary: Mark message as unread
       operationId: markMessageUnread
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/messageId'
       responses:
@@ -1148,7 +1148,7 @@ paths:
       summary: Mark thread as read
       operationId: markThreadRead
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/messageId'
       requestBody:
@@ -1178,7 +1178,7 @@ paths:
       summary: List thread replies
       operationId: listThread
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/messageId'
       requestBody:
@@ -1206,7 +1206,7 @@ paths:
       summary: Get thread subscription status
       operationId: getThreadSubscription
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/messageId'
       responses:
@@ -1231,7 +1231,7 @@ paths:
       summary: Subscribe to thread
       operationId: subscribeToThread
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/messageId'
       responses:
@@ -1256,7 +1256,7 @@ paths:
       summary: Unsubscribe from thread
       operationId: unsubscribeFromThread
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/messageId'
       responses:
@@ -1282,7 +1282,7 @@ paths:
       summary: Upload a file
       operationId: uploadFile
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/channelId'
       requestBody:
@@ -1329,14 +1329,28 @@ paths:
       tags: [files]
       summary: Download a file
       operationId: downloadFile
-      security:
-        - sessionAuth: []
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: string
+        - name: expires
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: Unix timestamp when the signed URL expires
+        - name: uid
+          in: query
+          schema:
+            type: string
+          description: User ID for signed URL verification
+        - name: sig
+          in: query
+          schema:
+            type: string
+          description: HMAC-SHA256 signature for signed URL verification
       responses:
         '200':
           description: File content
@@ -1352,13 +1366,75 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /files/{id}/sign-url:
+    post:
+      tags: [files]
+      summary: Get a signed download URL for a file
+      operationId: signFileUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Signed URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignedUrl'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /files/sign-urls:
+    post:
+      tags: [files]
+      summary: Get signed download URLs for multiple files
+      operationId: signFileUrls
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [file_ids]
+              properties:
+                file_ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Signed URLs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [urls]
+                properties:
+                  urls:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SignedUrl'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /files/{id}/delete:
     post:
       tags: [files]
       summary: Delete a file
       operationId: deleteFile
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1386,7 +1462,7 @@ paths:
       summary: Upload a custom emoji
       operationId: uploadCustomEmoji
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - name: wid
           in: path
@@ -1430,7 +1506,7 @@ paths:
       summary: List custom emojis for a workspace
       operationId: listCustomEmojis
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - name: wid
           in: path
@@ -1461,7 +1537,7 @@ paths:
       summary: Delete a custom emoji
       operationId: deleteCustomEmoji
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1489,7 +1565,7 @@ paths:
       summary: Get user profile
       operationId: getUser
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1518,7 +1594,7 @@ paths:
       summary: Update own profile
       operationId: updateProfile
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -1546,7 +1622,7 @@ paths:
       summary: Upload avatar image
       operationId: uploadAvatar
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -1574,7 +1650,7 @@ paths:
       summary: Remove avatar
       operationId: deleteAvatar
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Avatar removed
@@ -1591,7 +1667,7 @@ paths:
       summary: Upload workspace icon
       operationId: uploadWorkspaceIcon
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       requestBody:
@@ -1623,7 +1699,7 @@ paths:
       summary: Remove workspace icon
       operationId: deleteWorkspaceIcon
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       responses:
@@ -1645,7 +1721,7 @@ paths:
       summary: SSE event stream
       operationId: events
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       responses:
@@ -1662,7 +1738,7 @@ paths:
       summary: Start typing indicator
       operationId: startTyping
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       requestBody:
@@ -1689,7 +1765,7 @@ paths:
       summary: Stop typing indicator
       operationId: stopTyping
       security:
-        - sessionAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/workspaceId'
       requestBody:
@@ -1712,10 +1788,9 @@ paths:
 
 components:
   securitySchemes:
-    sessionAuth:
-      type: apiKey
-      in: cookie
-      name: feather_session
+    bearerAuth:
+      type: http
+      scheme: bearer
 
   parameters:
     workspaceId:
@@ -2304,6 +2379,18 @@ components:
           type: string
           format: date-time
 
+    SignedUrl:
+      type: object
+      required: [file_id, url, expires_at]
+      properties:
+        file_id:
+          type: string
+        url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+
     SuccessResponse:
       type: object
       required: [success]
@@ -2758,10 +2845,12 @@ components:
 
     AuthResponse:
       type: object
-      required: [user]
+      required: [user, token]
       properties:
         user:
           $ref: '#/components/schemas/User'
+        token:
+          type: string
 
     MeResponse:
       type: object

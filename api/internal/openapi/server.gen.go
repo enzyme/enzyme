@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	SessionAuthScopes = "sessionAuth.Scopes"
+	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
 // Defines values for ChannelRole.
@@ -103,7 +103,8 @@ type Attachment struct {
 
 // AuthResponse defines model for AuthResponse.
 type AuthResponse struct {
-	User User `json:"user"`
+	Token string `json:"token"`
+	User  User   `json:"user"`
 }
 
 // AvatarUploadResponse defines model for AvatarUploadResponse.
@@ -340,6 +341,13 @@ type SendMessageInput struct {
 	AttachmentIds  *[]string `json:"attachment_ids,omitempty"`
 	Content        *string   `json:"content,omitempty"`
 	ThreadParentId *string   `json:"thread_parent_id,omitempty"`
+}
+
+// SignedUrl defines model for SignedUrl.
+type SignedUrl struct {
+	ExpiresAt time.Time `json:"expires_at"`
+	FileId    string    `json:"file_id"`
+	Url       string    `json:"url"`
 }
 
 // SuccessResponse defines model for SuccessResponse.
@@ -603,6 +611,23 @@ type AddChannelMemberJSONBody struct {
 	UserId string       `json:"user_id"`
 }
 
+// SignFileUrlsJSONBody defines parameters for SignFileUrls.
+type SignFileUrlsJSONBody struct {
+	FileIds []string `json:"file_ids"`
+}
+
+// DownloadFileParams defines parameters for DownloadFile.
+type DownloadFileParams struct {
+	// Expires Unix timestamp when the signed URL expires
+	Expires *int64 `form:"expires,omitempty" json:"expires,omitempty"`
+
+	// Uid User ID for signed URL verification
+	Uid *string `form:"uid,omitempty" json:"uid,omitempty"`
+
+	// Sig HMAC-SHA256 signature for signed URL verification
+	Sig *string `form:"sig,omitempty" json:"sig,omitempty"`
+}
+
 // AddReactionJSONBody defines parameters for AddReaction.
 type AddReactionJSONBody struct {
 	Emoji string `json:"emoji"`
@@ -700,6 +725,9 @@ type UpdateChannelNotificationsJSONRequestBody = NotificationPreferences
 
 // UpdateChannelJSONRequestBody defines body for UpdateChannel for application/json ContentType.
 type UpdateChannelJSONRequestBody = UpdateChannelInput
+
+// SignFileUrlsJSONRequestBody defines body for SignFileUrls for application/json ContentType.
+type SignFileUrlsJSONRequestBody SignFileUrlsJSONBody
 
 // AddReactionJSONRequestBody defines body for AddReaction for application/json ContentType.
 type AddReactionJSONRequestBody AddReactionJSONBody
@@ -823,12 +851,18 @@ type ServerInterface interface {
 	// Delete a custom emoji
 	// (POST /emojis/{id}/delete)
 	DeleteCustomEmoji(w http.ResponseWriter, r *http.Request, id string)
+	// Get signed download URLs for multiple files
+	// (POST /files/sign-urls)
+	SignFileUrls(w http.ResponseWriter, r *http.Request)
 	// Delete a file
 	// (POST /files/{id}/delete)
 	DeleteFile(w http.ResponseWriter, r *http.Request, id string)
 	// Download a file
 	// (GET /files/{id}/download)
-	DownloadFile(w http.ResponseWriter, r *http.Request, id string)
+	DownloadFile(w http.ResponseWriter, r *http.Request, id string, params DownloadFileParams)
+	// Get a signed download URL for a file
+	// (POST /files/{id}/sign-url)
+	SignFileUrl(w http.ResponseWriter, r *http.Request, id string)
 	// Accept an invite
 	// (POST /invites/{code}/accept)
 	AcceptInvite(w http.ResponseWriter, r *http.Request, code string)
@@ -1066,6 +1100,12 @@ func (_ Unimplemented) DeleteCustomEmoji(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Get signed download URLs for multiple files
+// (POST /files/sign-urls)
+func (_ Unimplemented) SignFileUrls(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Delete a file
 // (POST /files/{id}/delete)
 func (_ Unimplemented) DeleteFile(w http.ResponseWriter, r *http.Request, id string) {
@@ -1074,7 +1114,13 @@ func (_ Unimplemented) DeleteFile(w http.ResponseWriter, r *http.Request, id str
 
 // Download a file
 // (GET /files/{id}/download)
-func (_ Unimplemented) DownloadFile(w http.ResponseWriter, r *http.Request, id string) {
+func (_ Unimplemented) DownloadFile(w http.ResponseWriter, r *http.Request, id string, params DownloadFileParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a signed download URL for a file
+// (POST /files/{id}/sign-url)
+func (_ Unimplemented) SignFileUrl(w http.ResponseWriter, r *http.Request, id string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1397,7 +1443,7 @@ func (siw *ServerInterfaceWrapper) ArchiveChannel(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1428,7 +1474,7 @@ func (siw *ServerInterfaceWrapper) UploadFile(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1459,7 +1505,7 @@ func (siw *ServerInterfaceWrapper) JoinChannel(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1490,7 +1536,7 @@ func (siw *ServerInterfaceWrapper) LeaveChannel(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1521,7 +1567,7 @@ func (siw *ServerInterfaceWrapper) MarkChannelRead(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1552,7 +1598,7 @@ func (siw *ServerInterfaceWrapper) AddChannelMember(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1583,7 +1629,7 @@ func (siw *ServerInterfaceWrapper) ListChannelMembers(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1614,7 +1660,7 @@ func (siw *ServerInterfaceWrapper) ListMessages(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1645,7 +1691,7 @@ func (siw *ServerInterfaceWrapper) SendMessage(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1676,7 +1722,7 @@ func (siw *ServerInterfaceWrapper) GetChannelNotifications(w http.ResponseWriter
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1707,7 +1753,7 @@ func (siw *ServerInterfaceWrapper) UpdateChannelNotifications(w http.ResponseWri
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1738,7 +1784,7 @@ func (siw *ServerInterfaceWrapper) UnstarChannel(w http.ResponseWriter, r *http.
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1769,7 +1815,7 @@ func (siw *ServerInterfaceWrapper) StarChannel(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1800,7 +1846,7 @@ func (siw *ServerInterfaceWrapper) UpdateChannel(w http.ResponseWriter, r *http.
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1831,12 +1877,32 @@ func (siw *ServerInterfaceWrapper) DeleteCustomEmoji(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCustomEmoji(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SignFileUrls operation middleware
+func (siw *ServerInterfaceWrapper) SignFileUrls(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SignFileUrls(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1862,7 +1928,7 @@ func (siw *ServerInterfaceWrapper) DeleteFile(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1891,14 +1957,66 @@ func (siw *ServerInterfaceWrapper) DownloadFile(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DownloadFileParams
+
+	// ------------- Optional query parameter "expires" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "expires", r.URL.Query(), &params.Expires)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expires", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "uid" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "uid", r.URL.Query(), &params.Uid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uid", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sig" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "sig", r.URL.Query(), &params.Sig)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sig", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadFile(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SignFileUrl operation middleware
+func (siw *ServerInterfaceWrapper) SignFileUrl(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DownloadFile(w, r, id)
+		siw.Handler.SignFileUrl(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1924,7 +2042,7 @@ func (siw *ServerInterfaceWrapper) AcceptInvite(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1955,7 +2073,7 @@ func (siw *ServerInterfaceWrapper) GetMessage(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -1986,7 +2104,7 @@ func (siw *ServerInterfaceWrapper) DeleteMessage(w http.ResponseWriter, r *http.
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2017,7 +2135,7 @@ func (siw *ServerInterfaceWrapper) MarkMessageUnread(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2048,7 +2166,7 @@ func (siw *ServerInterfaceWrapper) AddReaction(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2079,7 +2197,7 @@ func (siw *ServerInterfaceWrapper) RemoveReaction(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2110,7 +2228,7 @@ func (siw *ServerInterfaceWrapper) SubscribeToThread(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2141,7 +2259,7 @@ func (siw *ServerInterfaceWrapper) GetThreadSubscription(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2172,7 +2290,7 @@ func (siw *ServerInterfaceWrapper) ListThread(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2203,7 +2321,7 @@ func (siw *ServerInterfaceWrapper) MarkThreadRead(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2234,7 +2352,7 @@ func (siw *ServerInterfaceWrapper) UnsubscribeFromThread(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2265,7 +2383,7 @@ func (siw *ServerInterfaceWrapper) UpdateMessage(w http.ResponseWriter, r *http.
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2285,7 +2403,7 @@ func (siw *ServerInterfaceWrapper) DeleteAvatar(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2305,7 +2423,7 @@ func (siw *ServerInterfaceWrapper) UploadAvatar(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2325,7 +2443,7 @@ func (siw *ServerInterfaceWrapper) UpdateProfile(w http.ResponseWriter, r *http.
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2356,7 +2474,7 @@ func (siw *ServerInterfaceWrapper) GetUser(w http.ResponseWriter, r *http.Reques
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2376,7 +2494,7 @@ func (siw *ServerInterfaceWrapper) CreateWorkspace(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2396,7 +2514,7 @@ func (siw *ServerInterfaceWrapper) ReorderWorkspaces(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2427,7 +2545,7 @@ func (siw *ServerInterfaceWrapper) GetWorkspace(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2458,7 +2576,7 @@ func (siw *ServerInterfaceWrapper) CreateChannel(w http.ResponseWriter, r *http.
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2489,7 +2607,7 @@ func (siw *ServerInterfaceWrapper) CreateDM(w http.ResponseWriter, r *http.Reque
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2520,7 +2638,7 @@ func (siw *ServerInterfaceWrapper) ListChannels(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2551,7 +2669,7 @@ func (siw *ServerInterfaceWrapper) MarkAllChannelsRead(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2582,7 +2700,7 @@ func (siw *ServerInterfaceWrapper) GetDMSuggestions(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2613,7 +2731,7 @@ func (siw *ServerInterfaceWrapper) ListCustomEmojis(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2644,7 +2762,7 @@ func (siw *ServerInterfaceWrapper) UploadCustomEmoji(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2675,7 +2793,7 @@ func (siw *ServerInterfaceWrapper) DeleteWorkspaceIcon(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2706,7 +2824,7 @@ func (siw *ServerInterfaceWrapper) UploadWorkspaceIcon(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2737,7 +2855,7 @@ func (siw *ServerInterfaceWrapper) CreateWorkspaceInvite(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2768,7 +2886,7 @@ func (siw *ServerInterfaceWrapper) ListWorkspaceMembers(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2799,7 +2917,7 @@ func (siw *ServerInterfaceWrapper) RemoveWorkspaceMember(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2830,7 +2948,7 @@ func (siw *ServerInterfaceWrapper) UpdateWorkspaceMemberRole(w http.ResponseWrit
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2861,7 +2979,7 @@ func (siw *ServerInterfaceWrapper) ListUserThreads(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2892,7 +3010,7 @@ func (siw *ServerInterfaceWrapper) ListAllUnreads(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -2923,7 +3041,7 @@ func (siw *ServerInterfaceWrapper) UpdateWorkspace(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, SessionAuthScopes, []string{})
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -3115,10 +3233,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/emojis/{id}/delete", wrapper.DeleteCustomEmoji)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/files/sign-urls", wrapper.SignFileUrls)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/files/{id}/delete", wrapper.DeleteFile)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/files/{id}/download", wrapper.DownloadFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/files/{id}/sign-url", wrapper.SignFileUrl)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/invites/{code}/accept", wrapper.AcceptInvite)
@@ -4051,6 +4175,43 @@ func (response DeleteCustomEmoji404JSONResponse) VisitDeleteCustomEmojiResponse(
 	return json.NewEncoder(w).Encode(response)
 }
 
+type SignFileUrlsRequestObject struct {
+	Body *SignFileUrlsJSONRequestBody
+}
+
+type SignFileUrlsResponseObject interface {
+	VisitSignFileUrlsResponse(w http.ResponseWriter) error
+}
+
+type SignFileUrls200JSONResponse struct {
+	Urls []SignedUrl `json:"urls"`
+}
+
+func (response SignFileUrls200JSONResponse) VisitSignFileUrlsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SignFileUrls400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SignFileUrls400JSONResponse) VisitSignFileUrlsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SignFileUrls401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SignFileUrls401JSONResponse) VisitSignFileUrlsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type DeleteFileRequestObject struct {
 	Id string `json:"id"`
 }
@@ -4096,7 +4257,8 @@ func (response DeleteFile404JSONResponse) VisitDeleteFileResponse(w http.Respons
 }
 
 type DownloadFileRequestObject struct {
-	Id string `json:"id"`
+	Id     string `json:"id"`
+	Params DownloadFileParams
 }
 
 type DownloadFileResponseObject interface {
@@ -4143,6 +4305,41 @@ func (response DownloadFile403JSONResponse) VisitDownloadFileResponse(w http.Res
 type DownloadFile404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response DownloadFile404JSONResponse) VisitDownloadFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SignFileUrlRequestObject struct {
+	Id string `json:"id"`
+}
+
+type SignFileUrlResponseObject interface {
+	VisitSignFileUrlResponse(w http.ResponseWriter) error
+}
+
+type SignFileUrl200JSONResponse SignedUrl
+
+func (response SignFileUrl200JSONResponse) VisitSignFileUrlResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SignFileUrl401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SignFileUrl401JSONResponse) VisitSignFileUrlResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SignFileUrl404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SignFileUrl404JSONResponse) VisitSignFileUrlResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
 
@@ -5572,12 +5769,18 @@ type StrictServerInterface interface {
 	// Delete a custom emoji
 	// (POST /emojis/{id}/delete)
 	DeleteCustomEmoji(ctx context.Context, request DeleteCustomEmojiRequestObject) (DeleteCustomEmojiResponseObject, error)
+	// Get signed download URLs for multiple files
+	// (POST /files/sign-urls)
+	SignFileUrls(ctx context.Context, request SignFileUrlsRequestObject) (SignFileUrlsResponseObject, error)
 	// Delete a file
 	// (POST /files/{id}/delete)
 	DeleteFile(ctx context.Context, request DeleteFileRequestObject) (DeleteFileResponseObject, error)
 	// Download a file
 	// (GET /files/{id}/download)
 	DownloadFile(ctx context.Context, request DownloadFileRequestObject) (DownloadFileResponseObject, error)
+	// Get a signed download URL for a file
+	// (POST /files/{id}/sign-url)
+	SignFileUrl(ctx context.Context, request SignFileUrlRequestObject) (SignFileUrlResponseObject, error)
 	// Accept an invite
 	// (POST /invites/{code}/accept)
 	AcceptInvite(ctx context.Context, request AcceptInviteRequestObject) (AcceptInviteResponseObject, error)
@@ -6325,6 +6528,37 @@ func (sh *strictHandler) DeleteCustomEmoji(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// SignFileUrls operation middleware
+func (sh *strictHandler) SignFileUrls(w http.ResponseWriter, r *http.Request) {
+	var request SignFileUrlsRequestObject
+
+	var body SignFileUrlsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SignFileUrls(ctx, request.(SignFileUrlsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SignFileUrls")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SignFileUrlsResponseObject); ok {
+		if err := validResponse.VisitSignFileUrlsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // DeleteFile operation middleware
 func (sh *strictHandler) DeleteFile(w http.ResponseWriter, r *http.Request, id string) {
 	var request DeleteFileRequestObject
@@ -6352,10 +6586,11 @@ func (sh *strictHandler) DeleteFile(w http.ResponseWriter, r *http.Request, id s
 }
 
 // DownloadFile operation middleware
-func (sh *strictHandler) DownloadFile(w http.ResponseWriter, r *http.Request, id string) {
+func (sh *strictHandler) DownloadFile(w http.ResponseWriter, r *http.Request, id string, params DownloadFileParams) {
 	var request DownloadFileRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.DownloadFile(ctx, request.(DownloadFileRequestObject))
@@ -6370,6 +6605,32 @@ func (sh *strictHandler) DownloadFile(w http.ResponseWriter, r *http.Request, id
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DownloadFileResponseObject); ok {
 		if err := validResponse.VisitDownloadFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SignFileUrl operation middleware
+func (sh *strictHandler) SignFileUrl(w http.ResponseWriter, r *http.Request, id string) {
+	var request SignFileUrlRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SignFileUrl(ctx, request.(SignFileUrlRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SignFileUrl")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SignFileUrlResponseObject); ok {
+		if err := validResponse.VisitSignFileUrlResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

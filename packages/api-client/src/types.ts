@@ -60,3 +60,6 @@ export type ThreadListResult = components['schemas']['ThreadListResult'];
 
 // Custom emoji types
 export type CustomEmoji = components['schemas']['CustomEmoji'];
+
+// File signing types
+export type SignedUrl = components['schemas']['SignedUrl'];

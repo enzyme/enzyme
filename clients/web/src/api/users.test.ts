@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Hoist mocks
 const mockGet = vi.hoisted(() => vi.fn());
 const mockPost = vi.hoisted(() => vi.fn());
+const mockDel = vi.hoisted(() => vi.fn());
 const mockUploadFile = vi.hoisted(() => vi.fn());
 
 vi.mock('@feather/api-client', async (importOriginal) => {
@@ -11,13 +12,10 @@ vi.mock('@feather/api-client', async (importOriginal) => {
     ...original,
     get: mockGet,
     post: mockPost,
+    del: mockDel,
     uploadFile: mockUploadFile,
   };
 });
-
-// Mock fetch for deleteAvatar
-const mockFetch = vi.fn();
-(globalThis as Record<string, unknown>).fetch = mockFetch;
 
 import { usersApi } from './users';
 
@@ -76,36 +74,12 @@ describe('usersApi', () => {
 
   describe('deleteAvatar', () => {
     it('DELETE /users/me/avatar', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ success: true }),
-      });
+      mockDel.mockResolvedValue({ success: true });
 
       const result = await usersApi.deleteAvatar();
 
-      expect(mockFetch).toHaveBeenCalledWith('/api/users/me/avatar', {
-        method: 'DELETE',
-        credentials: 'include',
-      });
+      expect(mockDel).toHaveBeenCalledWith('/users/me/avatar');
       expect(result).toEqual({ success: true });
-    });
-
-    it('throws error on failed delete', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        json: () => Promise.resolve({ error: { message: 'Avatar not found' } }),
-      });
-
-      await expect(usersApi.deleteAvatar()).rejects.toThrow('Avatar not found');
-    });
-
-    it('throws generic error when no message provided', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        json: () => Promise.resolve({}),
-      });
-
-      await expect(usersApi.deleteAvatar()).rejects.toThrow('Failed to delete avatar');
     });
   });
 });

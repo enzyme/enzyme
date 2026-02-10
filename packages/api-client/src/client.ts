@@ -2,6 +2,16 @@ import type { ApiErrorResponse } from './types';
 
 const API_BASE = '/api';
 
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null): void {
+  authToken = token;
+}
+
+export function getAuthToken(): string | null {
+  return authToken;
+}
+
 export class ApiError extends Error {
   code: string;
   status: number;
@@ -26,12 +36,20 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  return headers;
+}
+
 export async function get<T>(endpoint: string): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     method: 'GET',
-    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders(),
     },
   });
   return handleResponse<T>(response);
@@ -40,9 +58,9 @@ export async function get<T>(endpoint: string): Promise<T> {
 export async function post<T>(endpoint: string, data?: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     method: 'POST',
-    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders(),
     },
     body: data ? JSON.stringify(data) : undefined,
   });
@@ -64,7 +82,7 @@ export async function uploadFile(
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     method: 'POST',
-    credentials: 'include',
+    headers: authHeaders(),
     body: formData,
   });
   return handleResponse(response);
@@ -73,9 +91,9 @@ export async function uploadFile(
 export async function del<T>(endpoint: string): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     method: 'DELETE',
-    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders(),
     },
   });
   return handleResponse<T>(response);

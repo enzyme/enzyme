@@ -138,9 +138,11 @@ import { get, post, ApiError } from '@feather/api-client';
 
 **Authentication**
 
-- Session-based using `alexedwards/scs` with SQLite store
-- bcrypt (cost 12), cookie named `feather_session`
-- Get user: `auth.GetUserID(ctx)`
+- Token-based using `Authorization: Bearer <token>` header
+- Tokens stored in `sessions` table with `user_id` and `expiry`
+- bcrypt (cost 12) for passwords
+- Get user: `auth.GetUserID(ctx)`, get token: `auth.GetToken(ctx)`
+- SSE uses `?token=` query param (EventSource can't set headers)
 
 **IDs** - ULIDs via `ulid.Make().String()`
 
@@ -244,20 +246,25 @@ mockResets := testutil.NewMockPasswordResetRepository()
 ### Manual Testing
 
 ```bash
-# Register
-curl -X POST http://localhost:8080/api/auth/register \
+# Register (returns token)
+curl -s -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123","display_name":"Test"}'
+  -d '{"email":"test@example.com","password":"password123","display_name":"Test"}' | jq .token
 
-# Login (save cookie)
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" -c cookies.txt \
-  -d '{"email":"test@example.com","password":"password123"}'
+# Login (returns token)
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}' | jq -r .token)
 
-# Authenticated request
-curl -X POST http://localhost:8080/api/workspaces/create \
-  -H "Content-Type: application/json" -b cookies.txt \
-  -d '{"slug":"my-workspace","name":"My Workspace"}'
+# Authenticated request with bearer token
+curl -s http://localhost:8080/api/auth/me \
+  -H "Authorization: Bearer $TOKEN" | jq .user
+
+# Create workspace
+curl -s -X POST http://localhost:8080/api/workspaces/create \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"name":"My Workspace"}'
 ```
 
 ---

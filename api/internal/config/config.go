@@ -24,13 +24,13 @@ type DatabaseConfig struct {
 
 type AuthConfig struct {
 	SessionDuration time.Duration `koanf:"session_duration"`
-	SecureCookies   bool          `koanf:"secure_cookies"`
 	BcryptCost      int           `koanf:"bcrypt_cost"`
 }
 
 type FilesConfig struct {
 	StoragePath   string `koanf:"storage_path"`
 	MaxUploadSize int64  `koanf:"max_upload_size"`
+	SigningSecret string `koanf:"signing_secret"`
 }
 
 type EmailConfig struct {
@@ -72,7 +72,6 @@ func Defaults() *Config {
 		},
 		Auth: AuthConfig{
 			SessionDuration: 720 * time.Hour, // 30 days
-			SecureCookies:   false,
 			BcryptCost:      12,
 		},
 		Files: FilesConfig{

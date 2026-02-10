@@ -17,7 +17,7 @@ import (
 )
 
 // NewRouter creates a new HTTP router with all routes registered
-func NewRouter(h *handler.Handler, sseHandler *sse.Handler, authHandler *auth.Handler, sessionManager *auth.SessionManager, limiter *ratelimit.Limiter) http.Handler {
+func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.SessionStore, limiter *ratelimit.Limiter) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -25,7 +25,7 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, authHandler *auth.Ha
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RealIP)
 	r.Use(ratelimit.Middleware(limiter))
-	r.Use(sessionManager.LoadAndSave)
+	r.Use(auth.TokenMiddleware(sessionStore))
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +76,8 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, authHandler *auth.Ha
 		r.Get("/emojis/{workspaceId}/{filename}", h.ServeEmoji)
 
 		r.Group(func(r chi.Router) {
-			r.Use(authHandler.RequireAuth)
+			r.Use(auth.SSETokenMiddleware(sessionStore))
+			r.Use(auth.RequireAuth())
 			r.Get("/workspaces/{wid}/events", sseHandler.Events)
 			r.Post("/workspaces/{wid}/typing/start", sseHandler.StartTyping)
 			r.Post("/workspaces/{wid}/typing/stop", sseHandler.StopTyping)

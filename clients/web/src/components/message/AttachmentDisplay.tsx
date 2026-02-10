@@ -7,6 +7,8 @@ import {
   ModalOverlay,
 } from 'react-aria-components';
 import type { Attachment } from '@feather/api-client';
+import { AuthImage } from '../ui';
+import { useSignedUrl } from '../../hooks/useSignedUrl';
 import { cn } from '../../lib/utils';
 
 interface AttachmentDisplayProps {
@@ -21,6 +23,35 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// --- CarouselDownloadLink ---
+// Extracted as a component so the useSignedUrl hook re-runs when `fileId` changes.
+
+function CarouselDownloadLink({ fileId, filename }: { fileId: string; filename: string }) {
+  const url = useSignedUrl(fileId);
+
+  return (
+    <a
+      href={url ?? '#'}
+      download={filename}
+      className={cn(
+        'rounded-lg bg-black/50 p-2 text-white transition-colors hover:bg-black/70',
+        !url && 'pointer-events-none opacity-50',
+      )}
+      title="Download"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+        />
+      </svg>
+    </a>
+  );
 }
 
 // --- ImageCarousel ---
@@ -84,8 +115,8 @@ function ImageCarousel({ images, initialIndex, isOpen, onClose }: ImageCarouselP
               </AriaButton>
             )}
 
-            <img
-              src={current.url}
+            <AuthImage
+              fileId={current.id}
               alt={current.filename}
               className="max-h-[85vh] max-w-full rounded-lg object-contain"
             />
@@ -108,22 +139,7 @@ function ImageCarousel({ images, initialIndex, isOpen, onClose }: ImageCarouselP
             )}
 
             <div className="absolute right-2 top-2 flex gap-2">
-              <a
-                href={current.url}
-                download={current.filename}
-                className="rounded-lg bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
-                title="Download"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
-              </a>
+              <CarouselDownloadLink fileId={current.id} filename={current.filename} />
               <button
                 onClick={onClose}
                 className="rounded-lg bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
@@ -207,8 +223,8 @@ function ImageGrid({ images }: ImageGridProps) {
                 isOverlayCell ? `View ${remainingCount} more images` : `View ${image.filename}`
               }
             >
-              <img
-                src={image.url}
+              <AuthImage
+                fileId={image.id}
                 alt={image.filename}
                 className="h-full w-full object-cover"
                 loading="lazy"
@@ -244,8 +260,8 @@ function ImageAttachment({ attachment, onClick }: { attachment: Attachment; onCl
       className="block cursor-pointer overflow-hidden rounded-lg border border-gray-200 transition-colors hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
       aria-label={`View ${attachment.filename}`}
     >
-      <img
-        src={attachment.url}
+      <AuthImage
+        fileId={attachment.id}
         alt={attachment.filename}
         className="max-h-64 max-w-full object-contain"
         loading="lazy"
@@ -257,11 +273,16 @@ function ImageAttachment({ attachment, onClick }: { attachment: Attachment; onCl
 // --- FileAttachment ---
 
 function FileAttachment({ attachment }: { attachment: Attachment }) {
+  const url = useSignedUrl(attachment.id);
+
   return (
     <a
-      href={attachment.url}
+      href={url ?? '#'}
       download={attachment.filename}
-      className="flex max-w-xs items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+      className={cn(
+        'flex max-w-xs items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800',
+        !url && 'pointer-events-none opacity-50',
+      )}
     >
       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
         <svg

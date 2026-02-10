@@ -46,7 +46,6 @@ database:
 
 auth:
   session_duration: "720h"  # 30 days
-  secure_cookies: true      # Set true for HTTPS
   bcrypt_cost: 12
 
 files:
@@ -69,7 +68,6 @@ All config options can be set via environment variables with `FEATHER_` prefix:
 ```bash
 FEATHER_SERVER_PORT=3000
 FEATHER_DATABASE_PATH=/var/lib/feather/feather.db
-FEATHER_AUTH_SECURE_COOKIES=true
 ```
 
 ### CLI Flags
@@ -80,7 +78,7 @@ FEATHER_AUTH_SECURE_COOKIES=true
 
 ## API Endpoints
 
-All API endpoints are under `/api/`. Protected endpoints require session authentication.
+All API endpoints are under `/api/`. Protected endpoints require `Authorization: Bearer <token>` header.
 
 ### Authentication
 ```
@@ -154,7 +152,7 @@ POST /api/workspaces/{id}/typing/stop
 
 ## SSE Events
 
-Connect to `/api/workspaces/{id}/events` for real-time updates. Supports `Last-Event-ID` header for reconnection catch-up.
+Connect to `/api/workspaces/{id}/events?token=<token>` for real-time updates. Supports `Last-Event-ID` header for reconnection catch-up.
 
 Event types:
 - `connected`, `heartbeat`
@@ -197,7 +195,7 @@ api/
 | Database | SQLite (modernc.org/sqlite - pure Go) |
 | Migrations | pressly/goose |
 | Config | knadh/koanf |
-| Sessions | alexedwards/scs |
+| Auth | Bearer token sessions |
 | Password | bcrypt (cost 12) |
 | IDs | ULID |
 | Router | go-chi/chi |

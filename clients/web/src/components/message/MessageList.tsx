@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMessages, useChannels } from '../../hooks';
+import { usePrewarmSignedUrls } from '../../hooks/usePrewarmSignedUrls';
 import { MessageItem } from './MessageItem';
 import { SystemMessage } from './SystemMessage';
 import { MessageSkeleton } from '../ui';
@@ -24,6 +25,9 @@ export function MessageList({
   const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
     useMessages(channelId);
   const { data: channelsData } = useChannels(workspaceId);
+
+  // Pre-warm signed URL cache for any file attachments in loaded messages
+  usePrewarmSignedUrls(data?.pages);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);

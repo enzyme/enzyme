@@ -1,7 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within, userEvent } from '../../test-utils';
 import { AttachmentDisplay } from './AttachmentDisplay';
 import type { Attachment } from '@feather/api-client';
+
+// Mock the signedUrlCache so getCachedIfFresh returns URLs synchronously
+vi.mock('../../lib/signedUrlCache', () => ({
+  getCachedIfFresh: (fileId: string) => `/signed/${fileId}`,
+  getUrl: (fileId: string) => Promise.resolve(`/signed/${fileId}`),
+  getUrls: () => Promise.resolve(),
+  invalidate: () => {},
+}));
 
 function makeImage(id: string, filename = `image-${id}.png`): Attachment {
   return {

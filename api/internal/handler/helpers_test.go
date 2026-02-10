@@ -16,6 +16,7 @@ import (
 	"github.com/feather/api/internal/file"
 	"github.com/feather/api/internal/message"
 	"github.com/feather/api/internal/notification"
+	"github.com/feather/api/internal/signing"
 	"github.com/feather/api/internal/sse"
 	"github.com/feather/api/internal/testutil"
 	"github.com/feather/api/internal/thread"
@@ -42,7 +43,7 @@ func testHandler(t *testing.T) (*Handler, *sql.DB) {
 	passwordResets := auth.NewPasswordResetRepo(db)
 	authService := auth.NewService(userRepo, passwordResets, 4)
 
-	sessionManager := auth.NewSessionManager(db, 24*time.Hour, false)
+	sessionStore := auth.NewSessionStore(db, 24*time.Hour)
 
 	notifPrefsRepo := notification.NewPreferencesRepository(db)
 	notifPendingRepo := notification.NewPendingRepository(db)
@@ -50,7 +51,7 @@ func testHandler(t *testing.T) (*Handler, *sql.DB) {
 
 	h := New(Dependencies{
 		AuthService:         authService,
-		SessionManager:      sessionManager,
+		SessionStore:        sessionStore,
 		UserRepo:            userRepo,
 		WorkspaceRepo:       workspaceRepo,
 		ChannelRepo:         channelRepo,
@@ -60,57 +61,32 @@ func testHandler(t *testing.T) (*Handler, *sql.DB) {
 		EmojiRepo:           emojiRepo,
 		NotificationService: notifService,
 		Hub:                 hub,
+		Signer:              signing.NewSigner("test-signing-secret"),
 		StoragePath:         t.TempDir(),
 		MaxUploadSize:       10 * 1024 * 1024,
+		PublicURL:           "http://localhost:8080",
 	})
 
 	return h, db
 }
 
 // ctxWithUser creates a context that simulates an authenticated user.
-// It creates an HTTP request, loads session data via the session manager middleware,
-// sets the user ID in the session, and attaches the request to the handler context.
+// Sets the user ID and token directly in context (as TokenMiddleware would)
+// and attaches a request for handlers that need it.
 func ctxWithUser(t *testing.T, h *Handler, userID string) context.Context {
 	t.Helper()
 
-	// Create a real HTTP request and response recorder
+	// Create a token for this user
+	token, err := h.sessionStore.Create(userID)
+	if err != nil {
+		t.Fatalf("creating session: %v", err)
+	}
+
+	// Build context with user ID, token, and request (as middleware would)
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	w := httptest.NewRecorder()
-
-	// Use the session manager's LoadAndSave middleware to initialize a session on the request.
-	// We wrap a handler that sets the userID and captures the request-with-session.
-	var reqWithSession *http.Request
-	inner := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-		h.sessionManager.Put(r.Context(), auth.SessionKeyUserID, userID)
-		reqWithSession = r
-	})
-
-	h.sessionManager.LoadAndSave(inner).ServeHTTP(w, r)
-
-	if reqWithSession == nil {
-		t.Fatal("session middleware did not execute")
-	}
-
-	// Now create a new request that carries the session cookie from the response.
-	cookies := w.Result().Cookies()
-	r2 := httptest.NewRequest(http.MethodGet, "/", nil)
-	for _, c := range cookies {
-		r2.AddCookie(c)
-	}
-
-	// Run through LoadAndSave again to load the session from the cookie.
-	var finalReq *http.Request
-	inner2 := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-		finalReq = r
-	})
-	w2 := httptest.NewRecorder()
-	h.sessionManager.LoadAndSave(inner2).ServeHTTP(w2, r2)
-
-	if finalReq == nil {
-		t.Fatal("session middleware did not execute on second pass")
-	}
-
-	return WithRequest(context.Background(), finalReq)
+	ctx := auth.WithUserID(r.Context(), userID)
+	ctx = auth.WithToken(ctx, token)
+	return WithRequest(ctx, r.WithContext(ctx))
 }
 
 // addWorkspaceMember adds a user to a workspace with the given role directly in the database.

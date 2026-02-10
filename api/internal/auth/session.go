@@ -1,108 +1,88 @@
 package auth
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
-	"net/http"
+	"encoding/hex"
+	"errors"
 	"time"
-
-	"github.com/alexedwards/scs/v2"
 )
 
-const (
-	SessionKeyUserID = "user_id"
-)
+var ErrSessionNotFound = errors.New("session not found")
 
-type SessionManager struct {
-	*scs.SessionManager
+type SessionStore struct {
+	db       *sql.DB
+	lifetime time.Duration
 }
 
-func NewSessionManager(db *sql.DB, lifetime time.Duration, secureCookies bool) *SessionManager {
-	sm := scs.New()
-	sm.Store = NewSQLiteStore(db)
-	sm.Lifetime = lifetime
-	sm.Cookie.Secure = secureCookies
-	sm.Cookie.HttpOnly = true
-	sm.Cookie.SameSite = http.SameSiteLaxMode
-	sm.Cookie.Name = "feather_session"
-
-	return &SessionManager{sm}
+func NewSessionStore(db *sql.DB, lifetime time.Duration) *SessionStore {
+	return &SessionStore{db: db, lifetime: lifetime}
 }
 
-func (sm *SessionManager) SetUserID(r *http.Request, userID string) {
-	sm.Put(r.Context(), SessionKeyUserID, userID)
+// Create inserts a new session and returns the plaintext token.
+// Only the SHA-256 hash is stored in the database.
+func (s *SessionStore) Create(userID string) (string, error) {
+	token := generateSessionToken()
+	expiry := time.Now().Add(s.lifetime).UTC().Format(time.RFC3339)
+
+	_, err := s.db.Exec(
+		"INSERT INTO sessions (token, user_id, expiry) VALUES (?, ?, ?)",
+		hashToken(token), userID, expiry,
+	)
+	if err != nil {
+		return "", err
+	}
+	return token, nil
 }
 
-func (sm *SessionManager) GetUserID(r *http.Request) string {
-	return sm.GetString(r.Context(), SessionKeyUserID)
-}
-
-func (sm *SessionManager) ClearUserID(r *http.Request) {
-	sm.Remove(r.Context(), SessionKeyUserID)
-}
-
-// SQLiteStore implements scs.Store for SQLite
-type SQLiteStore struct {
-	db *sql.DB
-}
-
-func NewSQLiteStore(db *sql.DB) *SQLiteStore {
-	return &SQLiteStore{db: db}
-}
-
-func (s *SQLiteStore) Delete(token string) error {
-	_, err := s.db.Exec("DELETE FROM sessions WHERE token = ?", token)
-	return err
-}
-
-func (s *SQLiteStore) Find(token string) ([]byte, bool, error) {
-	var data []byte
-	var expiryStr string
-
-	row := s.db.QueryRow("SELECT data, expiry FROM sessions WHERE token = ?", token)
-	err := row.Scan(&data, &expiryStr)
-	if err == sql.ErrNoRows {
-		return nil, false, nil
+// Validate looks up a session by its hashed token and returns the user ID if valid.
+func (s *SessionStore) Validate(token string) (string, error) {
+	hashed := hashToken(token)
+	var userID, expiryStr string
+	err := s.db.QueryRow(
+		"SELECT user_id, expiry FROM sessions WHERE token = ?", hashed,
+	).Scan(&userID, &expiryStr)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrSessionNotFound
 	}
 	if err != nil {
-		return nil, false, err
+		return "", err
 	}
 
 	expiry, err := time.Parse(time.RFC3339, expiryStr)
 	if err != nil {
-		return nil, false, err
+		return "", err
 	}
-
 	if time.Now().After(expiry) {
-		return nil, false, nil
+		// Clean up expired session
+		_, _ = s.db.Exec("DELETE FROM sessions WHERE token = ?", hashed)
+		return "", ErrSessionNotFound
 	}
 
-	return data, true, nil
+	return userID, nil
 }
 
-func (s *SQLiteStore) Commit(token string, data []byte, expiry time.Time) error {
-	_, err := s.db.Exec(`
-		INSERT INTO sessions (token, data, expiry)
-		VALUES (?, ?, ?)
-		ON CONFLICT(token) DO UPDATE SET data = excluded.data, expiry = excluded.expiry
-	`, token, data, expiry.Format(time.RFC3339))
+// Delete removes a session by its hashed token.
+func (s *SessionStore) Delete(token string) error {
+	_, err := s.db.Exec("DELETE FROM sessions WHERE token = ?", hashToken(token))
 	return err
 }
 
-func (s *SQLiteStore) All() (map[string][]byte, error) {
-	rows, err := s.db.Query("SELECT token, data FROM sessions WHERE expiry > ?", time.Now().Format(time.RFC3339))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+// DeleteExpired removes all expired sessions.
+func (s *SessionStore) DeleteExpired() error {
+	_, err := s.db.Exec("DELETE FROM sessions WHERE expiry < ?", time.Now().UTC().Format(time.RFC3339))
+	return err
+}
 
-	sessions := make(map[string][]byte)
-	for rows.Next() {
-		var token string
-		var data []byte
-		if err := rows.Scan(&token, &data); err != nil {
-			return nil, err
-		}
-		sessions[token] = data
-	}
-	return sessions, rows.Err()
+func generateSessionToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// hashToken returns the hex-encoded SHA-256 hash of a plaintext token.
+func hashToken(token string) string {
+	h := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(h[:])
 }

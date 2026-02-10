@@ -3,14 +3,17 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/feather/api/internal/channel"
 	"github.com/feather/api/internal/file"
 	"github.com/feather/api/internal/openapi"
+	"github.com/feather/api/internal/signing"
 	"github.com/feather/api/internal/workspace"
 	"github.com/oklog/ulid/v2"
 )
@@ -122,7 +125,19 @@ func (h *Handler) UploadFile(ctx context.Context, request openapi.UploadFileRequ
 func (h *Handler) DownloadFile(ctx context.Context, request openapi.DownloadFileRequestObject) (openapi.DownloadFileResponseObject, error) {
 	userID := h.getUserID(ctx)
 	if userID == "" {
-		return openapi.DownloadFile401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+		// Fall back to signed URL verification
+		if request.Params.Expires != nil && request.Params.Uid != nil && request.Params.Sig != nil {
+			err := h.signer.Verify(request.Id, *request.Params.Uid, *request.Params.Expires, *request.Params.Sig)
+			if err != nil {
+				if errors.Is(err, signing.ErrExpired) {
+					return openapi.DownloadFile403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Signed URL has expired")}, nil
+				}
+				return openapi.DownloadFile403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Invalid signature")}, nil
+			}
+			userID = *request.Params.Uid
+		} else {
+			return openapi.DownloadFile401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+		}
 	}
 
 	attachment, err := h.fileRepo.GetByID(ctx, request.Id)
@@ -206,6 +221,57 @@ func (h *Handler) DeleteFile(ctx context.Context, request openapi.DeleteFileRequ
 	return openapi.DeleteFile200JSONResponse{
 		Success: true,
 	}, nil
+}
+
+const signedURLTTL = time.Hour
+
+// SignFileUrl generates a signed download URL for a single file.
+// Authorization is enforced at download time, not at signing time.
+func (h *Handler) SignFileUrl(ctx context.Context, request openapi.SignFileUrlRequestObject) (openapi.SignFileUrlResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.SignFileUrl401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+	}
+
+	baseURL := fmt.Sprintf("%s/api/files/%s/download", h.publicURL, request.Id)
+	url, expiresAt, err := h.signer.SignedURL(baseURL, request.Id, userID, signedURLTTL)
+	if err != nil {
+		return nil, err
+	}
+
+	return openapi.SignFileUrl200JSONResponse{
+		FileId:    request.Id,
+		Url:       url,
+		ExpiresAt: expiresAt,
+	}, nil
+}
+
+// SignFileUrls generates signed download URLs for multiple files.
+func (h *Handler) SignFileUrls(ctx context.Context, request openapi.SignFileUrlsRequestObject) (openapi.SignFileUrlsResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.SignFileUrls401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+	}
+
+	if len(request.Body.FileIds) > 100 {
+		return openapi.SignFileUrls400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Maximum 100 file IDs per request")}, nil
+	}
+
+	urls := make([]openapi.SignedUrl, 0, len(request.Body.FileIds))
+	for _, fileID := range request.Body.FileIds {
+		baseURL := fmt.Sprintf("%s/api/files/%s/download", h.publicURL, fileID)
+		url, expiresAt, err := h.signer.SignedURL(baseURL, fileID, userID, signedURLTTL)
+		if err != nil {
+			return nil, err
+		}
+		urls = append(urls, openapi.SignedUrl{
+			FileId:    fileID,
+			Url:       url,
+			ExpiresAt: expiresAt,
+		})
+	}
+
+	return openapi.SignFileUrls200JSONResponse{Urls: urls}, nil
 }
 
 func sanitizeFilename(filename string) string {

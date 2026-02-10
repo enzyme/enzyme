@@ -11,6 +11,7 @@ import {
   useAutoFocusComposer,
 } from '../../hooks';
 import { useUpdateMessage, useDeleteMessage, useMarkMessageUnread } from '../../hooks/useMessages';
+import { usePrewarmSignedUrls } from '../../hooks/usePrewarmSignedUrls';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { Avatar, MessageSkeleton, Modal, Button, toast } from '../ui';
 import { EmojiDisplay } from '../message/ReactionsDisplay';
@@ -75,6 +76,9 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
 
   // Use cached message if available, otherwise use fetched
   const parentMessage = cachedMessage || fetchedData?.message;
+
+  // Pre-warm signed URL cache for thread message attachments
+  usePrewarmSignedUrls(data?.pages);
 
   // Flatten thread messages (already in chronological order from API)
   const threadMessages = data?.pages.flatMap((page) => page.messages) || [];

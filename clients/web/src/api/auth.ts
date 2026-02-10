@@ -13,6 +13,7 @@ export interface RegisterInput {
 
 export interface AuthResponse {
   user: User;
+  token: string;
 }
 
 export interface MeResponse {

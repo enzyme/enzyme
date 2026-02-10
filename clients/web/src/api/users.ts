@@ -1,4 +1,4 @@
-import { get, post, uploadFile, type User } from '@feather/api-client';
+import { get, post, del, uploadFile, type User } from '@feather/api-client';
 
 export interface UserProfile {
   id: string;
@@ -24,15 +24,5 @@ export const usersApi = {
   uploadAvatar: (file: File) =>
     uploadFile('/users/me/avatar', file) as Promise<AvatarUploadResponse>,
 
-  deleteAvatar: () =>
-    fetch('/api/users/me/avatar', {
-      method: 'DELETE',
-      credentials: 'include',
-    }).then(async (res) => {
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error?.message || 'Failed to delete avatar');
-      }
-      return res.json() as Promise<{ success: boolean }>;
-    }),
+  deleteAvatar: () => del<{ success: boolean }>('/users/me/avatar'),
 };

@@ -186,16 +186,16 @@ import { Button, Input, Modal, Menu, MenuItem } from '../components/ui';
 
 ## Architecture Decisions
 
-| Decision        | Choice                           | Rationale                                                               |
-| --------------- | -------------------------------- | ----------------------------------------------------------------------- |
-| Server state    | TanStack Query                   | Automatic caching, background refetch, request deduplication            |
-| UI state        | URL search params + localStorage | Shareable URLs for panels, persisted preferences, zero dependencies     |
-| Ephemeral state | `useSyncExternalStore`           | Built-in React 18 API for presence/typing, no external libraries        |
-| UI primitives   | React Aria Components            | Accessible by default, keyboard nav, focus management, ARIA built-in    |
-| Styling         | Tailwind + tailwind-variants     | Utility-first with variant support via `tv()`, class merging via `cn()` |
-| Real-time       | SSE → update cache               | Instant UI updates without refetch flicker                              |
-| Threads         | Side panel                       | Matches Slack UX, main channel stays visible                            |
-| Auth            | Session cookies                  | Backend handles session; `credentials: 'include'` on all requests       |
+| Decision        | Choice                           | Rationale                                                                    |
+| --------------- | -------------------------------- | ---------------------------------------------------------------------------- |
+| Server state    | TanStack Query                   | Automatic caching, background refetch, request deduplication                 |
+| UI state        | URL search params + localStorage | Shareable URLs for panels, persisted preferences, zero dependencies          |
+| Ephemeral state | `useSyncExternalStore`           | Built-in React 18 API for presence/typing, no external libraries             |
+| UI primitives   | React Aria Components            | Accessible by default, keyboard nav, focus management, ARIA built-in         |
+| Styling         | Tailwind + tailwind-variants     | Utility-first with variant support via `tv()`, class merging via `cn()`      |
+| Real-time       | SSE → update cache               | Instant UI updates without refetch flicker                                   |
+| Threads         | Side panel                       | Matches Slack UX, main channel stays visible                                 |
+| Auth            | Bearer tokens                    | Token stored in localStorage; `Authorization: Bearer` header on all requests |
 
 ## API Integration
 
@@ -206,7 +206,7 @@ import { get, post, ApiError } from '@feather/api-client';
 import type { User, Message } from '@feather/api-client';
 ```
 
-- `credentials: 'include'` for session cookies
+- `Authorization: Bearer` header for authentication
 - Automatic error handling with `ApiError` class
 - Type-safe responses generated from OpenAPI spec
 

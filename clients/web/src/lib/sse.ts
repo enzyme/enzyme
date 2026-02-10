@@ -1,4 +1,4 @@
-import type { SSEEvent, SSEEventType } from '@feather/api-client';
+import { getAuthToken, type SSEEvent, type SSEEventType } from '@feather/api-client';
 
 type EventHandler<T extends SSEEvent = SSEEvent> = (event: T) => void;
 
@@ -29,8 +29,9 @@ export class SSEConnection {
     }
 
     this.isConnecting = true;
-    const url = `/api/workspaces/${this.workspaceId}/events`;
-    this.eventSource = new EventSource(url, { withCredentials: true });
+    const token = getAuthToken();
+    const url = `/api/workspaces/${this.workspaceId}/events${token ? `?token=${token}` : ''}`;
+    this.eventSource = new EventSource(url);
 
     this.eventSource.onopen = () => {
       this.isConnecting = false;

@@ -38,11 +38,15 @@ func (h *Handler) Register(ctx context.Context, request openapi.RegisterRequestO
 		}, nil
 	}
 
-	// Auto-login after registration
-	h.setUserID(ctx, u.ID)
+	// Create session token
+	token, err := h.sessionStore.Create(u.ID)
+	if err != nil {
+		return nil, err
+	}
 
 	return openapi.Register200JSONResponse{
-		User: userToAPI(u),
+		User:  userToAPI(u),
+		Token: token,
 	}, nil
 }
 
@@ -69,17 +73,25 @@ func (h *Handler) Login(ctx context.Context, request openapi.LoginRequestObject)
 		}, nil
 	}
 
-	h.setUserID(ctx, u.ID)
+	// Create session token
+	token, err := h.sessionStore.Create(u.ID)
+	if err != nil {
+		return nil, err
+	}
 
 	return openapi.Login200JSONResponse{
-		User: userToAPI(u),
+		User:  userToAPI(u),
+		Token: token,
 	}, nil
 }
 
 // Logout handles user logout
 func (h *Handler) Logout(ctx context.Context, request openapi.LogoutRequestObject) (openapi.LogoutResponseObject, error) {
-	if err := h.destroySession(ctx); err != nil {
-		return nil, err
+	token := auth.GetToken(ctx)
+	if token != "" {
+		if err := h.sessionStore.Delete(token); err != nil {
+			return nil, err
+		}
 	}
 
 	return openapi.Logout200JSONResponse{

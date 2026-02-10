@@ -11,6 +11,7 @@ import (
 	"github.com/feather/api/internal/message"
 	"github.com/feather/api/internal/notification"
 	"github.com/feather/api/internal/openapi"
+	"github.com/feather/api/internal/signing"
 	"github.com/feather/api/internal/sse"
 	"github.com/feather/api/internal/thread"
 	"github.com/feather/api/internal/user"
@@ -23,7 +24,7 @@ var _ openapi.StrictServerInterface = (*Handler)(nil)
 // Handler implements the generated StrictServerInterface
 type Handler struct {
 	authService         *auth.Service
-	sessionManager      *auth.SessionManager
+	sessionStore        *auth.SessionStore
 	userRepo            *user.Repository
 	workspaceRepo       *workspace.Repository
 	channelRepo         *channel.Repository
@@ -33,14 +34,16 @@ type Handler struct {
 	emojiRepo           *emoji.Repository
 	notificationService *notification.Service
 	hub                 *sse.Hub
+	signer              *signing.Signer
 	storagePath         string
 	maxUploadSize       int64
+	publicURL           string
 }
 
 // Dependencies holds all dependencies for the Handler
 type Dependencies struct {
 	AuthService         *auth.Service
-	SessionManager      *auth.SessionManager
+	SessionStore        *auth.SessionStore
 	UserRepo            *user.Repository
 	WorkspaceRepo       *workspace.Repository
 	ChannelRepo         *channel.Repository
@@ -50,15 +53,17 @@ type Dependencies struct {
 	EmojiRepo           *emoji.Repository
 	NotificationService *notification.Service
 	Hub                 *sse.Hub
+	Signer              *signing.Signer
 	StoragePath         string
 	MaxUploadSize       int64
+	PublicURL           string
 }
 
 // New creates a new Handler with all dependencies
 func New(deps Dependencies) *Handler {
 	return &Handler{
 		authService:         deps.AuthService,
-		sessionManager:      deps.SessionManager,
+		sessionStore:        deps.SessionStore,
 		userRepo:            deps.UserRepo,
 		workspaceRepo:       deps.WorkspaceRepo,
 		channelRepo:         deps.ChannelRepo,
@@ -68,8 +73,10 @@ func New(deps Dependencies) *Handler {
 		emojiRepo:           deps.EmojiRepo,
 		notificationService: deps.NotificationService,
 		hub:                 deps.Hub,
+		signer:              deps.Signer,
 		storagePath:         deps.StoragePath,
 		maxUploadSize:       deps.MaxUploadSize,
+		publicURL:           deps.PublicURL,
 	}
 }
 
@@ -89,24 +96,7 @@ func GetRequest(ctx context.Context) *http.Request {
 	return r
 }
 
-// getUserID gets the current user ID from the session via context
+// getUserID gets the current user ID from context (set by TokenMiddleware)
 func (h *Handler) getUserID(ctx context.Context) string {
-	r := GetRequest(ctx)
-	if r == nil {
-		return ""
-	}
-	return h.sessionManager.GetUserID(r)
-}
-
-// setUserID sets the user ID in the session
-func (h *Handler) setUserID(ctx context.Context, userID string) {
-	r := GetRequest(ctx)
-	if r != nil {
-		h.sessionManager.SetUserID(r, userID)
-	}
-}
-
-// destroySession destroys the current session
-func (h *Handler) destroySession(ctx context.Context) error {
-	return h.sessionManager.Destroy(ctx)
+	return auth.GetUserID(ctx)
 }

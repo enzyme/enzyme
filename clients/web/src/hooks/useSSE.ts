@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { SSEConnection } from '../lib/sse';
+import { getUrls } from '../lib/signedUrlCache';
 import { addTypingUser, removeTypingUser, setUserPresence } from '../lib/presenceStore';
 import {
   playNotificationSound,
@@ -42,6 +43,12 @@ export function useSSE(workspaceId: string | undefined) {
     // Handle new message
     connection.on('message.new', (event) => {
       const message = event.data;
+
+      // Pre-warm signed URL cache for any attachments
+      if (message.attachments && message.attachments.length > 0) {
+        const ids = message.attachments.map((a) => a.id);
+        getUrls(ids).catch(() => {}); // fire-and-forget
+      }
 
       // Thread replies go to thread cache, and optionally to channel if broadcast
       if (message.thread_parent_id) {
