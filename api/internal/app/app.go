@@ -142,7 +142,7 @@ func New(cfg *config.Config) (*App, error) {
 	}
 
 	// Create router with generated handlers
-	router := server.NewRouter(h, sseHandler, sessionStore, limiter)
+	router := server.NewRouter(h, sseHandler, sessionStore, limiter, cfg.Server.AllowedOrigins)
 
 	// Create server
 	srv := server.New(cfg.Server.Host, cfg.Server.Port, router)

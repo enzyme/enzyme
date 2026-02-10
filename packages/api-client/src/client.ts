@@ -1,6 +1,14 @@
 import type { ApiErrorResponse } from './types';
 
-const API_BASE = '/api';
+let apiBase = '/api';
+
+export function setApiBase(url: string): void {
+  apiBase = url;
+}
+
+export function getApiBase(): string {
+  return apiBase;
+}
 
 let authToken: string | null = null;
 
@@ -45,7 +53,7 @@ function authHeaders(): Record<string, string> {
 }
 
 export async function get<T>(endpoint: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const response = await fetch(`${apiBase}${endpoint}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -56,7 +64,7 @@ export async function get<T>(endpoint: string): Promise<T> {
 }
 
 export async function post<T>(endpoint: string, data?: unknown): Promise<T> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const response = await fetch(`${apiBase}${endpoint}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -80,7 +88,7 @@ export async function uploadFile(
   }
   formData.append('file', file);
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const response = await fetch(`${apiBase}${endpoint}`, {
     method: 'POST',
     headers: authHeaders(),
     body: formData,
@@ -89,7 +97,7 @@ export async function uploadFile(
 }
 
 export async function del<T>(endpoint: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const response = await fetch(`${apiBase}${endpoint}`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',

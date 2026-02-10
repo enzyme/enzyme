@@ -2,4 +2,14 @@
 export * from './types';
 
 // Re-export client utilities
-export { ApiError, get, post, uploadFile, del, setAuthToken, getAuthToken } from './client';
+export {
+  ApiError,
+  get,
+  post,
+  uploadFile,
+  del,
+  setAuthToken,
+  getAuthToken,
+  setApiBase,
+  getApiBase,
+} from './client';

@@ -13,9 +13,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Host      string `koanf:"host"`
-	Port      int    `koanf:"port"`
-	PublicURL string `koanf:"public_url"`
+	Host           string   `koanf:"host"`
+	Port           int      `koanf:"port"`
+	PublicURL      string   `koanf:"public_url"`
+	AllowedOrigins []string `koanf:"allowed_origins"`
 }
 
 type DatabaseConfig struct {
@@ -63,9 +64,10 @@ type SSEConfig struct {
 func Defaults() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Host:      "0.0.0.0",
-			Port:      8080,
-			PublicURL: "http://localhost:8080",
+			Host:           "0.0.0.0",
+			Port:           8080,
+			PublicURL:      "http://localhost:8080",
+			AllowedOrigins: []string{"http://localhost:3000"},
 		},
 		Database: DatabaseConfig{
 			Path: "./data/feather.db",

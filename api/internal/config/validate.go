@@ -20,6 +20,14 @@ func Validate(cfg *Config) error {
 		}
 	}
 
+	// Allowed origins validation
+	for i, origin := range cfg.Server.AllowedOrigins {
+		u, err := url.Parse(origin)
+		if err != nil || u.Scheme == "" || u.Host == "" {
+			errs = append(errs, fmt.Errorf("server.allowed_origins[%d] %q is not a valid URL with scheme", i, origin))
+		}
+	}
+
 	// Database validation
 	if cfg.Database.Path == "" {
 		errs = append(errs, fmt.Errorf("database.path is required"))

@@ -204,6 +204,14 @@ Loads in order (later overrides earlier):
 3. Environment (`FEATHER_` prefix)
 4. CLI flags
 
+**CORS** - `server.allowed_origins` controls which origins can make cross-origin requests. Defaults to `["http://localhost:3000"]`. Set to empty list for same-origin deployments. Each origin must include a scheme (`http://` or `https://`).
+
+**Frontend API Base URL** - The web client reads `VITE_API_BASE` env var at build time to set the API base URL (defaults to `/api`). Use this when the API is on a different domain:
+
+```bash
+VITE_API_BASE=https://api.example.com/api pnpm --filter @feather/web build
+```
+
 ### Testing
 
 **Run tests**:

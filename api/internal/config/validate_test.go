@@ -13,6 +13,46 @@ func validConfig() *Config {
 	return cfg
 }
 
+func TestValidate_AllowedOrigins_Valid(t *testing.T) {
+	cfg := validConfig()
+	cfg.Server.AllowedOrigins = []string{"http://localhost:3000", "https://app.example.com"}
+	if err := Validate(cfg); err != nil {
+		t.Fatalf("valid origins should pass: %v", err)
+	}
+}
+
+func TestValidate_AllowedOrigins_Empty(t *testing.T) {
+	cfg := validConfig()
+	cfg.Server.AllowedOrigins = nil
+	if err := Validate(cfg); err != nil {
+		t.Fatalf("empty origins should pass: %v", err)
+	}
+}
+
+func TestValidate_AllowedOrigins_NoScheme(t *testing.T) {
+	cfg := validConfig()
+	cfg.Server.AllowedOrigins = []string{"localhost:3000"}
+	err := Validate(cfg)
+	if err == nil {
+		t.Fatal("expected error for origin without scheme")
+	}
+	if !strings.Contains(err.Error(), "allowed_origins") {
+		t.Fatalf("expected error about allowed_origins, got: %v", err)
+	}
+}
+
+func TestValidate_AllowedOrigins_EmptyString(t *testing.T) {
+	cfg := validConfig()
+	cfg.Server.AllowedOrigins = []string{""}
+	err := Validate(cfg)
+	if err == nil {
+		t.Fatal("expected error for empty string origin")
+	}
+	if !strings.Contains(err.Error(), "allowed_origins") {
+		t.Fatalf("expected error about allowed_origins, got: %v", err)
+	}
+}
+
 func TestValidate_RateLimitDefaults(t *testing.T) {
 	cfg := validConfig()
 	if err := Validate(cfg); err != nil {

@@ -13,17 +13,29 @@ import (
 	"github.com/feather/api/internal/sse"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 )
 
 // NewRouter creates a new HTTP router with all routes registered
-func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.SessionStore, limiter *ratelimit.Limiter) http.Handler {
+func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.SessionStore, limiter *ratelimit.Limiter, allowedOrigins []string) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RealIP)
+
+	if len(allowedOrigins) > 0 {
+		r.Use(cors.Handler(cors.Options{
+			AllowedOrigins: allowedOrigins,
+			AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+			AllowedHeaders: []string{"Content-Type", "Authorization"},
+			ExposedHeaders: []string{"X-Request-Id"},
+			MaxAge:         86400,
+		}))
+	}
+
 	r.Use(ratelimit.Middleware(limiter))
 	r.Use(auth.TokenMiddleware(sessionStore))
 

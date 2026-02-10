@@ -87,9 +87,10 @@ func (d *defaultsProviderStruct) ReadBytes() ([]byte, error) {
 func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"server": map[string]interface{}{
-			"host":       d.defaults.Server.Host,
-			"port":       d.defaults.Server.Port,
-			"public_url": d.defaults.Server.PublicURL,
+			"host":            d.defaults.Server.Host,
+			"port":            d.defaults.Server.Port,
+			"public_url":      d.defaults.Server.PublicURL,
+			"allowed_origins": d.defaults.Server.AllowedOrigins,
 		},
 		"database": map[string]interface{}{
 			"path": d.defaults.Database.Path,
@@ -148,6 +149,7 @@ func SetupFlags() *pflag.FlagSet {
 	flags.String("files.storage_path", "", "File storage path")
 	flags.Int64("files.max_upload_size", 0, "Max upload size in bytes")
 	flags.Bool("email.enabled", false, "Enable email sending")
+	flags.StringSlice("server.allowed_origins", nil, "Allowed CORS origins")
 	return flags
 }
 
