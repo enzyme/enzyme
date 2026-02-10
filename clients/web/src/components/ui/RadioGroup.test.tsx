@@ -97,6 +97,29 @@ describe('RadioGroup', () => {
     expect(radios[1]).toBeDisabled();
   });
 
+  it('applies data-selected attribute to selected radio', async () => {
+    const user = userEvent.setup();
+
+    const { container } = render(
+      <RadioGroup>
+        <Radio value="a">Option A</Radio>
+        <Radio value="b">Option B</Radio>
+      </RadioGroup>,
+    );
+
+    const radios = screen.getAllByRole('radio');
+    await user.click(radios[0]);
+
+    // React Aria sets data-selected on the AriaRadio wrapper element
+    // which is where Tailwind data-[selected]: styles are applied
+    const selectedElements = container.querySelectorAll('[data-selected]');
+    expect(selectedElements.length).toBe(1);
+
+    // The selected element should be associated with radio "a"
+    const selectedRadio = selectedElements[0].querySelector('input[type="radio"]');
+    expect(selectedRadio).toBe(radios[0]);
+  });
+
   it('supports keyboard navigation with arrow keys', async () => {
     const user = userEvent.setup();
     const handleChange = vi.fn();
