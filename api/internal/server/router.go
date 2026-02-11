@@ -88,7 +88,6 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.S
 		r.Get("/emojis/{workspaceId}/{filename}", h.ServeEmoji)
 
 		r.Group(func(r chi.Router) {
-			r.Use(auth.SSETokenMiddleware(sessionStore))
 			r.Use(auth.RequireAuth())
 			r.Get("/workspaces/{wid}/events", sseHandler.Events)
 			r.Post("/workspaces/{wid}/typing/start", sseHandler.StartTyping)

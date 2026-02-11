@@ -2,6 +2,7 @@
 
 BINARY_NAME=feather
 BUILD_DIR=./bin
+VERSION ?= dev
 
 generate:
 	@mkdir -p internal/openapi
@@ -10,7 +11,7 @@ generate:
 generate-types: generate
 
 build: generate
-	go build -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/feather
+	go build -ldflags "-X github.com/feather/api/internal/version.Version=$(VERSION)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/feather
 
 run: build
 	$(BUILD_DIR)/$(BINARY_NAME)

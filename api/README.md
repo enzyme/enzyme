@@ -152,7 +152,7 @@ POST /api/workspaces/{id}/typing/stop
 
 ## SSE Events
 
-Connect to `/api/workspaces/{id}/events?token=<token>` for real-time updates. Supports `Last-Event-ID` header for reconnection catch-up.
+Connect to `/api/workspaces/{id}/events` with `Authorization: Bearer <token>` header for real-time updates. Supports `Last-Event-ID` header for reconnection catch-up.
 
 Event types:
 - `connected`, `heartbeat`

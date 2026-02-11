@@ -12,4 +12,5 @@ export {
   getAuthToken,
   setApiBase,
   getApiBase,
+  authHeaders,
 } from './client';

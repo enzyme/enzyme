@@ -48,6 +48,7 @@ feather/
 │   │   ├── sse/                # Server-Sent Events (hub, handlers - manual)
 │   │   ├── presence/           # Online/away/offline tracking
 │   │   ├── email/              # Email service + templates
+│   │   ├── version/            # Server version (set via ldflags)
 │   │   └── server/             # HTTP server, router (chi)
 │   └── Makefile
 ├── clients/
@@ -142,7 +143,7 @@ import { get, post, ApiError } from '@feather/api-client';
 - Tokens stored in `sessions` table with `user_id` and `expiry`
 - bcrypt (cost 12) for passwords
 - Get user: `auth.GetUserID(ctx)`, get token: `auth.GetToken(ctx)`
-- SSE uses `?token=` query param (EventSource can't set headers)
+- SSE uses `Authorization: Bearer` header via `eventsource` npm package with `fetch` override
 
 **IDs** - ULIDs via `ulid.Make().String()`
 
@@ -163,7 +164,8 @@ import { get, post, ApiError } from '@feather/api-client';
 | `api/internal/handler/handler.go`    | Main handler implementing StrictServerInterface |
 | `api/internal/app/app.go`            | Dependency wiring                               |
 | `api/internal/server/router.go`      | Router setup, mounts generated handlers         |
-| `api/internal/auth/middleware.go`    | Auth middleware (used for SSE routes)           |
+| `api/internal/auth/middleware.go`    | Auth middleware                                 |
+| `api/internal/version/version.go`    | Server version variable (set via ldflags)       |
 | `api/internal/sse/hub.go`            | Real-time broadcasting                          |
 
 ### Common API Tasks

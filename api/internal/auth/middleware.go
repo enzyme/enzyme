@@ -68,28 +68,6 @@ func GetToken(ctx context.Context) string {
 	return token
 }
 
-// SSETokenMiddleware checks the ?token= query param and sets user in context if valid.
-// This should only be applied to SSE routes (EventSource can't set headers).
-func SSETokenMiddleware(store *SessionStore) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Only check query param if no user already set by TokenMiddleware
-			if GetUserID(r.Context()) == "" {
-				token := r.URL.Query().Get("token")
-				if token != "" {
-					userID, err := store.Validate(token)
-					if err == nil && userID != "" {
-						ctx := context.WithValue(r.Context(), userIDKey, userID)
-						ctx = context.WithValue(ctx, tokenKey, token)
-						r = r.WithContext(ctx)
-					}
-				}
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
 // extractBearerToken checks the Authorization header only.
 func extractBearerToken(r *http.Request) string {
 	auth := r.Header.Get("Authorization")

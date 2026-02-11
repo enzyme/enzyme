@@ -44,7 +44,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-function authHeaders(): Record<string, string> {
+export function authHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   if (authToken) {
     headers['Authorization'] = `Bearer ${authToken}`;

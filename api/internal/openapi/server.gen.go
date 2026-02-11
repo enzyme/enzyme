@@ -343,6 +343,11 @@ type SendMessageInput struct {
 	ThreadParentId *string   `json:"thread_parent_id,omitempty"`
 }
 
+// ServerInfo defines model for ServerInfo.
+type ServerInfo struct {
+	Version string `json:"version"`
+}
+
 // SignedUrl defines model for SignedUrl.
 type SignedUrl struct {
 	ExpiresAt time.Time `json:"expires_at"`
@@ -899,6 +904,9 @@ type ServerInterface interface {
 	// Update a message
 	// (POST /messages/{id}/update)
 	UpdateMessage(w http.ResponseWriter, r *http.Request, id MessageId)
+	// Get server information
+	// (GET /server-info)
+	GetServerInfo(w http.ResponseWriter, r *http.Request)
 	// Remove avatar
 	// (DELETE /users/me/avatar)
 	DeleteAvatar(w http.ResponseWriter, r *http.Request)
@@ -1193,6 +1201,12 @@ func (_ Unimplemented) UnsubscribeFromThread(w http.ResponseWriter, r *http.Requ
 // Update a message
 // (POST /messages/{id}/update)
 func (_ Unimplemented) UpdateMessage(w http.ResponseWriter, r *http.Request, id MessageId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get server information
+// (GET /server-info)
+func (_ Unimplemented) GetServerInfo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2398,6 +2412,20 @@ func (siw *ServerInterfaceWrapper) UpdateMessage(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetServerInfo operation middleware
+func (siw *ServerInterfaceWrapper) GetServerInfo(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetServerInfo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteAvatar operation middleware
 func (siw *ServerInterfaceWrapper) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
 
@@ -3279,6 +3307,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/messages/{id}/update", wrapper.UpdateMessage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/server-info", wrapper.GetServerInfo)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/users/me/avatar", wrapper.DeleteAvatar)
@@ -4848,6 +4879,22 @@ func (response UpdateMessage404JSONResponse) VisitUpdateMessageResponse(w http.R
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetServerInfoRequestObject struct {
+}
+
+type GetServerInfoResponseObject interface {
+	VisitGetServerInfoResponse(w http.ResponseWriter) error
+}
+
+type GetServerInfo200JSONResponse ServerInfo
+
+func (response GetServerInfo200JSONResponse) VisitGetServerInfoResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type DeleteAvatarRequestObject struct {
 }
 
@@ -5817,6 +5864,9 @@ type StrictServerInterface interface {
 	// Update a message
 	// (POST /messages/{id}/update)
 	UpdateMessage(ctx context.Context, request UpdateMessageRequestObject) (UpdateMessageResponseObject, error)
+	// Get server information
+	// (GET /server-info)
+	GetServerInfo(ctx context.Context, request GetServerInfoRequestObject) (GetServerInfoResponseObject, error)
 	// Remove avatar
 	// (DELETE /users/me/avatar)
 	DeleteAvatar(ctx context.Context, request DeleteAvatarRequestObject) (DeleteAvatarResponseObject, error)
@@ -6978,6 +7028,30 @@ func (sh *strictHandler) UpdateMessage(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateMessageResponseObject); ok {
 		if err := validResponse.VisitUpdateMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetServerInfo operation middleware
+func (sh *strictHandler) GetServerInfo(w http.ResponseWriter, r *http.Request) {
+	var request GetServerInfoRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetServerInfo(ctx, request.(GetServerInfoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetServerInfo")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetServerInfoResponseObject); ok {
+		if err := validResponse.VisitGetServerInfoResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

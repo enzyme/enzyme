@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/server-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get server information */
+        get: operations["getServerInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/register": {
         parameters: {
             query?: never;
@@ -1284,6 +1301,9 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
         };
+        ServerInfo: {
+            version: string;
+        };
         SuccessResponse: {
             success: boolean;
         };
@@ -1635,6 +1655,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getServerInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Server information */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerInfo"];
+                };
+            };
+        };
+    };
     register: {
         parameters: {
             query?: never;

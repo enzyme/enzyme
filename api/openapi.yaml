@@ -9,6 +9,8 @@ servers:
     description: API server
 
 tags:
+  - name: server
+    description: Server information
   - name: auth
     description: Authentication endpoints
   - name: users
@@ -27,6 +29,20 @@ tags:
     description: Server-Sent Events
 
 paths:
+  # Server endpoints
+  /server-info:
+    get:
+      tags: [server]
+      summary: Get server information
+      operationId: getServerInfo
+      responses:
+        '200':
+          description: Server information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerInfo'
+
   # Auth endpoints
   /auth/register:
     post:
@@ -2390,6 +2406,13 @@ components:
         expires_at:
           type: string
           format: date-time
+
+    ServerInfo:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: string
 
     SuccessResponse:
       type: object
