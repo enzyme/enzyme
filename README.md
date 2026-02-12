@@ -106,4 +106,4 @@ This builds binaries for 6 platforms and creates a GitHub Release with:
 
 ## License
 
-[Add license here]
+MIT - see [LICENSE](LICENSE) for details.
