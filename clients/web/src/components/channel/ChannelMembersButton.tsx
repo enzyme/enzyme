@@ -16,8 +16,8 @@ export function ChannelMembersButton({
 }: ChannelMembersButtonProps) {
   const { data, isLoading } = useChannelMembers(channelId);
 
-  // Hide for DM channels
-  if (channelType === 'dm' || channelType === 'group_dm') {
+  // Hide for 1:1 DM channels only
+  if (channelType === 'dm') {
     return null;
   }
 

@@ -46,6 +46,7 @@ import {
 } from '../../hooks/useChannels';
 import { cn, getAvatarColor } from '../../lib/utils';
 import { useUserPresence } from '../../lib/presenceStore';
+import { AvatarStack } from '../ui';
 import type { ChannelWithMembership, ChannelType, SuggestedUser } from '@feather/api-client';
 
 function ChannelIcon({ type, className }: { type: string; className?: string }) {
@@ -633,9 +634,17 @@ function ChannelItemContent({ channel, isActive }: ChannelItemContentProps) {
 
   const hasUnread = channel.unread_count > 0;
 
+  const avatarStackUsers = channel.dm_participants?.map((p) => ({
+    user_id: p.user_id,
+    display_name: p.display_name,
+    avatar_url: p.avatar_url,
+  }));
+
   return (
     <>
-      {isDM && dmParticipant ? (
+      {channel.type === 'group_dm' && avatarStackUsers && avatarStackUsers.length > 0 ? (
+        <AvatarStack users={avatarStackUsers} max={2} size="xs" showCount={false} />
+      ) : isDM && dmParticipant ? (
         <Avatar
           src={dmParticipant.avatar_url}
           name={dmParticipant.display_name}
@@ -827,7 +836,7 @@ function NewDMModal({
   const { user } = useAuth();
   const { data: membersData } = useWorkspaceMembers(workspaceId);
   const createDM = useCreateDM(workspaceId);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
 
   const members = membersData?.members;
   const otherMembers = useMemo(() => {
@@ -835,14 +844,34 @@ function NewDMModal({
     return members.filter((m) => m.user_id !== user.id);
   }, [members, user]);
 
+  const toggleUser = (userId: string) => {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const removeUser = (userId: string) => {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      next.delete(userId);
+      return next;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUserId) return;
+    if (selectedUserIds.size === 0) return;
 
     try {
-      const result = await createDM.mutateAsync({ user_ids: [selectedUserId] });
+      const result = await createDM.mutateAsync({ user_ids: Array.from(selectedUserIds) });
       onClose();
-      setSelectedUserId(null);
+      setSelectedUserIds(new Set());
       navigate(`/workspaces/${workspaceId}/channels/${result.channel.id}`);
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Failed to start conversation', 'error');
@@ -851,22 +880,59 @@ function NewDMModal({
 
   const handleClose = () => {
     onClose();
-    setSelectedUserId(null);
+    setSelectedUserIds(new Set());
   };
+
+  // Selected members for chips display
+  const selectedMembers = otherMembers.filter((m) => selectedUserIds.has(m.user_id));
+  // Total participants including current user
+  const totalParticipants = selectedUserIds.size + 1;
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="New Message">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Selected user chips */}
+        {selectedMembers.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {selectedMembers.map((member) => {
+              const displayName = member.display_name_override || member.display_name;
+              return (
+                <span
+                  key={member.user_id}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2.5 py-1 text-sm text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
+                >
+                  {displayName}
+                  <button
+                    type="button"
+                    onClick={() => removeUser(member.user_id)}
+                    className="ml-0.5 rounded-full p-0.5 hover:bg-primary-200 dark:hover:bg-primary-800/50"
+                  >
+                    <svg className="h-3 w-3" viewBox="0 0 12 12" fill="currentColor">
+                      <path d="M3.05 3.05a.75.75 0 011.06 0L6 4.94l1.89-1.89a.75.75 0 111.06 1.06L7.06 6l1.89 1.89a.75.75 0 11-1.06 1.06L6 7.06 4.11 8.95a.75.75 0 01-1.06-1.06L4.94 6 3.05 4.11a.75.75 0 010-1.06z" />
+                    </svg>
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        {totalParticipants >= 8 && (
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            Consider creating a channel for larger groups
+          </p>
+        )}
+
         <div className="max-h-64 space-y-1 overflow-y-auto">
           {otherMembers.map((member) => {
             const displayName = member.display_name_override || member.display_name;
-            const isSelected = selectedUserId === member.user_id;
+            const isSelected = selectedUserIds.has(member.user_id);
 
             return (
               <button
                 key={member.user_id}
                 type="button"
-                onClick={() => setSelectedUserId(member.user_id)}
+                onClick={() => toggleUser(member.user_id)}
                 className={cn(
                   'flex w-full items-center gap-3 rounded px-3 py-2 text-left',
                   isSelected
@@ -886,7 +952,20 @@ function NewDMModal({
                     {displayName.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="text-gray-900 dark:text-white">{displayName}</span>
+                <span className="flex-1 text-gray-900 dark:text-white">{displayName}</span>
+                {isSelected && (
+                  <svg
+                    className="h-5 w-5 text-primary-600 dark:text-primary-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
               </button>
             );
           })}
@@ -901,8 +980,12 @@ function NewDMModal({
           <Button type="button" variant="secondary" onPress={handleClose}>
             Cancel
           </Button>
-          <Button type="submit" isDisabled={!selectedUserId} isLoading={createDM.isPending}>
-            Start Conversation
+          <Button
+            type="submit"
+            isDisabled={selectedUserIds.size === 0}
+            isLoading={createDM.isPending}
+          >
+            {selectedUserIds.size <= 1 ? 'Start Conversation' : 'Start Group Conversation'}
           </Button>
         </div>
       </form>

@@ -427,3 +427,170 @@ func TestRepository_ListMemberChannelIDs(t *testing.T) {
 		t.Errorf("expected both channel IDs in list")
 	}
 }
+
+func TestComputeDMHash_Consistent(t *testing.T) {
+	hash1 := ComputeDMHash([]string{"a", "b", "c"})
+	hash2 := ComputeDMHash([]string{"c", "a", "b"})
+	hash3 := ComputeDMHash([]string{"b", "c", "a"})
+
+	if hash1 != hash2 || hash2 != hash3 {
+		t.Errorf("ComputeDMHash should be order-independent: %q, %q, %q", hash1, hash2, hash3)
+	}
+}
+
+func TestRepository_AddMemberToDM(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	user3 := testutil.CreateTestUser(t, db, "user3@example.com", "User 3")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	// Create a 1:1 DM
+	dm, err := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID})
+	if err != nil {
+		t.Fatalf("CreateDM() error = %v", err)
+	}
+	if dm.Type != TypeDM {
+		t.Fatalf("Type = %q, want %q", dm.Type, TypeDM)
+	}
+
+	// Add a third member — should convert to group_dm
+	currentIDs := []string{user1.ID, user2.ID}
+	updatedCh, err := repo.AddMemberToDM(ctx, dm.ID, user3.ID, currentIDs)
+	if err != nil {
+		t.Fatalf("AddMemberToDM() error = %v", err)
+	}
+
+	if updatedCh.Type != TypeGroupDM {
+		t.Errorf("Type = %q, want %q", updatedCh.Type, TypeGroupDM)
+	}
+
+	// Verify hash was updated
+	expectedHash := ComputeDMHash([]string{user1.ID, user2.ID, user3.ID})
+	if updatedCh.DMParticipantHash == nil || *updatedCh.DMParticipantHash != expectedHash {
+		t.Errorf("DMParticipantHash = %v, want %q", updatedCh.DMParticipantHash, expectedHash)
+	}
+
+	// Verify user3 is now a member
+	_, err = repo.GetMembership(ctx, user3.ID, dm.ID)
+	if err != nil {
+		t.Errorf("GetMembership() for new member error = %v", err)
+	}
+}
+
+func TestRepository_AddMemberToDM_AlreadyMember(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	dm, _ := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID})
+
+	_, err := repo.AddMemberToDM(ctx, dm.ID, user1.ID, []string{user1.ID, user2.ID})
+	if !errors.Is(err, ErrAlreadyMember) {
+		t.Errorf("AddMemberToDM() error = %v, want %v", err, ErrAlreadyMember)
+	}
+}
+
+func TestRepository_LeaveGroupDM(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	user3 := testutil.CreateTestUser(t, db, "user3@example.com", "User 3")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	// Create a group DM
+	dm, err := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID, user3.ID})
+	if err != nil {
+		t.Fatalf("CreateDM() error = %v", err)
+	}
+	if dm.Type != TypeGroupDM {
+		t.Fatalf("Type = %q, want %q", dm.Type, TypeGroupDM)
+	}
+
+	// User3 leaves — should convert back to dm
+	err = repo.LeaveGroupDM(ctx, user3.ID, dm.ID)
+	if err != nil {
+		t.Fatalf("LeaveGroupDM() error = %v", err)
+	}
+
+	updatedCh, err := repo.GetByID(ctx, dm.ID)
+	if err != nil {
+		t.Fatalf("GetByID() error = %v", err)
+	}
+
+	if updatedCh.Type != TypeDM {
+		t.Errorf("Type = %q, want %q after leaving", updatedCh.Type, TypeDM)
+	}
+
+	// Verify hash matches remaining two users
+	expectedHash := ComputeDMHash([]string{user1.ID, user2.ID})
+	if updatedCh.DMParticipantHash == nil || *updatedCh.DMParticipantHash != expectedHash {
+		t.Errorf("DMParticipantHash = %v, want %q", updatedCh.DMParticipantHash, expectedHash)
+	}
+
+	// Verify user3 is no longer a member
+	_, err = repo.GetMembership(ctx, user3.ID, dm.ID)
+	if !errors.Is(err, ErrNotChannelMember) {
+		t.Errorf("GetMembership() for removed member error = %v, want %v", err, ErrNotChannelMember)
+	}
+}
+
+func TestRepository_LeaveGroupDM_StaysGroupDMWith3Plus(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	user3 := testutil.CreateTestUser(t, db, "user3@example.com", "User 3")
+	user4 := testutil.CreateTestUser(t, db, "user4@example.com", "User 4")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	dm, _ := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID, user3.ID, user4.ID})
+
+	// User4 leaves — still 3 members, should stay group_dm
+	err := repo.LeaveGroupDM(ctx, user4.ID, dm.ID)
+	if err != nil {
+		t.Fatalf("LeaveGroupDM() error = %v", err)
+	}
+
+	updatedCh, _ := repo.GetByID(ctx, dm.ID)
+	if updatedCh.Type != TypeGroupDM {
+		t.Errorf("Type = %q, want %q (still 3 members)", updatedCh.Type, TypeGroupDM)
+	}
+}
+
+func TestRepository_RemoveMember_AllowsGroupDM(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	user3 := testutil.CreateTestUser(t, db, "user3@example.com", "User 3")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	dm, _ := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID, user3.ID})
+
+	// RemoveMember should work for group_dm (delegates to LeaveGroupDM)
+	err := repo.RemoveMember(ctx, user3.ID, dm.ID)
+	if err != nil {
+		t.Fatalf("RemoveMember() for group_dm error = %v", err)
+	}
+
+	// Verify user3 is gone
+	_, err = repo.GetMembership(ctx, user3.ID, dm.ID)
+	if !errors.Is(err, ErrNotChannelMember) {
+		t.Errorf("expected ErrNotChannelMember, got %v", err)
+	}
+}

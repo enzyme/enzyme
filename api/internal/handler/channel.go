@@ -271,6 +271,54 @@ func (h *Handler) AddChannelMember(ctx context.Context, request openapi.AddChann
 		return openapi.AddChannelMember404JSONResponse{NotFoundJSONResponse: notFoundResponse("User is not a member of the workspace")}, nil
 	}
 
+	// DM-specific handling
+	if ch.Type == channel.TypeDM || ch.Type == channel.TypeGroupDM {
+		// Enforce soft participant limit
+		currentMemberIDs, err := h.channelRepo.GetMemberUserIDs(ctx, string(request.Id))
+		if err != nil {
+			return nil, err
+		}
+		if len(currentMemberIDs) >= 8 {
+			return openapi.AddChannelMember400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Group DMs are limited to 8 participants. Consider creating a channel instead.")}, nil
+		}
+
+		updatedCh, err := h.channelRepo.AddMemberToDM(ctx, string(request.Id), request.Body.UserId, currentMemberIDs)
+		if err != nil {
+			if errors.Is(err, channel.ErrAlreadyMember) {
+				return openapi.AddChannelMember200JSONResponse{Success: true}, nil
+			}
+			return nil, err
+		}
+
+		// Update SSE hub cache
+		if h.hub != nil {
+			h.hub.AddChannelMember(string(request.Id), request.Body.UserId)
+
+			// Broadcast member added event
+			h.hub.BroadcastToChannel(ch.WorkspaceID, string(request.Id), sse.Event{
+				Type: sse.EventMemberAdded,
+				Data: map[string]string{
+					"channel_id": string(request.Id),
+					"user_id":    request.Body.UserId,
+				},
+			})
+
+			// Broadcast channel updated if type changed (dm -> group_dm)
+			if updatedCh.Type != ch.Type {
+				apiCh := channelToAPI(updatedCh)
+				h.hub.BroadcastToChannel(ch.WorkspaceID, string(request.Id), sse.Event{
+					Type: sse.EventChannelUpdated,
+					Data: apiCh,
+				})
+			}
+		}
+
+		// Create system message
+		h.createAddedSystemMessage(ctx, ch, request.Body.UserId, userID)
+
+		return openapi.AddChannelMember200JSONResponse{Success: true}, nil
+	}
+
 	role := "poster"
 	if request.Body.Role != nil {
 		role = string(*request.Body.Role)
@@ -399,7 +447,7 @@ func (h *Handler) LeaveChannel(ctx context.Context, request openapi.LeaveChannel
 		return openapi.LeaveChannel401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
 	}
 
-	// Get channel for system message (before leaving)
+	// Get channel for system message and type comparison (before leaving)
 	ch, err := h.channelRepo.GetByID(ctx, string(request.Id))
 	if err != nil {
 		return nil, err
@@ -407,6 +455,9 @@ func (h *Handler) LeaveChannel(ctx context.Context, request openapi.LeaveChannel
 
 	err = h.channelRepo.RemoveMember(ctx, userID, string(request.Id))
 	if err != nil {
+		if errors.Is(err, channel.ErrCannotLeaveChannel) {
+			return openapi.LeaveChannel400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Cannot leave this channel")}, nil
+		}
 		if errors.Is(err, channel.ErrCannotLeaveDefault) {
 			return openapi.LeaveChannel400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Cannot leave the default channel")}, nil
 		}
@@ -416,6 +467,27 @@ func (h *Handler) LeaveChannel(ctx context.Context, request openapi.LeaveChannel
 	// Update SSE hub cache for channel membership
 	if h.hub != nil {
 		h.hub.RemoveChannelMember(string(request.Id), userID)
+
+		// Broadcast member removed
+		h.hub.BroadcastToChannel(ch.WorkspaceID, string(request.Id), sse.Event{
+			Type: sse.EventMemberRemoved,
+			Data: map[string]string{
+				"channel_id": string(request.Id),
+				"user_id":    userID,
+			},
+		})
+
+		// For group DMs, broadcast channel updated (type/hash may have changed)
+		if ch.Type == channel.TypeGroupDM {
+			updatedCh, err := h.channelRepo.GetByID(ctx, string(request.Id))
+			if err == nil {
+				apiCh := channelToAPI(updatedCh)
+				h.hub.BroadcastToChannel(ch.WorkspaceID, string(request.Id), sse.Event{
+					Type: sse.EventChannelUpdated,
+					Data: apiCh,
+				})
+			}
+		}
 	}
 
 	// Create system message

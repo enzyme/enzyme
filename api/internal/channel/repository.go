@@ -71,7 +71,7 @@ func (r *Repository) Create(ctx context.Context, channel *Channel, creatorID str
 }
 
 func (r *Repository) CreateDM(ctx context.Context, workspaceID string, userIDs []string) (*Channel, error) {
-	hash := computeDMHash(userIDs)
+	hash := ComputeDMHash(userIDs)
 
 	// Check if DM already exists
 	var existingID string
@@ -397,16 +397,21 @@ func (r *Repository) UpdateMemberRole(ctx context.Context, userID, channelID str
 }
 
 func (r *Repository) RemoveMember(ctx context.Context, userID, channelID string) error {
-	// Check channel type - can't leave DMs or default channels
-	channel, err := r.GetByID(ctx, channelID)
+	// Check channel type - can't leave 1:1 DMs or default channels
+	ch, err := r.GetByID(ctx, channelID)
 	if err != nil {
 		return err
 	}
-	if channel.Type == TypeDM {
+	if ch.Type == TypeDM {
 		return ErrCannotLeaveChannel
 	}
-	if channel.IsDefault {
+	if ch.IsDefault {
 		return ErrCannotLeaveDefault
+	}
+
+	// Group DMs need special handling (hash update, possible type conversion)
+	if ch.Type == TypeGroupDM {
+		return r.LeaveGroupDM(ctx, userID, channelID)
 	}
 
 	result, err := r.db.ExecContext(ctx, `
@@ -420,6 +425,119 @@ func (r *Repository) RemoveMember(ctx context.Context, userID, channelID string)
 		return ErrNotChannelMember
 	}
 	return nil
+}
+
+// AddMemberToDM adds a member to a DM or group DM, updating the hash and converting dm -> group_dm if needed.
+func (r *Repository) AddMemberToDM(ctx context.Context, channelID, userID string, currentMemberIDs []string) (*Channel, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	now := time.Now().UTC()
+
+	// Insert membership
+	membershipID := ulid.Make().String()
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO channel_memberships (id, user_id, channel_id, channel_role, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, membershipID, userID, channelID, "poster", now.Format(time.RFC3339), now.Format(time.RFC3339))
+	if err != nil {
+		if isUniqueConstraintError(err) {
+			return nil, ErrAlreadyMember
+		}
+		return nil, err
+	}
+
+	// Compute new hash with all members including the new one
+	allMemberIDs := append(currentMemberIDs, userID)
+	newHash := ComputeDMHash(allMemberIDs)
+
+	// Determine new type
+	newType := TypeDM
+	if len(allMemberIDs) >= 3 {
+		newType = TypeGroupDM
+	}
+
+	// Update channel hash and type
+	_, err = tx.ExecContext(ctx, `
+		UPDATE channels SET type = ?, dm_participant_hash = ?, updated_at = ?
+		WHERE id = ?
+	`, newType, newHash, now.Format(time.RFC3339), channelID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return r.GetByID(ctx, channelID)
+}
+
+// LeaveGroupDM removes a member from a group DM, updating the hash and converting group_dm -> dm if only 2 remain.
+func (r *Repository) LeaveGroupDM(ctx context.Context, userID, channelID string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	now := time.Now().UTC()
+
+	// Remove membership
+	result, err := tx.ExecContext(ctx, `
+		DELETE FROM channel_memberships WHERE user_id = ? AND channel_id = ?
+	`, userID, channelID)
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrNotChannelMember
+	}
+
+	// Get remaining member IDs
+	memberRows, err := tx.QueryContext(ctx, `
+		SELECT user_id FROM channel_memberships WHERE channel_id = ?
+	`, channelID)
+	if err != nil {
+		return err
+	}
+	defer memberRows.Close()
+
+	var remainingIDs []string
+	for memberRows.Next() {
+		var id string
+		if err := memberRows.Scan(&id); err != nil {
+			return err
+		}
+		remainingIDs = append(remainingIDs, id)
+	}
+	if err := memberRows.Err(); err != nil {
+		return err
+	}
+
+	// Recompute hash
+	newHash := ComputeDMHash(remainingIDs)
+
+	// Convert to dm if exactly 2 remain
+	newType := TypeGroupDM
+	if len(remainingIDs) == 2 {
+		newType = TypeDM
+	}
+
+	// Update channel
+	_, err = tx.ExecContext(ctx, `
+		UPDATE channels SET type = ?, dm_participant_hash = ?, updated_at = ?
+		WHERE id = ?
+	`, newType, newHash, now.Format(time.RFC3339), channelID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *Repository) ListMembers(ctx context.Context, channelID string) ([]MemberInfo, error) {
@@ -725,7 +843,7 @@ func (r *Repository) scanChannel(row *sql.Row) (*Channel, error) {
 	return &c, nil
 }
 
-func computeDMHash(userIDs []string) string {
+func ComputeDMHash(userIDs []string) string {
 	sorted := make([]string, len(userIDs))
 	copy(sorted, userIDs)
 	sort.Strings(sorted)

@@ -186,24 +186,35 @@ export function ChannelDetailsModal({
     </div>
   );
 
+  const isGroupDM = channel.type === 'group_dm';
   const isLoading = membersLoading || (canAddMembers && workspaceMembersLoading);
 
+  // For group DMs, default to members tab since there's no about tab
+  const effectiveTab = isGroupDM && selectedTab === 'about' ? 'members' : selectedTab;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Channel Details" size="md">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isGroupDM ? 'Conversation Details' : 'Channel Details'}
+      size="md"
+    >
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
           <Spinner />
         </div>
       ) : (
-        <Tabs selectedKey={selectedTab} onSelectionChange={(key) => setSelectedTab(key as TabId)}>
+        <Tabs selectedKey={effectiveTab} onSelectionChange={(key) => setSelectedTab(key as TabId)}>
           <TabList>
-            <Tab id="about">About</Tab>
+            {!isGroupDM && <Tab id="about">About</Tab>}
             <Tab id="members">Members ({members.length})</Tab>
             {canAddMembers && <Tab id="add">Add Members</Tab>}
           </TabList>
-          <TabPanel id="about" className="pt-4">
-            {renderAboutTab()}
-          </TabPanel>
+          {!isGroupDM && (
+            <TabPanel id="about" className="pt-4">
+              {renderAboutTab()}
+            </TabPanel>
+          )}
           <TabPanel id="members" className="pt-4">
             {renderMemberList(members)}
           </TabPanel>

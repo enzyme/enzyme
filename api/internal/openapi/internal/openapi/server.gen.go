@@ -3787,6 +3787,15 @@ func (response AddChannelMember200JSONResponse) VisitAddChannelMemberResponse(w 
 	return json.NewEncoder(w).Encode(response)
 }
 
+type AddChannelMember400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AddChannelMember400JSONResponse) VisitAddChannelMemberResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type AddChannelMember401JSONResponse struct{ UnauthorizedJSONResponse }
 
 func (response AddChannelMember401JSONResponse) VisitAddChannelMemberResponse(w http.ResponseWriter) error {

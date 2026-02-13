@@ -188,7 +188,7 @@ export function ChannelPage() {
   const isMember = channel?.channel_role !== undefined;
   const canJoin = channel && channel.type === 'public' && !isMember;
   const canArchive = channel && channel.type !== 'dm' && channel.type !== 'group_dm';
-  const canLeave = channel && channel.type !== 'dm' && channel.type !== 'group_dm' && isMember;
+  const canLeave = channel && channel.type !== 'dm' && !channel.is_default && isMember;
   const canEditChannel =
     channel &&
     channel.type !== 'dm' &&
@@ -340,11 +340,20 @@ export function ChannelPage() {
       <Modal
         isOpen={isLeaveModalOpen}
         onClose={() => setIsLeaveModalOpen(false)}
-        title="Leave channel"
+        title={channel.type === 'group_dm' ? 'Leave conversation' : 'Leave channel'}
       >
         <p className="mb-4 text-gray-600 dark:text-gray-300">
-          Are you sure you want to leave <strong>#{channel.name}</strong>? You can rejoin anytime if
-          it's a public channel.
+          {channel.type === 'group_dm' ? (
+            <>
+              Are you sure you want to leave this group conversation? You will lose access to the
+              message history.
+            </>
+          ) : (
+            <>
+              Are you sure you want to leave <strong>#{channel.name}</strong>? You can rejoin
+              anytime if it's a public channel.
+            </>
+          )}
         </p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setIsLeaveModalOpen(false)}>
