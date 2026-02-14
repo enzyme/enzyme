@@ -4,6 +4,7 @@ import {
   type CreateChannelInput,
   type CreateDMInput,
   type UpdateChannelInput,
+  type ConvertGroupDMInput,
 } from '../api/channels';
 import type { ChannelWithMembership } from '@feather/api-client';
 
@@ -230,6 +231,17 @@ export function useUnstarChannel(workspaceId: string) {
       }
     },
     onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['channels', workspaceId] });
+    },
+  });
+}
+
+export function useConvertGroupDMToChannel(workspaceId: string, channelId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: ConvertGroupDMInput) => channelsApi.convertGroupDM(channelId, input),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['channels', workspaceId] });
     },
   });

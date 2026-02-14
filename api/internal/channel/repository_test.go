@@ -570,6 +570,146 @@ func TestRepository_LeaveGroupDM_StaysGroupDMWith3Plus(t *testing.T) {
 	}
 }
 
+func TestRepository_ConvertToChannel(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	user3 := testutil.CreateTestUser(t, db, "user3@example.com", "User 3")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	// Create a group DM
+	dm, err := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID, user3.ID})
+	if err != nil {
+		t.Fatalf("CreateDM() error = %v", err)
+	}
+	if dm.Type != TypeGroupDM {
+		t.Fatalf("Type = %q, want %q", dm.Type, TypeGroupDM)
+	}
+
+	// Convert to channel
+	desc := "A project channel"
+	converted, err := repo.ConvertToChannel(ctx, dm.ID, "project-x", &desc, user1.ID, TypePrivate)
+	if err != nil {
+		t.Fatalf("ConvertToChannel() error = %v", err)
+	}
+
+	// Verify type changed to private
+	if converted.Type != TypePrivate {
+		t.Errorf("Type = %q, want %q", converted.Type, TypePrivate)
+	}
+
+	// Verify name was set
+	if converted.Name != "project-x" {
+		t.Errorf("Name = %q, want %q", converted.Name, "project-x")
+	}
+
+	// Verify description was set
+	if converted.Description == nil || *converted.Description != desc {
+		t.Errorf("Description = %v, want %q", converted.Description, desc)
+	}
+
+	// Verify DM hash was cleared
+	if converted.DMParticipantHash != nil {
+		t.Errorf("DMParticipantHash = %v, want nil", converted.DMParticipantHash)
+	}
+
+	// Verify created_by was set
+	if converted.CreatedBy == nil || *converted.CreatedBy != user1.ID {
+		t.Errorf("CreatedBy = %v, want %q", converted.CreatedBy, user1.ID)
+	}
+
+	// Verify converter was promoted to admin
+	membership, err := repo.GetMembership(ctx, user1.ID, dm.ID)
+	if err != nil {
+		t.Fatalf("GetMembership() error = %v", err)
+	}
+	if membership.ChannelRole == nil || *membership.ChannelRole != ChannelRoleAdmin {
+		t.Errorf("ChannelRole = %v, want %q", membership.ChannelRole, ChannelRoleAdmin)
+	}
+
+	// Verify other members are still present
+	_, err = repo.GetMembership(ctx, user2.ID, dm.ID)
+	if err != nil {
+		t.Errorf("GetMembership() for user2 error = %v", err)
+	}
+	_, err = repo.GetMembership(ctx, user3.ID, dm.ID)
+	if err != nil {
+		t.Errorf("GetMembership() for user3 error = %v", err)
+	}
+}
+
+func TestRepository_ConvertToChannel_NoDescription(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	user3 := testutil.CreateTestUser(t, db, "user3@example.com", "User 3")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	dm, _ := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID, user3.ID})
+
+	// Convert without description
+	converted, err := repo.ConvertToChannel(ctx, dm.ID, "my-channel", nil, user1.ID, TypePublic)
+	if err != nil {
+		t.Fatalf("ConvertToChannel() error = %v", err)
+	}
+
+	if converted.Type != TypePublic {
+		t.Errorf("Type = %q, want %q", converted.Type, TypePublic)
+	}
+	if converted.Name != "my-channel" {
+		t.Errorf("Name = %q, want %q", converted.Name, "my-channel")
+	}
+}
+
+func TestRepository_GetByWorkspaceAndName(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	// Create a public channel
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user1.ID, "general", TypePublic)
+
+	// Should find it by name
+	found, err := repo.GetByWorkspaceAndName(ctx, ws.ID, "general")
+	if err != nil {
+		t.Fatalf("GetByWorkspaceAndName() error = %v", err)
+	}
+	if found == nil {
+		t.Fatal("GetByWorkspaceAndName() returned nil, want channel")
+	}
+	if found.ID != ch.ID {
+		t.Errorf("ID = %q, want %q", found.ID, ch.ID)
+	}
+
+	// Should return nil for non-existent name
+	notFound, err := repo.GetByWorkspaceAndName(ctx, ws.ID, "nonexistent")
+	if err != nil {
+		t.Fatalf("GetByWorkspaceAndName() error = %v", err)
+	}
+	if notFound != nil {
+		t.Errorf("GetByWorkspaceAndName() = %v, want nil", notFound)
+	}
+
+	// Should not find DM channels by name
+	repo.CreateDM(ctx, ws.ID, []string{user1.ID, testutil.CreateTestUser(t, db, "user2@example.com", "User 2").ID})
+	dmFound, err := repo.GetByWorkspaceAndName(ctx, ws.ID, "Direct Message")
+	if err != nil {
+		t.Fatalf("GetByWorkspaceAndName() error = %v", err)
+	}
+	if dmFound != nil {
+		t.Errorf("GetByWorkspaceAndName() should not find DM channels, got %v", dmFound)
+	}
+}
+
 func TestRepository_RemoveMember_AllowsGroupDM(t *testing.T) {
 	db := testutil.TestDB(t)
 	repo := NewRepository(db)

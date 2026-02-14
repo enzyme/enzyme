@@ -22,6 +22,7 @@ var (
 	ErrDMAlreadyExists      = errors.New("DM channel already exists")
 	ErrCannotLeaveDefault   = errors.New("cannot leave the default channel")
 	ErrCannotArchiveDefault = errors.New("cannot archive the default channel")
+	ErrChannelNameTaken     = errors.New("channel name already taken")
 )
 
 type Repository struct {
@@ -140,6 +141,20 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*Channel, error) {
 		SELECT id, workspace_id, name, description, type, dm_participant_hash, is_default, archived_at, created_by, created_at, updated_at
 		FROM channels WHERE id = ?
 	`, id))
+}
+
+func (r *Repository) GetByWorkspaceAndName(ctx context.Context, workspaceID, name string) (*Channel, error) {
+	ch, err := r.scanChannel(r.db.QueryRowContext(ctx, `
+		SELECT id, workspace_id, name, description, type, dm_participant_hash, is_default, archived_at, created_by, created_at, updated_at
+		FROM channels WHERE workspace_id = ? AND name = ? AND type IN ('public', 'private')
+	`, workspaceID, name))
+	if err != nil {
+		if errors.Is(err, ErrChannelNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return ch, nil
 }
 
 func (r *Repository) Update(ctx context.Context, channel *Channel) error {
@@ -538,6 +553,42 @@ func (r *Repository) LeaveGroupDM(ctx context.Context, userID, channelID string)
 	}
 
 	return tx.Commit()
+}
+
+// ConvertToChannel converts a group DM to a channel, clearing the DM hash,
+// updating name/description/type, and promoting the converting user to admin.
+func (r *Repository) ConvertToChannel(ctx context.Context, channelID, name string, description *string, createdBy string, channelType string) (*Channel, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	now := time.Now().UTC()
+
+	// Update channel: set type, name, description, clear hash, set created_by
+	_, err = tx.ExecContext(ctx, `
+		UPDATE channels SET type = ?, name = ?, description = ?, dm_participant_hash = NULL, created_by = ?, updated_at = ?
+		WHERE id = ?
+	`, channelType, name, description, createdBy, now.Format(time.RFC3339), channelID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Promote the converting user to admin
+	_, err = tx.ExecContext(ctx, `
+		UPDATE channel_memberships SET channel_role = ?, updated_at = ?
+		WHERE user_id = ? AND channel_id = ?
+	`, ChannelRoleAdmin, now.Format(time.RFC3339), createdBy, channelID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return r.GetByID(ctx, channelID)
 }
 
 func (r *Repository) ListMembers(ctx context.Context, channelID string) ([]MemberInfo, error) {

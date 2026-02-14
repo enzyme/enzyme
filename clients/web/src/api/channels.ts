@@ -26,6 +26,12 @@ export interface CreateDMInput {
   user_ids: string[];
 }
 
+export interface ConvertGroupDMInput {
+  name: string;
+  description?: string;
+  type?: 'public' | 'private';
+}
+
 export const channelsApi = {
   create: (workspaceId: string, input: CreateChannelInput) =>
     post<{ channel: Channel }>(`/workspaces/${workspaceId}/channels/create`, input),
@@ -75,4 +81,7 @@ export const channelsApi = {
 
   getDMSuggestions: (workspaceId: string) =>
     post<DMSuggestionsResponse>(`/workspaces/${workspaceId}/dm-suggestions`),
+
+  convertGroupDM: (channelId: string, input: ConvertGroupDMInput) =>
+    post<{ channel: Channel }>(`/channels/${channelId}/convert`, input),
 };

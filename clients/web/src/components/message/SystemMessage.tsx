@@ -73,6 +73,9 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
           contentText = `was added to #${systemEvent.channel_name}`;
         }
         break;
+      case 'user_converted_channel':
+        contentText = `converted this conversation to #${systemEvent.channel_name}`;
+        break;
     }
   }
 

@@ -364,6 +364,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/channels/{id}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Convert group DM to channel */
+        post: operations["convertGroupDMToChannel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channels/{id}/archive": {
         parameters: {
             query?: never;
@@ -1180,7 +1197,7 @@ export interface components {
         /** @enum {string} */
         MessageType: "user" | "system";
         /** @enum {string} */
-        SystemEventType: "user_joined" | "user_left" | "user_added";
+        SystemEventType: "user_joined" | "user_left" | "user_added" | "user_converted_channel";
         SystemEventData: {
             event_type: components["schemas"]["SystemEventType"];
             /** @description The user who joined/left/was added */
@@ -2234,6 +2251,46 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    convertGroupDMToChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Channel ID */
+                id: components["parameters"]["channelId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description?: string;
+                    /**
+                     * @default private
+                     * @enum {string}
+                     */
+                    type?: "public" | "private";
+                };
+            };
+        };
+        responses: {
+            /** @description Channel converted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        channel?: components["schemas"]["Channel"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     archiveChannel: {

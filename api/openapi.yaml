@@ -583,6 +583,48 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /channels/{id}/convert:
+    post:
+      tags: [channels]
+      summary: Convert group DM to channel
+      operationId: convertGroupDMToChannel
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: [public, private]
+                  default: private
+      responses:
+        '200':
+          description: Channel converted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel:
+                    $ref: '#/components/schemas/Channel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /channels/{id}/archive:
     post:
       tags: [channels]
@@ -2148,7 +2190,7 @@ components:
 
     SystemEventType:
       type: string
-      enum: [user_joined, user_left, user_added]
+      enum: [user_joined, user_left, user_added, user_converted_channel]
 
     SystemEventData:
       type: object

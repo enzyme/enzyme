@@ -14,9 +14,10 @@ const (
 
 // System event types
 const (
-	SystemEventUserJoined = "user_joined"
-	SystemEventUserLeft   = "user_left"
-	SystemEventUserAdded  = "user_added"
+	SystemEventUserJoined       = "user_joined"
+	SystemEventUserLeft         = "user_left"
+	SystemEventUserAdded        = "user_added"
+	SystemEventChannelConverted = "user_converted_channel"
 )
 
 // SystemEventData contains metadata for system messages

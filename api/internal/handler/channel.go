@@ -562,6 +562,123 @@ func channelMemberToAPI(m channel.MemberInfo) openapi.ChannelMember {
 	return apiMember
 }
 
+// ConvertGroupDMToChannel converts a group DM into a private channel
+func (h *Handler) ConvertGroupDMToChannel(ctx context.Context, request openapi.ConvertGroupDMToChannelRequestObject) (openapi.ConvertGroupDMToChannelResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.ConvertGroupDMToChannel401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+	}
+
+	ch, err := h.channelRepo.GetByID(ctx, string(request.Id))
+	if err != nil {
+		return nil, err
+	}
+
+	// Must be a group DM
+	if ch.Type != channel.TypeGroupDM {
+		return openapi.ConvertGroupDMToChannel400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Only group DMs can be converted to channels")}, nil
+	}
+
+	// Check workspace membership and permissions
+	membership, err := h.workspaceRepo.GetMembership(ctx, userID, ch.WorkspaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !workspace.CanCreateChannels(membership.Role) {
+		return openapi.ConvertGroupDMToChannel403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Permission denied")}, nil
+	}
+
+	// Must be a member of the group DM
+	_, err = h.channelRepo.GetMembership(ctx, userID, string(request.Id))
+	if err != nil {
+		if errors.Is(err, channel.ErrNotChannelMember) {
+			return openapi.ConvertGroupDMToChannel403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("You must be a member of this conversation")}, nil
+		}
+		return nil, err
+	}
+
+	// Validate channel name
+	name := strings.TrimSpace(request.Body.Name)
+	if name == "" {
+		return openapi.ConvertGroupDMToChannel400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Channel name is required")}, nil
+	}
+	if !validChannelName.MatchString(name) {
+		return openapi.ConvertGroupDMToChannel400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Channel name must contain only lowercase letters, numbers, and dashes")}, nil
+	}
+
+	// Check for duplicate channel name in workspace
+	existing, err := h.channelRepo.GetByWorkspaceAndName(ctx, ch.WorkspaceID, name)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return openapi.ConvertGroupDMToChannel400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "A channel with this name already exists")}, nil
+	}
+
+	// Determine target channel type (default: private)
+	targetType := channel.TypePrivate
+	if request.Body.Type != nil && string(*request.Body.Type) == channel.TypePublic {
+		targetType = channel.TypePublic
+	}
+
+	// Convert the channel
+	converted, err := h.channelRepo.ConvertToChannel(ctx, string(request.Id), name, request.Body.Description, userID, targetType)
+	if err != nil {
+		return nil, err
+	}
+
+	// Broadcast channel updated via SSE
+	if h.hub != nil {
+		apiCh := channelToAPI(converted)
+		h.hub.BroadcastToChannel(ch.WorkspaceID, converted.ID, sse.Event{
+			Type: sse.EventChannelUpdated,
+			Data: apiCh,
+		})
+	}
+
+	// Create system message for the conversion
+	h.createConvertSystemMessage(ctx, converted, userID, name)
+
+	apiCh := channelToAPI(converted)
+	return openapi.ConvertGroupDMToChannel200JSONResponse{
+		Channel: &apiCh,
+	}, nil
+}
+
+// createConvertSystemMessage creates a system message when a group DM is converted to a channel.
+// Errors are logged but do not fail the conversion.
+func (h *Handler) createConvertSystemMessage(ctx context.Context, ch *channel.Channel, userID, channelName string) {
+	user, err := h.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return
+	}
+
+	event := &message.SystemEventData{
+		EventType:       message.SystemEventChannelConverted,
+		UserID:          userID,
+		UserDisplayName: user.DisplayName,
+		ChannelName:     channelName,
+	}
+
+	msg, err := h.messageRepo.CreateSystemMessage(ctx, ch.ID, event)
+	if err != nil {
+		return
+	}
+
+	// Broadcast via SSE
+	if h.hub != nil {
+		msgWithUser, _ := h.messageRepo.GetByIDWithUser(ctx, msg.ID)
+		if msgWithUser != nil {
+			apiMsg := messageWithUserToAPI(msgWithUser)
+			h.hub.BroadcastToChannel(ch.WorkspaceID, ch.ID, sse.Event{
+				Type: sse.EventMessageNew,
+				Data: apiMsg,
+			})
+		}
+	}
+}
+
 // MarkChannelRead marks a channel as read for the current user
 func (h *Handler) MarkChannelRead(ctx context.Context, request openapi.MarkChannelReadRequestObject) (openapi.MarkChannelReadResponseObject, error) {
 	userID := h.getUserID(ctx)

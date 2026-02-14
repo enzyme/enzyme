@@ -6,6 +6,8 @@ import {
   LockClosedIcon,
   HashtagIcon,
   StarIcon,
+  ArrowLeftStartOnRectangleIcon,
+  ArchiveBoxIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { Button as AriaButton } from 'react-aria-components';
@@ -23,6 +25,7 @@ import { MessageList, MessageComposer, type MessageComposerRef } from '../compon
 import { ChannelMembersButton } from '../components/channel/ChannelMembersButton';
 import { ChannelNotificationButton } from '../components/channel/ChannelNotificationButton';
 import { ChannelDetailsModal } from '../components/channel/ChannelDetailsModal';
+import { ConvertToChannelModal } from '../components/channel/ConvertToChannelModal';
 import { Spinner, Modal, Button, toast, Tooltip } from '../components/ui';
 
 function ChannelIcon({ type, className }: { type: string; className?: string }) {
@@ -70,6 +73,7 @@ export function ChannelPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [detailsModalTab, setDetailsModalTab] = useState<'about' | 'members' | 'add'>('about');
@@ -187,8 +191,10 @@ export function ChannelPage() {
 
   const isMember = channel?.channel_role !== undefined;
   const canJoin = channel && channel.type === 'public' && !isMember;
-  const canArchive = channel && channel.type !== 'dm' && channel.type !== 'group_dm';
+  const canArchive =
+    channel && channel.type !== 'dm' && channel.type !== 'group_dm' && !channel.is_default;
   const canLeave = channel && channel.type !== 'dm' && !channel.is_default && isMember;
+  const canConvert = channel && channel.type === 'group_dm' && isMember;
   const canEditChannel =
     channel &&
     channel.type !== 'dm' &&
@@ -295,7 +301,7 @@ export function ChannelPage() {
             <ChannelNotificationButton channelId={channelId} channelType={channel.type} />
 
             {/* Settings menu */}
-            {(canArchive || canLeave) && (
+            {(canArchive || canLeave || canConvert) && (
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -306,15 +312,28 @@ export function ChannelPage() {
 
                 {isMenuOpen && (
                   <div className="absolute right-0 z-10 mt-1 w-48 rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                    {canConvert && (
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setIsConvertModalOpen(true);
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                      >
+                        <HashtagIcon className="h-4 w-4" />
+                        Convert to channel
+                      </button>
+                    )}
                     {canLeave && (
                       <button
                         onClick={() => {
                           setIsMenuOpen(false);
                           setIsLeaveModalOpen(true);
                         }}
-                        className="w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
                       >
-                        Leave channel
+                        <ArrowLeftStartOnRectangleIcon className="h-4 w-4" />
+                        {channel.type === 'group_dm' ? 'Leave direct message' : 'Leave channel'}
                       </button>
                     )}
                     {canArchive && (
@@ -323,8 +342,9 @@ export function ChannelPage() {
                           setIsMenuOpen(false);
                           setIsArchiveModalOpen(true);
                         }}
-                        className="w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700"
                       >
+                        <ArchiveBoxIcon className="h-4 w-4" />
                         Archive channel
                       </button>
                     )}
@@ -384,6 +404,14 @@ export function ChannelPage() {
           </Button>
         </div>
       </Modal>
+
+      {/* Convert to channel modal */}
+      <ConvertToChannelModal
+        isOpen={isConvertModalOpen}
+        onClose={() => setIsConvertModalOpen(false)}
+        workspaceId={workspaceId}
+        channelId={channelId}
+      />
 
       {/* Messages - always visible */}
       <MessageList

@@ -58,9 +58,10 @@ const (
 
 // Defines values for SystemEventType.
 const (
-	UserAdded  SystemEventType = "user_added"
-	UserJoined SystemEventType = "user_joined"
-	UserLeft   SystemEventType = "user_left"
+	UserAdded            SystemEventType = "user_added"
+	UserConvertedChannel SystemEventType = "user_converted_channel"
+	UserJoined           SystemEventType = "user_joined"
+	UserLeft             SystemEventType = "user_left"
 )
 
 // Defines values for ThreadSubscriptionStatus.
@@ -599,6 +600,12 @@ type ResetPasswordJSONBody struct {
 	Token       string `json:"token"`
 }
 
+// ConvertGroupDMToChannelJSONBody defines parameters for ConvertGroupDMToChannel.
+type ConvertGroupDMToChannelJSONBody struct {
+	Description *string `json:"description,omitempty"`
+	Name        string  `json:"name"`
+}
+
 // UploadFileMultipartBody defines parameters for UploadFile.
 type UploadFileMultipartBody struct {
 	File openapi_types.File `json:"file"`
@@ -710,6 +717,9 @@ type RegisterJSONRequestBody = RegisterInput
 // ResetPasswordJSONRequestBody defines body for ResetPassword for application/json ContentType.
 type ResetPasswordJSONRequestBody ResetPasswordJSONBody
 
+// ConvertGroupDMToChannelJSONRequestBody defines body for ConvertGroupDMToChannel for application/json ContentType.
+type ConvertGroupDMToChannelJSONRequestBody ConvertGroupDMToChannelJSONBody
+
 // UploadFileMultipartRequestBody defines body for UploadFile for multipart/form-data ContentType.
 type UploadFileMultipartRequestBody UploadFileMultipartBody
 
@@ -814,6 +824,9 @@ type ServerInterface interface {
 	// Archive channel
 	// (POST /channels/{id}/archive)
 	ArchiveChannel(w http.ResponseWriter, r *http.Request, id ChannelId)
+	// Convert group DM to channel
+	// (POST /channels/{id}/convert)
+	ConvertGroupDMToChannel(w http.ResponseWriter, r *http.Request, id ChannelId)
 	// Upload a file
 	// (POST /channels/{id}/files/upload)
 	UploadFile(w http.ResponseWriter, r *http.Request, id ChannelId)
@@ -1021,6 +1034,12 @@ func (_ Unimplemented) ResetPassword(w http.ResponseWriter, r *http.Request) {
 // Archive channel
 // (POST /channels/{id}/archive)
 func (_ Unimplemented) ArchiveChannel(w http.ResponseWriter, r *http.Request, id ChannelId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Convert group DM to channel
+// (POST /channels/{id}/convert)
+func (_ Unimplemented) ConvertGroupDMToChannel(w http.ResponseWriter, r *http.Request, id ChannelId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1463,6 +1482,37 @@ func (siw *ServerInterfaceWrapper) ArchiveChannel(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ArchiveChannel(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConvertGroupDMToChannel operation middleware
+func (siw *ServerInterfaceWrapper) ConvertGroupDMToChannel(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id ChannelId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConvertGroupDMToChannel(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3219,6 +3269,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/channels/{id}/archive", wrapper.ArchiveChannel)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channels/{id}/convert", wrapper.ConvertGroupDMToChannel)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channels/{id}/files/upload", wrapper.UploadFile)
 	})
 	r.Group(func(r chi.Router) {
@@ -3580,6 +3633,53 @@ type ArchiveChannel404JSONResponse struct{ NotFoundJSONResponse }
 func (response ArchiveChannel404JSONResponse) VisitArchiveChannelResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ConvertGroupDMToChannelRequestObject struct {
+	Id   ChannelId `json:"id"`
+	Body *ConvertGroupDMToChannelJSONRequestBody
+}
+
+type ConvertGroupDMToChannelResponseObject interface {
+	VisitConvertGroupDMToChannelResponse(w http.ResponseWriter) error
+}
+
+type ConvertGroupDMToChannel200JSONResponse struct {
+	Channel *Channel `json:"channel,omitempty"`
+}
+
+func (response ConvertGroupDMToChannel200JSONResponse) VisitConvertGroupDMToChannelResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ConvertGroupDMToChannel400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ConvertGroupDMToChannel400JSONResponse) VisitConvertGroupDMToChannelResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ConvertGroupDMToChannel401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ConvertGroupDMToChannel401JSONResponse) VisitConvertGroupDMToChannelResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ConvertGroupDMToChannel403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ConvertGroupDMToChannel403JSONResponse) VisitConvertGroupDMToChannelResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -5783,6 +5883,9 @@ type StrictServerInterface interface {
 	// Archive channel
 	// (POST /channels/{id}/archive)
 	ArchiveChannel(ctx context.Context, request ArchiveChannelRequestObject) (ArchiveChannelResponseObject, error)
+	// Convert group DM to channel
+	// (POST /channels/{id}/convert)
+	ConvertGroupDMToChannel(ctx context.Context, request ConvertGroupDMToChannelRequestObject) (ConvertGroupDMToChannelResponseObject, error)
 	// Upload a file
 	// (POST /channels/{id}/files/upload)
 	UploadFile(ctx context.Context, request UploadFileRequestObject) (UploadFileResponseObject, error)
@@ -6167,6 +6270,39 @@ func (sh *strictHandler) ArchiveChannel(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ArchiveChannelResponseObject); ok {
 		if err := validResponse.VisitArchiveChannelResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ConvertGroupDMToChannel operation middleware
+func (sh *strictHandler) ConvertGroupDMToChannel(w http.ResponseWriter, r *http.Request, id ChannelId) {
+	var request ConvertGroupDMToChannelRequestObject
+
+	request.Id = id
+
+	var body ConvertGroupDMToChannelJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ConvertGroupDMToChannel(ctx, request.(ConvertGroupDMToChannelRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ConvertGroupDMToChannel")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ConvertGroupDMToChannelResponseObject); ok {
+		if err := validResponse.VisitConvertGroupDMToChannelResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
