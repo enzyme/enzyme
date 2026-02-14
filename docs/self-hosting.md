@@ -5,7 +5,7 @@ This guide covers everything you need to deploy Feather on your own server.
 ## Requirements
 
 - A Linux, macOS, or Windows server
-- Port 8080 (default) available, or any port of your choosing
+- Port 443 available for HTTPS (or 8080 for local/development use)
 
 ## Quick Start
 
@@ -61,12 +61,18 @@ files:
 
 Create a `config.yaml` in the same directory as the binary (or pass `--config /path/to/config.yaml`). See the [Configuration Reference](./configuration.md) for all options.
 
-A minimal production config:
+A minimal production config with automatic TLS (Let's Encrypt):
 
 ```yaml
 server:
+  port: 443
   public_url: 'https://chat.example.com'
-  allowed_origins: [] # Empty for same-origin deployments
+  allowed_origins: []
+  tls:
+    mode: 'auto'
+    auto:
+      domain: 'chat.example.com'
+      email: 'admin@example.com'
 
 files:
   signing_secret: 'your-random-secret-here' # Generate with: openssl rand -hex 32
@@ -80,11 +86,13 @@ email:
   from: 'feather@example.com'
 ```
 
+When using auto TLS, Feather automatically redirects HTTP (port 80) to HTTPS (port 443).
+
 Configuration can also be set via environment variables with the `FEATHER_` prefix or CLI flags. See the [Configuration Reference](./configuration.md) for details.
 
-## Reverse Proxy Setup (Optional)
+## Advanced: Reverse Proxy
 
-Since Feather serves both the API and web client from a single binary, a reverse proxy is only needed if you want TLS termination via an external tool (alternatively, use [built-in TLS](#built-in-tls)).
+Most deployments can use [built-in TLS](#built-in-tls) directly. A reverse proxy is an alternative if you prefer to handle TLS termination externally (e.g., you already run nginx or Caddy for other services).
 
 ### nginx
 
@@ -191,6 +199,10 @@ WorkingDirectory=/opt/feather
 ExecStart=/opt/feather/feather --config /opt/feather/config.yaml
 Restart=always
 RestartSec=5
+
+# Allow binding to port 443 without root
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 
 # Hardening
 NoNewPrivileges=true

@@ -38,12 +38,12 @@ Run `./feather --help` for all available flags.
 
 ## Server
 
-| Key                      | Env Var                          | CLI Flag                   | Default                     | Description                                                                                                                |
-| ------------------------ | -------------------------------- | -------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `server.host`            | `FEATHER_SERVER_HOST`            | `--server.host`            | `0.0.0.0`                   | Address to bind the HTTP server to.                                                                                        |
-| `server.port`            | `FEATHER_SERVER_PORT`            | `--server.port`            | `8080`                      | Port to listen on.                                                                                                         |
-| `server.public_url`      | `FEATHER_SERVER_PUBLIC_URL`      | `--server.public_url`      | `http://localhost:8080`     | Public-facing URL. Used in emails (invite links, password resets). Must include the scheme.                                |
-| `server.allowed_origins` | `FEATHER_SERVER_ALLOWED_ORIGINS` | `--server.allowed_origins` | `["http://localhost:3000"]` | CORS allowed origins. Set to `[]` for same-origin deployments (behind a reverse proxy). Each origin must include a scheme. |
+| Key                      | Env Var                          | CLI Flag                   | Default                     | Description                                                                                                               |
+| ------------------------ | -------------------------------- | -------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `server.host`            | `FEATHER_SERVER_HOST`            | `--server.host`            | `0.0.0.0`                   | Address to bind the HTTP server to.                                                                                       |
+| `server.port`            | `FEATHER_SERVER_PORT`            | `--server.port`            | `8080`                      | Port to listen on.                                                                                                        |
+| `server.public_url`      | `FEATHER_SERVER_PUBLIC_URL`      | `--server.public_url`      | `http://localhost:8080`     | Public-facing URL. Used in emails (invite links, password resets). Must include the scheme.                               |
+| `server.allowed_origins` | `FEATHER_SERVER_ALLOWED_ORIGINS` | `--server.allowed_origins` | `["http://localhost:3000"]` | CORS allowed origins. Set to `[]` for production (same-origin with embedded frontend). Each origin must include a scheme. |
 
 ### TLS
 
@@ -115,34 +115,20 @@ Rate limiting protects authentication endpoints from brute-force attacks. Limits
 | `sse.event_retention`  | `FEATHER_SSE_EVENT_RETENTION`  | `24h`   | How long SSE events are stored for reconnection catch-up. |
 | `sse.cleanup_interval` | `FEATHER_SSE_CLEANUP_INTERVAL` | `1h`    | How often old SSE events are purged from the database.    |
 
-## Frontend
-
-The web frontend has one build-time environment variable:
-
-| Env Var         | Default | Description                                                                                           |
-| --------------- | ------- | ----------------------------------------------------------------------------------------------------- |
-| `VITE_API_BASE` | `/api`  | API base URL. Only needed when the API is on a different domain than the frontend. Set at build time. |
-
-For same-origin deployments (reverse proxy), the default `/api` works without changes.
-
-For cross-origin deployments:
-
-```bash
-VITE_API_BASE=https://api.example.com/api pnpm --filter @feather/web build
-```
-
----
-
 ## Full Example
 
 ```yaml
 server:
   host: '0.0.0.0'
-  port: 8080
+  port: 443
   public_url: 'https://chat.example.com'
-  allowed_origins: [] # Same-origin behind reverse proxy
+  allowed_origins: [] # Same-origin (embedded frontend)
   tls:
-    mode: 'off' # Handled by reverse proxy
+    mode: 'auto'
+    auto:
+      domain: 'chat.example.com'
+      email: 'admin@example.com'
+      cache_dir: './data/certs'
 
 database:
   path: '/var/lib/feather/feather.db'
