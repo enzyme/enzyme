@@ -6,6 +6,8 @@ import {
   type Reaction,
   type ThreadSubscriptionStatus,
   type ThreadListResult,
+  type SearchMessagesResult,
+  type SearchMessagesInput,
 } from '@feather/api-client';
 
 export interface SendMessageInput {
@@ -64,4 +66,7 @@ export const messagesApi = {
       `/messages/${messageId}/thread/mark-read`,
       lastReadReplyId ? { last_read_reply_id: lastReadReplyId } : {},
     ),
+
+  search: (workspaceId: string, input: SearchMessagesInput) =>
+    post<SearchMessagesResult>(`/workspaces/${workspaceId}/messages/search`, input),
 };

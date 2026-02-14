@@ -31,10 +31,10 @@ const (
 
 // Defines values for ChannelType.
 const (
-	Dm      ChannelType = "dm"
-	GroupDm ChannelType = "group_dm"
-	Private ChannelType = "private"
-	Public  ChannelType = "public"
+	ChannelTypeDm      ChannelType = "dm"
+	ChannelTypeGroupDm ChannelType = "group_dm"
+	ChannelTypePrivate ChannelType = "private"
+	ChannelTypePublic  ChannelType = "public"
 )
 
 // Defines values for ListMessagesInputDirection.
@@ -77,6 +77,12 @@ const (
 	WorkspaceRoleGuest  WorkspaceRole = "guest"
 	WorkspaceRoleMember WorkspaceRole = "member"
 	WorkspaceRoleOwner  WorkspaceRole = "owner"
+)
+
+// Defines values for ConvertGroupDMToChannelJSONBodyType.
+const (
+	ConvertGroupDMToChannelJSONBodyTypePrivate ConvertGroupDMToChannelJSONBodyType = "private"
+	ConvertGroupDMToChannelJSONBodyTypePublic  ConvertGroupDMToChannelJSONBodyType = "public"
 )
 
 // ApiError defines model for ApiError.
@@ -331,6 +337,50 @@ type RegisterInput struct {
 type ReorderWorkspacesInput struct {
 	// WorkspaceIds Ordered list of workspace IDs representing the new order
 	WorkspaceIds []string `json:"workspace_ids"`
+}
+
+// SearchMessage defines model for SearchMessage.
+type SearchMessage struct {
+	AlsoSendToChannel  *bool                `json:"also_send_to_channel,omitempty"`
+	Attachments        *[]Attachment        `json:"attachments,omitempty"`
+	ChannelId          string               `json:"channel_id"`
+	ChannelName        string               `json:"channel_name"`
+	ChannelType        ChannelType          `json:"channel_type"`
+	Content            string               `json:"content"`
+	CreatedAt          time.Time            `json:"created_at"`
+	DeletedAt          *time.Time           `json:"deleted_at,omitempty"`
+	EditedAt           *time.Time           `json:"edited_at,omitempty"`
+	Id                 string               `json:"id"`
+	LastReplyAt        *time.Time           `json:"last_reply_at,omitempty"`
+	Reactions          *[]Reaction          `json:"reactions,omitempty"`
+	ReplyCount         int                  `json:"reply_count"`
+	SystemEvent        *SystemEventData     `json:"system_event,omitempty"`
+	ThreadParentId     *string              `json:"thread_parent_id,omitempty"`
+	ThreadParticipants *[]ThreadParticipant `json:"thread_participants,omitempty"`
+	Type               *MessageType         `json:"type,omitempty"`
+	UpdatedAt          time.Time            `json:"updated_at"`
+	UserAvatarUrl      *string              `json:"user_avatar_url,omitempty"`
+	UserDisplayName    *string              `json:"user_display_name,omitempty"`
+	UserId             *string              `json:"user_id,omitempty"`
+}
+
+// SearchMessagesInput defines model for SearchMessagesInput.
+type SearchMessagesInput struct {
+	After     *time.Time `json:"after,omitempty"`
+	Before    *time.Time `json:"before,omitempty"`
+	ChannelId *string    `json:"channel_id,omitempty"`
+	Limit     *int       `json:"limit,omitempty"`
+	Offset    *int       `json:"offset,omitempty"`
+	Query     string     `json:"query"`
+	UserId    *string    `json:"user_id,omitempty"`
+}
+
+// SearchMessagesResult defines model for SearchMessagesResult.
+type SearchMessagesResult struct {
+	HasMore    bool            `json:"has_more"`
+	Messages   []SearchMessage `json:"messages"`
+	Query      string          `json:"query"`
+	TotalCount int             `json:"total_count"`
 }
 
 // SendMessageInput defines model for SendMessageInput.
@@ -602,9 +652,13 @@ type ResetPasswordJSONBody struct {
 
 // ConvertGroupDMToChannelJSONBody defines parameters for ConvertGroupDMToChannel.
 type ConvertGroupDMToChannelJSONBody struct {
-	Description *string `json:"description,omitempty"`
-	Name        string  `json:"name"`
+	Description *string                              `json:"description,omitempty"`
+	Name        string                               `json:"name"`
+	Type        *ConvertGroupDMToChannelJSONBodyType `json:"type,omitempty"`
 }
+
+// ConvertGroupDMToChannelJSONBodyType defines parameters for ConvertGroupDMToChannel.
+type ConvertGroupDMToChannelJSONBodyType string
 
 // UploadFileMultipartBody defines parameters for UploadFile.
 type UploadFileMultipartBody struct {
@@ -791,6 +845,9 @@ type RemoveWorkspaceMemberJSONRequestBody RemoveWorkspaceMemberJSONBody
 
 // UpdateWorkspaceMemberRoleJSONRequestBody defines body for UpdateWorkspaceMemberRole for application/json ContentType.
 type UpdateWorkspaceMemberRoleJSONRequestBody UpdateWorkspaceMemberRoleJSONBody
+
+// SearchMessagesJSONRequestBody defines body for SearchMessages for application/json ContentType.
+type SearchMessagesJSONRequestBody = SearchMessagesInput
 
 // ListUserThreadsJSONRequestBody defines body for ListUserThreads for application/json ContentType.
 type ListUserThreadsJSONRequestBody ListUserThreadsJSONBody
@@ -980,6 +1037,9 @@ type ServerInterface interface {
 	// Update member role
 	// (POST /workspaces/{wid}/members/update-role)
 	UpdateWorkspaceMemberRole(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// Search messages in workspace
+	// (POST /workspaces/{wid}/messages/search)
+	SearchMessages(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
 	// List threads user is subscribed to
 	// (POST /workspaces/{wid}/threads)
 	ListUserThreads(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
@@ -1346,6 +1406,12 @@ func (_ Unimplemented) RemoveWorkspaceMember(w http.ResponseWriter, r *http.Requ
 // Update member role
 // (POST /workspaces/{wid}/members/update-role)
 func (_ Unimplemented) UpdateWorkspaceMemberRole(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Search messages in workspace
+// (POST /workspaces/{wid}/messages/search)
+func (_ Unimplemented) SearchMessages(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -3041,6 +3107,37 @@ func (siw *ServerInterfaceWrapper) UpdateWorkspaceMemberRole(w http.ResponseWrit
 	handler.ServeHTTP(w, r)
 }
 
+// SearchMessages operation middleware
+func (siw *ServerInterfaceWrapper) SearchMessages(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchMessages(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListUserThreads operation middleware
 func (siw *ServerInterfaceWrapper) ListUserThreads(w http.ResponseWriter, r *http.Request) {
 
@@ -3423,6 +3520,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/{wid}/members/update-role", wrapper.UpdateWorkspaceMemberRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/messages/search", wrapper.SearchMessages)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/{wid}/threads", wrapper.ListUserThreads)
@@ -5750,6 +5850,51 @@ func (response UpdateWorkspaceMemberRole404JSONResponse) VisitUpdateWorkspaceMem
 	return json.NewEncoder(w).Encode(response)
 }
 
+type SearchMessagesRequestObject struct {
+	Wid  WorkspaceId `json:"wid"`
+	Body *SearchMessagesJSONRequestBody
+}
+
+type SearchMessagesResponseObject interface {
+	VisitSearchMessagesResponse(w http.ResponseWriter) error
+}
+
+type SearchMessages200JSONResponse SearchMessagesResult
+
+func (response SearchMessages200JSONResponse) VisitSearchMessagesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SearchMessages400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SearchMessages400JSONResponse) VisitSearchMessagesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SearchMessages401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SearchMessages401JSONResponse) VisitSearchMessagesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SearchMessages403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SearchMessages403JSONResponse) VisitSearchMessagesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListUserThreadsRequestObject struct {
 	Wid  WorkspaceId `json:"wid"`
 	Body *ListUserThreadsJSONRequestBody
@@ -6039,6 +6184,9 @@ type StrictServerInterface interface {
 	// Update member role
 	// (POST /workspaces/{wid}/members/update-role)
 	UpdateWorkspaceMemberRole(ctx context.Context, request UpdateWorkspaceMemberRoleRequestObject) (UpdateWorkspaceMemberRoleResponseObject, error)
+	// Search messages in workspace
+	// (POST /workspaces/{wid}/messages/search)
+	SearchMessages(ctx context.Context, request SearchMessagesRequestObject) (SearchMessagesResponseObject, error)
 	// List threads user is subscribed to
 	// (POST /workspaces/{wid}/threads)
 	ListUserThreads(ctx context.Context, request ListUserThreadsRequestObject) (ListUserThreadsResponseObject, error)
@@ -7784,6 +7932,39 @@ func (sh *strictHandler) UpdateWorkspaceMemberRole(w http.ResponseWriter, r *htt
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateWorkspaceMemberRoleResponseObject); ok {
 		if err := validResponse.VisitUpdateWorkspaceMemberRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchMessages operation middleware
+func (sh *strictHandler) SearchMessages(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request SearchMessagesRequestObject
+
+	request.Wid = wid
+
+	var body SearchMessagesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchMessages(ctx, request.(SearchMessagesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchMessages")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchMessagesResponseObject); ok {
+		if err := validResponse.VisitSearchMessagesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -114,3 +114,26 @@ type ThreadListResult struct {
 	NextCursor        string          `json:"next_cursor,omitempty"`
 	UnreadThreadCount int             `json:"unread_thread_count"`
 }
+
+type SearchOptions struct {
+	Query     string
+	ChannelID string
+	UserID    string
+	Before    *time.Time
+	After     *time.Time
+	Limit     int
+	Offset    int
+}
+
+type SearchMessage struct {
+	MessageWithUser
+	ChannelName string `json:"channel_name"`
+	ChannelType string `json:"channel_type"`
+}
+
+type SearchResult struct {
+	Messages   []SearchMessage `json:"messages"`
+	TotalCount int             `json:"total_count"`
+	HasMore    bool            `json:"has_more"`
+	Query      string          `json:"query"`
+}

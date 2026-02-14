@@ -532,6 +532,97 @@ func (h *Handler) ListThread(ctx context.Context, request openapi.ListThreadRequ
 	return openapi.ListThread200JSONResponse(messageListResultToAPI(result)), nil
 }
 
+// SearchMessages searches messages in a workspace
+func (h *Handler) SearchMessages(ctx context.Context, request openapi.SearchMessagesRequestObject) (openapi.SearchMessagesResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.SearchMessages401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+	}
+
+	// Check workspace membership
+	_, err := h.workspaceRepo.GetMembership(ctx, userID, string(request.Wid))
+	if err != nil {
+		return openapi.SearchMessages403JSONResponse{ForbiddenJSONResponse: notAMemberResponse("Not a member of this workspace")}, nil
+	}
+
+	if strings.TrimSpace(request.Body.Query) == "" {
+		return openapi.SearchMessages400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Search query is required")}, nil
+	}
+
+	opts := message.SearchOptions{
+		Query: request.Body.Query,
+	}
+	if request.Body.ChannelId != nil {
+		opts.ChannelID = *request.Body.ChannelId
+	}
+	if request.Body.UserId != nil {
+		opts.UserID = *request.Body.UserId
+	}
+	if request.Body.Before != nil {
+		opts.Before = request.Body.Before
+	}
+	if request.Body.After != nil {
+		opts.After = request.Body.After
+	}
+	if request.Body.Limit != nil {
+		opts.Limit = *request.Body.Limit
+	}
+	if request.Body.Offset != nil {
+		opts.Offset = *request.Body.Offset
+	}
+
+	result, err := h.messageRepo.Search(ctx, string(request.Wid), userID, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return openapi.SearchMessages200JSONResponse(searchResultToAPI(result)), nil
+}
+
+// searchMessageToAPI converts a message.SearchMessage to openapi.SearchMessage
+func searchMessageToAPI(m *message.SearchMessage) openapi.SearchMessage {
+	apiMsg := openapi.SearchMessage{
+		Id:             m.ID,
+		ChannelId:      m.ChannelID,
+		UserId:         m.UserID,
+		Content:        m.Content,
+		ThreadParentId: m.ThreadParentID,
+		ReplyCount:     m.ReplyCount,
+		LastReplyAt:    m.LastReplyAt,
+		EditedAt:       m.EditedAt,
+		DeletedAt:      m.DeletedAt,
+		CreatedAt:      m.CreatedAt,
+		UpdatedAt:      m.UpdatedAt,
+		ChannelName:    m.ChannelName,
+		ChannelType:    openapi.ChannelType(m.ChannelType),
+	}
+	if m.UserDisplayName != "" {
+		apiMsg.UserDisplayName = &m.UserDisplayName
+	}
+	if m.UserAvatarURL != nil {
+		apiMsg.UserAvatarUrl = m.UserAvatarURL
+	}
+	if m.Type != "" {
+		msgType := openapi.MessageType(m.Type)
+		apiMsg.Type = &msgType
+	}
+	return apiMsg
+}
+
+// searchResultToAPI converts a message.SearchResult to openapi.SearchMessagesResult
+func searchResultToAPI(result *message.SearchResult) openapi.SearchMessagesResult {
+	messages := make([]openapi.SearchMessage, len(result.Messages))
+	for i, m := range result.Messages {
+		messages[i] = searchMessageToAPI(&m)
+	}
+	return openapi.SearchMessagesResult{
+		Messages:   messages,
+		TotalCount: result.TotalCount,
+		HasMore:    result.HasMore,
+		Query:      result.Query,
+	}
+}
+
 // messageWithUserToAPI converts a message.MessageWithUser to openapi.MessageWithUser
 func messageWithUserToAPI(m *message.MessageWithUser) openapi.MessageWithUser {
 	apiMsg := openapi.MessageWithUser{

@@ -227,6 +227,7 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
 
   return (
     <div
+      id={`message-${message.id}`}
       ref={messageRef}
       className={cn(
         'group relative px-4 py-1.5',

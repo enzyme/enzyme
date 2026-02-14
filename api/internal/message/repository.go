@@ -819,6 +819,130 @@ func (r *Repository) scanUnreadMessage(row rowScanner) (*UnreadMessage, string, 
 	return &msg, channelName, channelType, nil
 }
 
+// sanitizeFTSQuery quotes each word in the query to prevent FTS5 syntax injection
+func sanitizeFTSQuery(query string) string {
+	words := strings.Fields(query)
+	quoted := make([]string, 0, len(words))
+	for _, w := range words {
+		// Remove any double quotes to prevent injection, then quote the word
+		w = strings.ReplaceAll(w, "\"", "")
+		if w != "" {
+			quoted = append(quoted, "\""+w+"\"")
+		}
+	}
+	return strings.Join(quoted, " ")
+}
+
+// Search searches messages across channels in a workspace using FTS5
+func (r *Repository) Search(ctx context.Context, workspaceID, currentUserID string, opts SearchOptions) (*SearchResult, error) {
+	if opts.Limit <= 0 || opts.Limit > 100 {
+		opts.Limit = 20
+	}
+	if opts.Offset < 0 {
+		opts.Offset = 0
+	}
+
+	sanitized := sanitizeFTSQuery(opts.Query)
+	if sanitized == "" {
+		return &SearchResult{
+			Messages: []SearchMessage{},
+			Query:    opts.Query,
+		}, nil
+	}
+
+	// Build WHERE clauses and args for both count and data queries
+	whereClauses := []string{
+		"m.deleted_at IS NULL",
+		"m.type != 'system'",
+		"c.workspace_id = ?",
+		"messages_fts.content MATCH ?",
+		// Access control: user must be a channel member OR channel must be public
+		"(cm.user_id IS NOT NULL OR c.type = 'public')",
+	}
+	baseArgs := []interface{}{workspaceID, sanitized}
+
+	if opts.ChannelID != "" {
+		whereClauses = append(whereClauses, "m.channel_id = ?")
+		baseArgs = append(baseArgs, opts.ChannelID)
+	}
+	if opts.UserID != "" {
+		whereClauses = append(whereClauses, "m.user_id = ?")
+		baseArgs = append(baseArgs, opts.UserID)
+	}
+	if opts.Before != nil {
+		whereClauses = append(whereClauses, "m.created_at < ?")
+		baseArgs = append(baseArgs, opts.Before.Format("2006-01-02T15:04:05Z07:00"))
+	}
+	if opts.After != nil {
+		whereClauses = append(whereClauses, "m.created_at > ?")
+		baseArgs = append(baseArgs, opts.After.Format("2006-01-02T15:04:05Z07:00"))
+	}
+
+	whereSQL := strings.Join(whereClauses, " AND ")
+
+	joinSQL := `
+		FROM messages_fts
+		JOIN messages m ON m.rowid = messages_fts.rowid
+		JOIN channels c ON c.id = m.channel_id
+		LEFT JOIN users u ON u.id = m.user_id
+		LEFT JOIN channel_memberships cm ON cm.channel_id = c.id AND cm.user_id = ?
+	`
+	// Prepend currentUserID for the channel_memberships join
+	joinArgs := append([]interface{}{currentUserID}, baseArgs...)
+
+	// Count query
+	countQuery := "SELECT COUNT(*) " + joinSQL + " WHERE " + whereSQL
+	var totalCount int
+	if err := r.db.QueryRowContext(ctx, countQuery, joinArgs...).Scan(&totalCount); err != nil {
+		return nil, err
+	}
+
+	// Data query
+	dataQuery := `
+		SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+		       COALESCE(u.display_name, '') as user_display_name, u.avatar_url,
+		       c.name as channel_name, c.type as channel_type
+	` + joinSQL + " WHERE " + whereSQL + `
+		ORDER BY messages_fts.rank
+		LIMIT ? OFFSET ?
+	`
+	dataArgs := append(joinArgs, opts.Limit, opts.Offset)
+
+	rows, err := r.db.QueryContext(ctx, dataQuery, dataArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []SearchMessage
+	for rows.Next() {
+		msg, channelName, channelType, err := r.scanUnreadMessage(rows)
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, SearchMessage{
+			MessageWithUser: msg.MessageWithUser,
+			ChannelName:     channelName,
+			ChannelType:     channelType,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if messages == nil {
+		messages = []SearchMessage{}
+	}
+
+	return &SearchResult{
+		Messages:   messages,
+		TotalCount: totalCount,
+		HasMore:    opts.Offset+len(messages) < totalCount,
+		Query:      opts.Query,
+	}, nil
+}
+
 // ListUserThreads lists threads the user is subscribed to in a workspace, ordered by last_reply_at DESC
 func (r *Repository) ListUserThreads(ctx context.Context, workspaceID, userID string, opts ListOptions) (*ThreadListResult, error) {
 	if opts.Limit <= 0 || opts.Limit > 100 {

@@ -54,6 +54,11 @@ export type NotificationData = components['schemas']['NotificationData'];
 export type UnreadMessage = components['schemas']['UnreadMessage'];
 export type UnreadMessagesResult = components['schemas']['UnreadMessagesResult'];
 
+// Search types
+export type SearchMessage = components['schemas']['SearchMessage'];
+export type SearchMessagesResult = components['schemas']['SearchMessagesResult'];
+export type SearchMessagesInput = components['schemas']['SearchMessagesInput'];
+
 // Thread types
 export type ThreadMessage = components['schemas']['ThreadMessage'];
 export type ThreadListResult = components['schemas']['ThreadListResult'];

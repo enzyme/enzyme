@@ -83,3 +83,30 @@
   height: 2.5rem;
   width: 2.5rem;
 }
+
+/* Search result highlight animation */
+@keyframes search-highlight-pulse {
+  0% {
+    background-color: rgb(254 240 138);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.dark .search-highlight {
+  animation: search-highlight-pulse-dark 2s ease-out;
+}
+
+.search-highlight {
+  animation: search-highlight-pulse 2s ease-out;
+}
+
+@keyframes search-highlight-pulse-dark {
+  0% {
+    background-color: rgb(59 130 246 / 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}

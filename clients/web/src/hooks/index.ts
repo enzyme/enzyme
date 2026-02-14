@@ -49,3 +49,4 @@ export {
   useUploadCustomEmoji,
   useDeleteCustomEmoji,
 } from './useCustomEmojis';
+export { useSearch } from './useSearch';

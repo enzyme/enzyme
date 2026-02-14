@@ -7,6 +7,7 @@ import {
   HashtagIcon,
   InboxIcon,
   ChatBubbleLeftEllipsisIcon,
+  MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 import {
   DndContext,
@@ -75,9 +76,10 @@ function DisclosureCaret({ isExpanded, className }: { isExpanded: boolean; class
 
 interface ChannelSidebarProps {
   workspaceId: string | undefined;
+  onSearchClick?: () => void;
 }
 
-export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
+export function ChannelSidebar({ workspaceId, onSearchClick }: ChannelSidebarProps) {
   const { channelId } = useParams<{ channelId: string }>();
   const location = useLocation();
   const { data: workspaceData } = useWorkspace(workspaceId);
@@ -219,15 +221,26 @@ export function ChannelSidebar({ workspaceId }: ChannelSidebarProps) {
           <h2 className="truncate font-bold text-gray-900 dark:text-white">
             {workspaceData?.workspace.name || 'Loading...'}
           </h2>
-          {hasUnread && (
-            <button
-              onClick={() => markAllAsRead.mutate()}
-              className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-              title="Mark all as read"
-            >
-              <CheckCircleIcon className="h-5 w-5" />
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {onSearchClick && (
+              <button
+                onClick={onSearchClick}
+                className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                title="Search messages (Cmd+K)"
+              >
+                <MagnifyingGlassIcon className="h-5 w-5" />
+              </button>
+            )}
+            {hasUnread && (
+              <button
+                onClick={() => markAllAsRead.mutate()}
+                className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                title="Mark all as read"
+              >
+                <CheckCircleIcon className="h-5 w-5" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

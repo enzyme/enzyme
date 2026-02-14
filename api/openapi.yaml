@@ -932,6 +932,35 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /workspaces/{wid}/messages/search:
+    post:
+      tags: [messages]
+      summary: Search messages in workspace
+      operationId: searchMessages
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchMessagesInput'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchMessagesResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /workspaces/{wid}/threads:
     post:
       tags: [messages]
@@ -2369,6 +2398,55 @@ components:
         has_more:
           type: boolean
         next_cursor:
+          type: string
+
+    SearchMessagesInput:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+        channel_id:
+          type: string
+        user_id:
+          type: string
+        before:
+          type: string
+          format: date-time
+        after:
+          type: string
+          format: date-time
+        limit:
+          type: integer
+          default: 20
+        offset:
+          type: integer
+          default: 0
+
+    SearchMessage:
+      allOf:
+        - $ref: '#/components/schemas/MessageWithUser'
+        - type: object
+          required: [channel_name, channel_type]
+          properties:
+            channel_name:
+              type: string
+            channel_type:
+              $ref: '#/components/schemas/ChannelType'
+
+    SearchMessagesResult:
+      type: object
+      required: [messages, total_count, has_more, query]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchMessage'
+        total_count:
+          type: integer
+        has_more:
+          type: boolean
+        query:
           type: string
 
     ThreadMessage:

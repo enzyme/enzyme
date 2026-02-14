@@ -1,19 +1,38 @@
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet, useParams } from 'react-router-dom';
 import { WorkspaceSwitcher } from '../workspace/WorkspaceSwitcher';
 import { ChannelSidebar } from '../channel/ChannelSidebar';
 import { ThreadPanel } from '../thread/ThreadPanel';
 import { ProfilePane } from '../profile/ProfilePane';
+import { SearchModal } from '../search/SearchModal';
 import { useSSE } from '../../hooks';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { useSidebar } from '../../hooks/useSidebar';
 import { cn } from '../../lib/utils';
 
 export function AppLayout() {
-  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const { workspaceId, channelId } = useParams<{ workspaceId: string; channelId: string }>();
   const { isConnected } = useSSE(workspaceId);
   const { threadId } = useThreadPanel();
   const { profileUserId } = useProfilePanel();
   const { collapsed: sidebarCollapsed } = useSidebar();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const handleOpenSearch = useCallback(() => {
+    setIsSearchOpen(true);
+  }, []);
+
+  // Global Cmd+K / Ctrl+K keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="flex h-screen flex-col bg-white dark:bg-gray-900">
@@ -35,7 +54,7 @@ export function AppLayout() {
             sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-64',
           )}
         >
-          <ChannelSidebar workspaceId={workspaceId} />
+          <ChannelSidebar workspaceId={workspaceId} onSearchClick={handleOpenSearch} />
         </div>
 
         {/* Main Content */}
@@ -49,6 +68,13 @@ export function AppLayout() {
         {/* Profile Pane */}
         {profileUserId && <ProfilePane userId={profileUserId} />}
       </div>
+
+      {/* Search Modal */}
+      <SearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        initialChannelId={channelId}
+      />
     </div>
   );
 }

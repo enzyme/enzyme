@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useMessages, useChannels } from '../../hooks';
 import { usePrewarmSignedUrls } from '../../hooks/usePrewarmSignedUrls';
 import { MessageItem } from './MessageItem';
@@ -102,6 +102,33 @@ export function MessageList({
       container.scrollTop = container.scrollHeight;
     }
   }, [messages.length]);
+
+  // Jump to message from ?msg= search param
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightedMsgId = searchParams.get('msg');
+
+  useEffect(() => {
+    if (!highlightedMsgId || messages.length === 0) return;
+
+    const el = document.getElementById(`message-${highlightedMsgId}`);
+    if (el) {
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      el.classList.add('search-highlight');
+      const timer = setTimeout(() => {
+        el.classList.remove('search-highlight');
+        // Clean up the ?msg param
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete('msg');
+            return next;
+          },
+          { replace: true },
+        );
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedMsgId, messages.length, setSearchParams]);
 
   // Intersection observer for infinite scroll
   useEffect(() => {

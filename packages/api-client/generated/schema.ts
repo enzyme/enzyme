@@ -553,6 +553,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{wid}/messages/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Search messages in workspace */
+        post: operations["searchMessages"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{wid}/threads": {
         parameters: {
             query?: never;
@@ -1281,6 +1298,29 @@ export interface components {
             messages: components["schemas"]["UnreadMessage"][];
             has_more: boolean;
             next_cursor?: string;
+        };
+        SearchMessagesInput: {
+            query: string;
+            channel_id?: string;
+            user_id?: string;
+            /** Format: date-time */
+            before?: string;
+            /** Format: date-time */
+            after?: string;
+            /** @default 20 */
+            limit: number;
+            /** @default 0 */
+            offset: number;
+        };
+        SearchMessage: components["schemas"]["MessageWithUser"] & {
+            channel_name: string;
+            channel_type: components["schemas"]["ChannelType"];
+        };
+        SearchMessagesResult: {
+            messages: components["schemas"]["SearchMessage"][];
+            total_count: number;
+            has_more: boolean;
+            query: string;
         };
         ThreadMessage: components["schemas"]["MessageWithUser"] & {
             channel_name: string;
@@ -2628,6 +2668,36 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    searchMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                wid: components["parameters"]["workspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchMessagesInput"];
+            };
+        };
+        responses: {
+            /** @description Search results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchMessagesResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listUserThreads: {
