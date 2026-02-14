@@ -9,52 +9,6 @@ permissions:
   contents: write
 
 jobs:
-  build-backend:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-          - goos: linux
-            goarch: arm64
-          - goos: darwin
-            goarch: amd64
-          - goos: darwin
-            goarch: arm64
-          - goos: windows
-            goarch: amd64
-          - goos: windows
-            goarch: arm64
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25.5'
-          cache-dependency-path: api/go.sum
-
-      - name: Build
-        env:
-          CGO_ENABLED: 0
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          cd api
-          BINARY_NAME="feather-${{ matrix.goos }}-${{ matrix.goarch }}"
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            BINARY_NAME="${BINARY_NAME}.exe"
-          fi
-          go build -ldflags="-s -w" -o "../${BINARY_NAME}" ./cmd/feather
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: feather-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: feather-${{ matrix.goos }}-${{ matrix.goarch }}*
-
   build-frontend:
     runs-on: ubuntu-latest
     steps:
@@ -81,29 +35,73 @@ jobs:
       - name: Install dependencies
         run: make install
 
-      - name: Install oapi-codegen
-        # Version must match server.gen.go header
-        run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.1
-
       - name: Generate types
         run: make generate-types
 
       - name: Build frontend
         run: pnpm --filter @feather/web build
 
-      - name: Package frontend
+      - name: Upload web dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: clients/web/dist/
+
+  build-backend:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.5'
+          cache-dependency-path: api/go.sum
+
+      - name: Download web dist
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: api/internal/web/dist/
+
+      - name: Build
+        env:
+          CGO_ENABLED: 0
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
-          cd clients/web/dist
-          tar -czvf ../../../feather-web.tar.gz .
+          cd api
+          BINARY_NAME="feather-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BINARY_NAME="${BINARY_NAME}.exe"
+          fi
+          go build -ldflags="-s -w" -o "../${BINARY_NAME}" ./cmd/feather
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: feather-web
-          path: feather-web.tar.gz
+          name: feather-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: feather-${{ matrix.goos }}-${{ matrix.goarch }}*
 
   release:
-    needs: [build-backend, build-frontend]
+    needs: build-backend
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -117,7 +115,7 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release
-          find artifacts -type f \( -name "feather-*" -o -name "*.tar.gz" \) -exec cp {} release/ \;
+          find artifacts -type f -name "feather-*" -exec cp {} release/ \;
           ls -la release/
 
       - name: Create Release

@@ -6,33 +6,26 @@ This guide covers everything you need to deploy Feather on your own server.
 
 - A Linux, macOS, or Windows server
 - Port 8080 (default) available, or any port of your choosing
-- A web server (nginx, Caddy, etc.) for serving the frontend and proxying API requests (optional but recommended for production)
 
 ## Quick Start
 
 1. Download the latest release for your platform from the [releases page](https://github.com/bradsimantel/feather/releases)
-2. Extract the frontend tarball
-3. Start the server
+2. Start the server
 
 ```bash
-# Download backend binary and frontend
+# Download the binary (includes the web client)
 curl -LO https://github.com/bradsimantel/feather/releases/latest/download/feather-linux-amd64
-curl -LO https://github.com/bradsimantel/feather/releases/latest/download/feather-web.tar.gz
 chmod +x feather-linux-amd64
-
-# Extract frontend
-mkdir -p web
-tar -xzf feather-web.tar.gz -C web
 
 # Start the server
 ./feather-linux-amd64
 ```
 
-The server starts on `http://localhost:8080`. The first user to register will automatically have a workspace created for them.
+The server starts on `http://localhost:8080` and serves both the API and web client. The first user to register will automatically have a workspace created for them.
 
 ## Available Binaries
 
-Each release includes pre-built binaries for six platforms:
+Each release includes pre-built binaries for six platforms. Each binary is a single self-contained file with the web client embedded:
 
 | OS      | Architecture | Binary Name                 |
 | ------- | ------------ | --------------------------- |
@@ -42,8 +35,6 @@ Each release includes pre-built binaries for six platforms:
 | macOS   | ARM64        | `feather-darwin-arm64`      |
 | Windows | x86_64       | `feather-windows-amd64.exe` |
 | Windows | ARM64        | `feather-windows-arm64.exe` |
-
-A `feather-web.tar.gz` frontend bundle is also included.
 
 ## Data Directory
 
@@ -91,9 +82,9 @@ email:
 
 Configuration can also be set via environment variables with the `FEATHER_` prefix or CLI flags. See the [Configuration Reference](./configuration.md) for details.
 
-## Reverse Proxy Setup
+## Reverse Proxy Setup (Optional)
 
-For production, you'll want a reverse proxy to handle TLS, serve the frontend, and proxy API requests to the Feather backend.
+Since Feather serves both the API and web client from a single binary, a reverse proxy is only needed if you want TLS termination via an external tool (alternatively, use [built-in TLS](#built-in-tls)).
 
 ### nginx
 
@@ -105,12 +96,7 @@ server {
     ssl_certificate     /etc/letsencrypt/live/chat.example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/chat.example.com/privkey.pem;
 
-    # Frontend static files
-    root /var/www/feather/web;
-    index index.html;
-
-    # API and SSE requests → backend
-    location /api/ {
+    location / {
         proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -122,16 +108,6 @@ server {
         proxy_cache off;
         proxy_read_timeout 86400s;
     }
-
-    # Health check
-    location /health {
-        proxy_pass http://127.0.0.1:8080;
-    }
-
-    # SPA fallback — serve index.html for all other routes
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
 }
 ```
 
@@ -139,22 +115,7 @@ server {
 
 ```
 chat.example.com {
-    root * /var/www/feather/web
-
-    # API → backend
-    handle /api/* {
-        reverse_proxy localhost:8080
-    }
-
-    handle /health {
-        reverse_proxy localhost:8080
-    }
-
-    # Frontend SPA
-    handle {
-        try_files {path} /index.html
-        file_server
-    }
+    reverse_proxy localhost:8080
 }
 ```
 
@@ -300,4 +261,4 @@ make install
 make build
 ```
 
-The backend binary will be at `api/bin/feather` and the frontend at `clients/web/dist/`.
+The binary at `api/bin/feather` includes the embedded web client. Run it directly — no separate frontend serving needed.

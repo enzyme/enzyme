@@ -17,8 +17,10 @@ import (
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 )
 
-// NewRouter creates a new HTTP router with all routes registered
-func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.SessionStore, limiter *ratelimit.Limiter, allowedOrigins []string) http.Handler {
+// NewRouter creates a new HTTP router with all routes registered.
+// If spaHandler is non-nil, it is mounted as a fallback for unmatched routes
+// to serve the embedded web client.
+func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.SessionStore, limiter *ratelimit.Limiter, allowedOrigins []string, spaHandler http.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -94,6 +96,11 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.S
 			r.Post("/workspaces/{wid}/typing/stop", sseHandler.StopTyping)
 		})
 	})
+
+	// Mount embedded SPA as fallback for all unmatched routes
+	if spaHandler != nil {
+		r.NotFound(spaHandler.ServeHTTP)
+	}
 
 	return r
 }

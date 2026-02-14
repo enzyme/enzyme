@@ -18,10 +18,10 @@ generate-types:
 	cd api && make generate-types
 	pnpm --filter @feather/api-client generate
 
-# Build all
+# Build all (web first so it can be embedded into the Go binary)
 build: generate-types
-	cd api && make build
 	pnpm --filter @feather/web build
+	cd api && make build
 	pnpm --filter @feather/desktop build
 	pnpm --filter @feather/desktop make
 

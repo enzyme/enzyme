@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/feather/api/internal/sse"
 	"github.com/feather/api/internal/thread"
 	"github.com/feather/api/internal/user"
+	"github.com/feather/api/internal/web"
 	"github.com/feather/api/internal/workspace"
 )
 
@@ -143,8 +145,17 @@ func New(cfg *config.Config) (*App, error) {
 		limiter = ratelimit.NewLimiter(rules)
 	}
 
+	// Create embedded SPA handler if web client is bundled
+	var spaHandler http.Handler
+	if web.HasContent() {
+		spaHandler = web.Handler()
+		log.Printf("Embedded web client: enabled")
+	} else {
+		log.Printf("Embedded web client: not found (serve frontend separately)")
+	}
+
 	// Create router with generated handlers
-	router := server.NewRouter(h, sseHandler, sessionStore, limiter, cfg.Server.AllowedOrigins)
+	router := server.NewRouter(h, sseHandler, sessionStore, limiter, cfg.Server.AllowedOrigins, spaHandler)
 
 	// Build TLS options
 	tlsOpts := server.TLSOptions{
