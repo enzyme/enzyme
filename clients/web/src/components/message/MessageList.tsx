@@ -48,8 +48,7 @@ export function MessageList({
   const topSentinelRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
-  const newMessageCountRef = useRef(0);
-  const prevMessageCountRef = useRef(0);
+  const lastBottomMessageIdRef = useRef<string | null>(null);
   const scrollAnchorRef = useRef<{ itemKey: string; offsetFromContainerTop: number } | null>(null);
   const [showJumpButton, setShowJumpButton] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
@@ -111,20 +110,28 @@ export function MessageList({
     measureElement: (el) => el.getBoundingClientRect().height,
   });
 
-  // Track new messages arriving while scrolled up
+  // Track new messages arriving while scrolled up by comparing against the
+  // newest message ID from when the user was last at the bottom. This avoids
+  // counting older messages loaded via infinite scroll as "new".
   useEffect(() => {
-    const currentCount = allMessages.length;
-    if (prevMessageCountRef.current > 0 && currentCount > prevMessageCountRef.current) {
-      if (!isAtBottomRef.current) {
-        const diff = currentCount - prevMessageCountRef.current;
-        newMessageCountRef.current += diff;
-        setNewMessageCount(newMessageCountRef.current);
-      }
+    if (allMessages.length === 0) return;
+    const newestId = allMessages[allMessages.length - 1].id;
+
+    if (isAtBottomRef.current) {
+      lastBottomMessageIdRef.current = newestId;
+      setNewMessageCount(0);
+    } else if (lastBottomMessageIdRef.current) {
+      const idx = allMessages.findIndex((m) => m.id > lastBottomMessageIdRef.current!);
+      setNewMessageCount(idx === -1 ? 0 : allMessages.length - idx);
+    } else {
+      lastBottomMessageIdRef.current = newestId;
     }
-    prevMessageCountRef.current = currentCount;
-  }, [allMessages.length]);
+  }, [allMessages]);
 
   // Handle scroll events — only tracks at-bottom state and jump button
+  const allMessagesRef = useRef(allMessages);
+  allMessagesRef.current = allMessages;
+
   const handleScroll = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -138,7 +145,10 @@ export function MessageList({
     }
 
     if (atBottom) {
-      newMessageCountRef.current = 0;
+      const msgs = allMessagesRef.current;
+      if (msgs.length > 0) {
+        lastBottomMessageIdRef.current = msgs[msgs.length - 1].id;
+      }
       setNewMessageCount(0);
       onReachBottom();
     }
@@ -296,8 +306,7 @@ export function MessageList({
   useEffect(() => {
     initialScrollDoneRef.current = false;
     scrollAnchorRef.current = null;
-    newMessageCountRef.current = 0;
-    prevMessageCountRef.current = 0;
+    lastBottomMessageIdRef.current = null;
     wasFetchingNextRef.current = false;
     wasFetchingPrevRef.current = false;
     setNewMessageCount(0);
@@ -417,7 +426,10 @@ export function MessageList({
         virtualizer.scrollToIndex(lastIndex, { align: 'end' });
       });
     }
-    newMessageCountRef.current = 0;
+    const msgs = allMessagesRef.current;
+    if (msgs.length > 0) {
+      lastBottomMessageIdRef.current = msgs[msgs.length - 1].id;
+    }
     setNewMessageCount(0);
     setShowJumpButton(false);
     isAtBottomRef.current = true;
