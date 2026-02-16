@@ -114,11 +114,12 @@ export function ChannelSidebar({ workspaceId, onSearchClick }: ChannelSidebarPro
   }
 
   const channels = localChannels;
-  const totalUnreadCount = useMemo(
-    () => channels.reduce((sum, c) => sum + c.unread_count, 0),
+  const totalNotificationCount = useMemo(
+    () => channels.reduce((sum, c) => sum + c.notification_count, 0),
     [channels],
   );
-  const hasUnread = totalUnreadCount > 0;
+  const hasUnread = useMemo(() => channels.some((c) => c.unread_count > 0), [channels]);
+  const hasNotifications = totalNotificationCount > 0;
   const isUnreadsPage = location.pathname.includes('/unreads');
   const isThreadsPage = location.pathname.includes('/threads');
   const { data: threadsData } = useUserThreads({ workspaceId: workspaceId || '' });
@@ -231,7 +232,7 @@ export function ChannelSidebar({ workspaceId, onSearchClick }: ChannelSidebarPro
                 <MagnifyingGlassIcon className="h-5 w-5" />
               </button>
             )}
-            {hasUnread && (
+            {(hasUnread || hasNotifications) && (
               <button
                 onClick={() => markAllAsRead.mutate()}
                 className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
@@ -261,9 +262,9 @@ export function ChannelSidebar({ workspaceId, onSearchClick }: ChannelSidebarPro
               <InboxIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             </span>
             <span className={cn('truncate', hasUnread && 'font-semibold')}>All Unreads</span>
-            {hasUnread && (
+            {hasNotifications && (
               <span className="ml-auto rounded-full bg-primary-600 px-1.5 py-0.5 text-xs text-white">
-                {totalUnreadCount}
+                {totalNotificationCount}
               </span>
             )}
           </Link>
@@ -621,7 +622,7 @@ interface ChannelItemLinkProps {
 }
 
 function ChannelItemLink({ channel, workspaceId, isActive, isMenuOpen }: ChannelItemLinkProps) {
-  const hasUnread = channel.unread_count > 0;
+  const hasNotifications = channel.notification_count > 0;
 
   return (
     <Link
@@ -635,9 +636,9 @@ function ChannelItemLink({ channel, workspaceId, isActive, isMenuOpen }: Channel
       )}
     >
       <ChannelItemContent channel={channel} isActive={isActive} />
-      {hasUnread && (
+      {hasNotifications && (
         <span className="ml-auto rounded-full bg-primary-600 px-1.5 py-0.5 text-xs text-white">
-          {channel.unread_count}
+          {channel.notification_count}
         </span>
       )}
     </Link>

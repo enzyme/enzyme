@@ -2143,13 +2143,15 @@ components:
       allOf:
         - $ref: '#/components/schemas/Channel'
         - type: object
-          required: [unread_count, is_starred]
+          required: [unread_count, is_starred, notification_count]
           properties:
             channel_role:
               $ref: '#/components/schemas/ChannelRole'
             last_read_message_id:
               type: string
             unread_count:
+              type: integer
+            notification_count:
               type: integer
             is_starred:
               type: boolean

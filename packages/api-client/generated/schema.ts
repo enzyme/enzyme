@@ -1182,6 +1182,7 @@ export interface components {
             channel_role?: components["schemas"]["ChannelRole"];
             last_read_message_id?: string;
             unread_count: number;
+            notification_count: number;
             is_starred: boolean;
             /** @description For DM channels, the other participants (excluding current user) */
             dm_participants?: components["schemas"]["ChannelMember"][];

@@ -531,6 +531,7 @@ func channelWithMembershipToAPI(ch channel.ChannelWithMembership) openapi.Channe
 		UpdatedAt:         ch.UpdatedAt,
 		LastReadMessageId: ch.LastReadMessageID,
 		UnreadCount:       ch.UnreadCount,
+		NotificationCount: ch.NotificationCount,
 		IsStarred:         ch.IsStarred,
 	}
 	if ch.ChannelRole != nil {

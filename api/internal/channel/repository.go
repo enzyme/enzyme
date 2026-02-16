@@ -208,13 +208,32 @@ func (r *Repository) ListForWorkspace(ctx context.Context, workspaceID, userID s
 		             AND m.thread_parent_id IS NULL
 		             AND m.deleted_at IS NULL
 		             AND (cm.last_read_message_id IS NULL OR m.id > cm.last_read_message_id)
-		       ), 0) as unread_count
+		       ), 0) as unread_count,
+		       COALESCE((
+		           SELECT COUNT(*) FROM messages m
+		           WHERE m.channel_id = c.id
+		             AND m.thread_parent_id IS NULL
+		             AND m.deleted_at IS NULL
+		             AND (cm.last_read_message_id IS NULL OR m.id > cm.last_read_message_id)
+		             AND CASE
+		               WHEN c.type IN ('dm', 'group_dm') THEN 1
+		               WHEN np.notify_level = 'none' THEN 0
+		               WHEN np.notify_level = 'all' THEN 1
+		               WHEN np.notify_level = 'mentions' OR np.notify_level IS NULL THEN
+		                 EXISTS (
+		                   SELECT 1 FROM json_each(m.mentions) je
+		                   WHERE je.value = ? OR je.value IN ('@channel', '@here', '@everyone')
+		                 )
+		               ELSE 0
+		             END = 1
+		       ), 0) as notification_count
 		FROM channels c
 		LEFT JOIN channel_memberships cm ON cm.channel_id = c.id AND cm.user_id = ?
+		LEFT JOIN notification_preferences np ON np.channel_id = c.id AND np.user_id = ?
 		WHERE c.workspace_id = ? AND c.archived_at IS NULL
 		  AND (c.type = 'public' OR cm.id IS NOT NULL)
 		ORDER BY c.name
-	`, userID, workspaceID)
+	`, userID, userID, userID, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -231,9 +250,10 @@ func (r *Repository) ListForWorkspace(ctx context.Context, workspaceID, userID s
 		var isDefault int
 		var isStarred int
 		var unreadCount int
+		var notificationCount int
 
 		err := rows.Scan(&c.ID, &c.WorkspaceID, &c.Name, &description, &c.Type, &dmHash, &isDefault, &archivedAt, &createdBy, &createdAt, &updatedAt,
-			&channelRole, &lastReadID, &isStarred, &unreadCount)
+			&channelRole, &lastReadID, &isStarred, &unreadCount, &notificationCount)
 		if err != nil {
 			return nil, err
 		}
@@ -260,6 +280,7 @@ func (r *Repository) ListForWorkspace(ctx context.Context, workspaceID, userID s
 		c.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 		c.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
 		c.UnreadCount = unreadCount
+		c.NotificationCount = notificationCount
 		c.IsStarred = isStarred != 0
 		c.IsDefault = isDefault != 0
 
@@ -824,6 +845,7 @@ func (r *Repository) ListRecentDMs(ctx context.Context, workspaceID, userID stri
 		c.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 		c.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
 		c.UnreadCount = unreadCount
+		c.NotificationCount = unreadCount // DMs always notify
 		c.IsStarred = isStarred != 0
 		c.IsDefault = isDefault != 0
 

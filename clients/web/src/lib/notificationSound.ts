@@ -1,49 +1,82 @@
-let notificationAudio: HTMLAudioElement | null = null;
+let audioContext: AudioContext | null = null;
 let audioUnlocked = false;
 
-// Initialize audio on first user interaction
-function initAudio() {
-  if (notificationAudio) return;
-
-  notificationAudio = new Audio('/sounds/notification.mp3');
-  notificationAudio.volume = 0.5;
+// Initialize AudioContext on first user interaction
+function getAudioContext(): AudioContext | null {
+  if (!audioContext) {
+    try {
+      audioContext = new AudioContext();
+    } catch {
+      return null;
+    }
+  }
+  return audioContext;
 }
 
 // Unlock audio context on user interaction (required by browsers)
 export function unlockAudio() {
   if (audioUnlocked) return;
 
-  initAudio();
-  if (notificationAudio) {
-    // Play and immediately pause to unlock
-    const playPromise = notificationAudio.play();
-    if (playPromise) {
-      playPromise
-        .then(() => {
-          notificationAudio?.pause();
-          notificationAudio!.currentTime = 0;
-          audioUnlocked = true;
-        })
-        .catch(() => {
-          // Autoplay blocked, will retry on next interaction
-        });
-    }
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === 'suspended') {
+    ctx
+      .resume()
+      .then(() => {
+        audioUnlocked = true;
+      })
+      .catch(() => {
+        // Will retry on next interaction
+      });
+  } else if (ctx) {
+    audioUnlocked = true;
   }
 }
 
-// Play notification sound
+// Play a two-tone notification chime using Web Audio API
 export function playNotificationSound() {
-  if (!notificationAudio) {
-    initAudio();
+  const ctx = getAudioContext();
+  if (!ctx || !audioUnlocked) return;
+
+  // Resume context if suspended
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
   }
 
-  if (notificationAudio && audioUnlocked) {
-    // Reset and play
-    notificationAudio.currentTime = 0;
-    notificationAudio.play().catch(() => {
-      // Silently fail if playback fails
-    });
-  }
+  const now = ctx.currentTime;
+  const duration = 0.15;
+  const gap = 0.05;
+  const volume = 0.3;
+
+  // First tone: D5 (~587 Hz)
+  playTone(ctx, 587, now, duration, volume);
+  // Second tone: A5 (~880 Hz)
+  playTone(ctx, 880, now + duration + gap, duration, volume);
+}
+
+function playTone(
+  ctx: AudioContext,
+  frequency: number,
+  startTime: number,
+  duration: number,
+  volume: number,
+) {
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+
+  oscillator.type = 'sine';
+  oscillator.frequency.setValueAtTime(frequency, startTime);
+
+  // Envelope: quick attack, short sustain, smooth decay
+  gainNode.gain.setValueAtTime(0, startTime);
+  gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.01);
+  gainNode.gain.setValueAtTime(volume, startTime + duration * 0.6);
+  gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+  oscillator.connect(gainNode);
+  gainNode.connect(ctx.destination);
+
+  oscillator.start(startTime);
+  oscillator.stop(startTime + duration);
 }
 
 // Request browser notification permission

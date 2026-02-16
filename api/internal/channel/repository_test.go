@@ -2,10 +2,14 @@ package channel
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/feather/api/internal/testutil"
+	"github.com/oklog/ulid/v2"
 )
 
 func TestRepository_Create(t *testing.T) {
@@ -732,5 +736,313 @@ func TestRepository_RemoveMember_AllowsGroupDM(t *testing.T) {
 	_, err = repo.GetMembership(ctx, user3.ID, dm.ID)
 	if !errors.Is(err, ErrNotChannelMember) {
 		t.Errorf("expected ErrNotChannelMember, got %v", err)
+	}
+}
+
+// createMessageWithMentions creates a message with specified mentions JSON array
+func createMessageWithMentions(t *testing.T, db *sql.DB, channelID, userID, content string, mentions []string) string {
+	t.Helper()
+
+	id := ulid.Make().String()
+	now := time.Now().UTC()
+
+	mentionsJSON, err := json.Marshal(mentions)
+	if err != nil {
+		t.Fatalf("marshaling mentions: %v", err)
+	}
+
+	_, err = db.ExecContext(context.Background(), `
+		INSERT INTO messages (id, channel_id, user_id, content, mentions, reply_count, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+	`, id, channelID, userID, content, string(mentionsJSON), now.Format(time.RFC3339), now.Format(time.RFC3339))
+	if err != nil {
+		t.Fatalf("creating test message with mentions: %v", err)
+	}
+
+	return id
+}
+
+// setNotificationPreference sets a notification preference for a user/channel
+func setNotificationPreference(t *testing.T, db *sql.DB, userID, channelID, notifyLevel string) {
+	t.Helper()
+
+	id := ulid.Make().String()
+	now := time.Now().UTC()
+
+	_, err := db.ExecContext(context.Background(), `
+		INSERT INTO notification_preferences (id, user_id, channel_id, notify_level, email_enabled, created_at, updated_at)
+		VALUES (?, ?, ?, ?, 1, ?, ?)
+	`, id, userID, channelID, notifyLevel, now.Format(time.RFC3339), now.Format(time.RFC3339))
+	if err != nil {
+		t.Fatalf("setting notification preference: %v", err)
+	}
+}
+
+func TestRepository_ListForWorkspace_NotificationCount_DMsAlwaysNotify(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	// Create DM
+	dm, err := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID})
+	if err != nil {
+		t.Fatalf("CreateDM() error = %v", err)
+	}
+
+	// Add messages (no mentions needed for DMs)
+	testutil.CreateTestMessage(t, db, dm.ID, user2.ID, "Hello")
+	testutil.CreateTestMessage(t, db, dm.ID, user2.ID, "How are you?")
+
+	channels, err := repo.ListForWorkspace(ctx, ws.ID, user1.ID)
+	if err != nil {
+		t.Fatalf("ListForWorkspace() error = %v", err)
+	}
+
+	var dmChannel *ChannelWithMembership
+	for i, c := range channels {
+		if c.ID == dm.ID {
+			dmChannel = &channels[i]
+			break
+		}
+	}
+
+	if dmChannel == nil {
+		t.Fatal("DM channel not found in results")
+	}
+
+	// DMs should always have notification_count == unread_count
+	if dmChannel.NotificationCount != dmChannel.UnreadCount {
+		t.Errorf("DM NotificationCount = %d, want %d (same as UnreadCount)", dmChannel.NotificationCount, dmChannel.UnreadCount)
+	}
+	if dmChannel.NotificationCount != 2 {
+		t.Errorf("DM NotificationCount = %d, want 2", dmChannel.NotificationCount)
+	}
+}
+
+func TestRepository_ListForWorkspace_NotificationCount_MentionsDefault(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user1.ID, "general", "public")
+
+	// Message 1: mentions user1
+	createMessageWithMentions(t, db, ch.ID, user2.ID, "Hey @User 1", []string{user1.ID})
+	// Message 2: no mentions
+	createMessageWithMentions(t, db, ch.ID, user2.ID, "Just chatting", []string{})
+	// Message 3: mentions @channel
+	createMessageWithMentions(t, db, ch.ID, user2.ID, "Hey @channel", []string{"@channel"})
+
+	channels, err := repo.ListForWorkspace(ctx, ws.ID, user1.ID)
+	if err != nil {
+		t.Fatalf("ListForWorkspace() error = %v", err)
+	}
+
+	var found *ChannelWithMembership
+	for i, c := range channels {
+		if c.ID == ch.ID {
+			found = &channels[i]
+			break
+		}
+	}
+
+	if found == nil {
+		t.Fatal("channel not found in results")
+	}
+
+	// Default (no preference row) = 'mentions': should count messages with user mention or @channel
+	if found.UnreadCount != 3 {
+		t.Errorf("UnreadCount = %d, want 3", found.UnreadCount)
+	}
+	if found.NotificationCount != 2 {
+		t.Errorf("NotificationCount = %d, want 2 (1 direct mention + 1 @channel)", found.NotificationCount)
+	}
+}
+
+func TestRepository_ListForWorkspace_NotificationCount_NotifyAll(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user1.ID, "general", "public")
+
+	// Set notify_level = 'all'
+	setNotificationPreference(t, db, user1.ID, ch.ID, "all")
+
+	// Messages without mentions
+	testutil.CreateTestMessage(t, db, ch.ID, user2.ID, "Hello")
+	testutil.CreateTestMessage(t, db, ch.ID, user2.ID, "World")
+
+	channels, err := repo.ListForWorkspace(ctx, ws.ID, user1.ID)
+	if err != nil {
+		t.Fatalf("ListForWorkspace() error = %v", err)
+	}
+
+	var found *ChannelWithMembership
+	for i, c := range channels {
+		if c.ID == ch.ID {
+			found = &channels[i]
+			break
+		}
+	}
+
+	if found == nil {
+		t.Fatal("channel not found in results")
+	}
+
+	// notify_level='all': notification_count should match unread_count
+	if found.NotificationCount != found.UnreadCount {
+		t.Errorf("NotificationCount = %d, want %d (same as UnreadCount)", found.NotificationCount, found.UnreadCount)
+	}
+	if found.NotificationCount != 2 {
+		t.Errorf("NotificationCount = %d, want 2", found.NotificationCount)
+	}
+}
+
+func TestRepository_ListForWorkspace_NotificationCount_NotifyNone(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user1.ID, "general", "public")
+
+	// Set notify_level = 'none'
+	setNotificationPreference(t, db, user1.ID, ch.ID, "none")
+
+	// Messages with mentions
+	createMessageWithMentions(t, db, ch.ID, user2.ID, "Hey @User 1", []string{user1.ID})
+	testutil.CreateTestMessage(t, db, ch.ID, user2.ID, "Hello")
+
+	channels, err := repo.ListForWorkspace(ctx, ws.ID, user1.ID)
+	if err != nil {
+		t.Fatalf("ListForWorkspace() error = %v", err)
+	}
+
+	var found *ChannelWithMembership
+	for i, c := range channels {
+		if c.ID == ch.ID {
+			found = &channels[i]
+			break
+		}
+	}
+
+	if found == nil {
+		t.Fatal("channel not found in results")
+	}
+
+	// notify_level='none': notification_count should be 0
+	if found.UnreadCount != 2 {
+		t.Errorf("UnreadCount = %d, want 2", found.UnreadCount)
+	}
+	if found.NotificationCount != 0 {
+		t.Errorf("NotificationCount = %d, want 0", found.NotificationCount)
+	}
+}
+
+func TestRepository_ListForWorkspace_NotificationCount_MentionsExplicit(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user1.ID, "general", "public")
+
+	// Explicit mentions preference (same as default for channels)
+	setNotificationPreference(t, db, user1.ID, ch.ID, "mentions")
+
+	// Messages: 1 with direct mention, 1 with @here, 1 with @everyone, 1 without
+	createMessageWithMentions(t, db, ch.ID, user2.ID, "Hey @User 1", []string{user1.ID})
+	createMessageWithMentions(t, db, ch.ID, user2.ID, "@here check this", []string{"@here"})
+	createMessageWithMentions(t, db, ch.ID, user2.ID, "@everyone important", []string{"@everyone"})
+	createMessageWithMentions(t, db, ch.ID, user2.ID, "just chatting", []string{})
+
+	channels, err := repo.ListForWorkspace(ctx, ws.ID, user1.ID)
+	if err != nil {
+		t.Fatalf("ListForWorkspace() error = %v", err)
+	}
+
+	var found *ChannelWithMembership
+	for i, c := range channels {
+		if c.ID == ch.ID {
+			found = &channels[i]
+			break
+		}
+	}
+
+	if found == nil {
+		t.Fatal("channel not found in results")
+	}
+
+	if found.UnreadCount != 4 {
+		t.Errorf("UnreadCount = %d, want 4", found.UnreadCount)
+	}
+	// Should count: direct mention + @here + @everyone = 3
+	if found.NotificationCount != 3 {
+		t.Errorf("NotificationCount = %d, want 3 (1 direct + 1 @here + 1 @everyone)", found.NotificationCount)
+	}
+}
+
+func TestRepository_ListRecentDMs_NotificationCount(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Test WS")
+
+	// Create DM
+	dm, err := repo.CreateDM(ctx, ws.ID, []string{user1.ID, user2.ID})
+	if err != nil {
+		t.Fatalf("CreateDM() error = %v", err)
+	}
+
+	// Add messages (DMs always notify regardless of mentions)
+	testutil.CreateTestMessage(t, db, dm.ID, user2.ID, "Hello")
+	testutil.CreateTestMessage(t, db, dm.ID, user2.ID, "How are you?")
+	testutil.CreateTestMessage(t, db, dm.ID, user2.ID, "Are you there?")
+
+	channels, err := repo.ListRecentDMs(ctx, ws.ID, user1.ID, time.Now().Add(-24*time.Hour), 50)
+	if err != nil {
+		t.Fatalf("ListRecentDMs() error = %v", err)
+	}
+
+	var dmChannel *ChannelWithMembership
+	for i, c := range channels {
+		if c.ID == dm.ID {
+			dmChannel = &channels[i]
+			break
+		}
+	}
+
+	if dmChannel == nil {
+		t.Fatal("DM channel not found in results")
+	}
+
+	if dmChannel.UnreadCount != 3 {
+		t.Errorf("UnreadCount = %d, want 3", dmChannel.UnreadCount)
+	}
+	// DMs should always have notification_count == unread_count
+	if dmChannel.NotificationCount != dmChannel.UnreadCount {
+		t.Errorf("NotificationCount = %d, want %d (same as UnreadCount)", dmChannel.NotificationCount, dmChannel.UnreadCount)
 	}
 }

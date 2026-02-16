@@ -170,6 +170,7 @@ type ChannelWithMembership struct {
 	IsStarred         bool        `json:"is_starred"`
 	LastReadMessageId *string     `json:"last_read_message_id,omitempty"`
 	Name              string      `json:"name"`
+	NotificationCount int         `json:"notification_count"`
 	Type              ChannelType `json:"type"`
 	UnreadCount       int         `json:"unread_count"`
 	UpdatedAt         time.Time   `json:"updated_at"`

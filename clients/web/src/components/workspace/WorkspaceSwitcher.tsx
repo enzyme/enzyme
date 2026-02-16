@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button as AriaButton } from 'react-aria-components';
 import {
@@ -31,7 +31,7 @@ import {
   ComputerDesktopIcon,
   CheckIcon,
 } from '@heroicons/react/24/outline';
-import { useAuth } from '../../hooks';
+import { useAuth, useChannels } from '../../hooks';
 import {
   Avatar,
   Modal,
@@ -233,26 +233,47 @@ function WorkspaceItemContent({
   isDragOverlay,
   isMenuOpen,
 }: WorkspaceItemContentProps) {
+  // Only fetch channel data for the active workspace (avoids extra API calls)
+  const { data: channelsData } = useChannels(isActive ? workspace.id : undefined);
+
+  const { hasUnread, totalNotifications } = useMemo(() => {
+    if (!channelsData?.channels) return { hasUnread: false, totalNotifications: 0 };
+    return {
+      hasUnread: channelsData.channels.some((c) => c.unread_count > 0),
+      totalNotifications: channelsData.channels.reduce((sum, c) => sum + c.notification_count, 0),
+    };
+  }, [channelsData]);
+
   return (
-    <div
-      className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-lg transition-colors',
-        isActive ? 'ring-2 ring-gray-900 dark:ring-white' : '',
-        workspace.icon_url ? '' : `${getAvatarColor(workspace.id)} hover:opacity-80`,
-        isDragOverlay && 'cursor-grabbing shadow-lg',
-        isMenuOpen && !isActive && 'ring-2 ring-gray-400 dark:ring-gray-500',
-      )}
-    >
-      {workspace.icon_url ? (
-        <img
-          src={workspace.icon_url}
-          alt={workspace.name}
-          className="h-full w-full rounded-lg object-cover"
-        />
-      ) : (
-        <span className="text-xs font-semibold text-white">
-          {workspace.name.slice(0, 2).toUpperCase()}
+    <div className="relative">
+      <div
+        className={cn(
+          'flex h-8 w-8 items-center justify-center rounded-lg transition-colors',
+          isActive ? 'ring-2 ring-gray-900 dark:ring-white' : '',
+          workspace.icon_url ? '' : `${getAvatarColor(workspace.id)} hover:opacity-80`,
+          isDragOverlay && 'cursor-grabbing shadow-lg',
+          isMenuOpen && !isActive && 'ring-2 ring-gray-400 dark:ring-gray-500',
+        )}
+      >
+        {workspace.icon_url ? (
+          <img
+            src={workspace.icon_url}
+            alt={workspace.name}
+            className="h-full w-full rounded-lg object-cover"
+          />
+        ) : (
+          <span className="text-xs font-semibold text-white">
+            {workspace.name.slice(0, 2).toUpperCase()}
+          </span>
+        )}
+      </div>
+      {isActive && totalNotifications > 0 && (
+        <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+          {totalNotifications > 99 ? '99+' : totalNotifications}
         </span>
+      )}
+      {isActive && totalNotifications === 0 && hasUnread && (
+        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary-500" />
       )}
     </div>
   );

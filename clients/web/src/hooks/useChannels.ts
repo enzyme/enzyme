@@ -32,7 +32,12 @@ export function useMarkChannelAsRead(workspaceId: string) {
             ...old,
             channels: old.channels.map((c) =>
               c.id === channelId
-                ? { ...c, unread_count: 0, last_read_message_id: data.last_read_message_id }
+                ? {
+                    ...c,
+                    unread_count: 0,
+                    notification_count: 0,
+                    last_read_message_id: data.last_read_message_id,
+                  }
                 : c,
             ),
           };
@@ -55,7 +60,7 @@ export function useMarkAllChannelsAsRead(workspaceId: string) {
           if (!old) return old;
           return {
             ...old,
-            channels: old.channels.map((c) => ({ ...c, unread_count: 0 })),
+            channels: old.channels.map((c) => ({ ...c, unread_count: 0, notification_count: 0 })),
           };
         },
       );

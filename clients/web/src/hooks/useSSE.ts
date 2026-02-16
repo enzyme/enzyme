@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { SSEConnection } from '../lib/sse';
 import { getUrls } from '../lib/signedUrlCache';
@@ -7,6 +8,7 @@ import {
   playNotificationSound,
   showBrowserNotification,
   unlockAudio,
+  requestNotificationPermission,
 } from '../lib/notificationSound';
 import type {
   MessageListResult,
@@ -21,6 +23,11 @@ export function useSSE(workspaceId: string | undefined) {
   const [isConnected, setIsConnected] = useState(false);
   const connectionRef = useRef<SSEConnection | null>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
 
   useEffect(() => {
     if (!workspaceId) {
@@ -402,7 +409,9 @@ export function useSSE(workspaceId: string | undefined) {
           return {
             ...old,
             channels: old.channels.map((c) =>
-              c.id === channel_id ? { ...c, unread_count: 0, last_read_message_id } : c,
+              c.id === channel_id
+                ? { ...c, unread_count: 0, notification_count: 0, last_read_message_id }
+                : c,
             ),
           };
         },
@@ -463,14 +472,35 @@ export function useSSE(workspaceId: string | undefined) {
     connection.on('notification', (event) => {
       const notification = event.data as NotificationData;
 
-      // Play sound
-      playNotificationSound();
+      // Increment notification_count for the channel
+      if (notification.channel_id) {
+        queryClient.setQueryData(
+          ['channels', workspaceId],
+          (old: { channels: ChannelWithMembership[] } | undefined) => {
+            if (!old) return old;
+            return {
+              ...old,
+              channels: old.channels.map((c) =>
+                c.id === notification.channel_id
+                  ? { ...c, notification_count: c.notification_count + 1 }
+                  : c,
+              ),
+            };
+          },
+        );
+      }
 
-      // Show browser notification if permitted
-      const title = getNotificationTitle(notification);
-      showBrowserNotification(title, notification.preview || '', () => {
-        // Could navigate to the channel/message here
-      });
+      // Only play sound and show browser notification when tab is not focused
+      if (!document.hasFocus()) {
+        playNotificationSound();
+
+        const title = getNotificationTitle(notification);
+        showBrowserNotification(title, notification.preview || '', () => {
+          if (notification.channel_id && workspaceId) {
+            navigateRef.current(`/workspaces/${workspaceId}/channels/${notification.channel_id}`);
+          }
+        });
+      }
     });
 
     // Unlock audio on first interaction
@@ -483,6 +513,11 @@ export function useSSE(workspaceId: string | undefined) {
     document.addEventListener('keydown', handleInteraction);
 
     connection.connect();
+
+    // Request notification permission if not yet decided (avoids prompting on every connection)
+    if ('Notification' in window && Notification.permission === 'default') {
+      requestNotificationPermission();
+    }
 
     return () => {
       connection.disconnect();
