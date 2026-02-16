@@ -13,7 +13,7 @@ auth:
 files:
   storage_path: "./data/uploads"
   max_upload_size: 10485760  # 10MB
-  signing_secret: ""  # HMAC secret for signed file URLs (auto-generated if empty)
+  signing_secret: ""  # HMAC secret for signed file URLs (auto-generated and saved to data dir if empty)
 
 email:
   enabled: false

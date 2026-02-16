@@ -42,9 +42,10 @@ By default, Feather stores all data under `./data/` relative to where you run th
 
 ```
 data/
-├── feather.db    # SQLite database
-├── uploads/      # Uploaded files
-└── certs/        # TLS certificates (if using auto TLS)
+├── feather.db       # SQLite database
+├── .signing_secret  # Auto-generated HMAC secret for file URLs
+├── uploads/         # Uploaded files
+└── certs/           # TLS certificates (if using auto TLS)
 ```
 
 You can customize these paths via [configuration](./configuration.md). For production, use absolute paths:
@@ -73,9 +74,6 @@ server:
     auto:
       domain: 'chat.example.com'
       email: 'admin@example.com'
-
-files:
-  signing_secret: 'your-random-secret-here' # Generate with: openssl rand -hex 32
 
 email:
   enabled: true
@@ -240,10 +238,11 @@ sudo journalctl -u feather -f
 
 ## Backups
 
-All persistent state is in two places:
+All persistent state is in the data directory (default: `./data/`):
 
 1. **SQLite database** — the single `.db` file (default: `./data/feather.db`)
 2. **Uploaded files** — the uploads directory (default: `./data/uploads/`)
+3. **Signing secret** — `./data/.signing_secret` (used to sign file download URLs)
 
 To back up:
 
@@ -251,8 +250,9 @@ To back up:
 # SQLite backup (safe to run while server is running — uses WAL mode)
 sqlite3 /var/lib/feather/feather.db ".backup '/backups/feather-$(date +%Y%m%d).db'"
 
-# File uploads
+# File uploads and signing secret
 rsync -a /var/lib/feather/uploads/ /backups/uploads/
+cp /var/lib/feather/.signing_secret /backups/.signing_secret
 ```
 
 ## Upgrading

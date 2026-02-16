@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -98,13 +99,27 @@ func New(cfg *config.Config) (*App, error) {
 
 	// Initialize file URL signer
 	if cfg.Files.SigningSecret == "" {
-		b := make([]byte, 32)
-		if _, err := rand.Read(b); err != nil {
-			_ = db.Close()
-			return nil, err
+		// Derive secret file path from database directory
+		secretPath := filepath.Join(filepath.Dir(cfg.Database.Path), ".signing_secret")
+		if data, err := os.ReadFile(secretPath); err == nil && len(data) > 0 {
+			cfg.Files.SigningSecret = strings.TrimSpace(string(data))
+		} else {
+			b := make([]byte, 32)
+			if _, err := rand.Read(b); err != nil {
+				_ = db.Close()
+				return nil, err
+			}
+			cfg.Files.SigningSecret = hex.EncodeToString(b)
+			if err := os.MkdirAll(filepath.Dir(secretPath), 0700); err != nil {
+				_ = db.Close()
+				return nil, fmt.Errorf("creating data directory: %w", err)
+			}
+			if err := os.WriteFile(secretPath, []byte(cfg.Files.SigningSecret+"\n"), 0600); err != nil {
+				_ = db.Close()
+				return nil, fmt.Errorf("writing signing secret: %w", err)
+			}
+			log.Printf("Generated files.signing_secret and saved to %s", secretPath)
 		}
-		cfg.Files.SigningSecret = hex.EncodeToString(b)
-		log.Printf("No files.signing_secret configured; generated a random one (set FEATHER_FILES_SIGNING_SECRET for persistence across restarts)")
 	}
 	signer := signing.NewSigner(cfg.Files.SigningSecret)
 
