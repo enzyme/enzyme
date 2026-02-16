@@ -13,6 +13,7 @@ function makeChannel(overrides: Partial<ChannelWithMembership> = {}): ChannelWit
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     unread_count: 0,
+    notification_count: 0,
     is_starred: false,
     ...overrides,
   };

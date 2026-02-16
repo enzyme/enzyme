@@ -66,6 +66,7 @@ function createMockChannel(overrides: Partial<ChannelWithMembership> = {}): Chan
     updated_at: new Date().toISOString(),
     is_starred: false,
     unread_count: 0,
+    notification_count: 0,
     ...overrides,
   };
 }
