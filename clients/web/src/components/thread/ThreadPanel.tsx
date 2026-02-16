@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { XMarkIcon, HashtagIcon } from '@heroicons/react/24/outline';
 import {
@@ -55,6 +55,7 @@ interface ThreadPanelProps {
 
 export function ThreadPanel({ messageId }: ThreadPanelProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { closeThread } = useThreadPanel();
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -90,6 +91,40 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
     markThreadRead.mutate({ messageId });
     return () => clearTimeout(timer);
   }, [messageId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Highlight deep-linked thread reply via ?msg= param
+  const highlightMsgId = searchParams.get('msg');
+  useEffect(() => {
+    if (!highlightMsgId || isLoading) return;
+
+    // Defer to allow thread messages to render into the DOM after isLoading flips
+    let timer: ReturnType<typeof setTimeout>;
+    const raf = requestAnimationFrame(() => {
+      const el = document.getElementById(`message-${highlightMsgId}`);
+      if (!el) return;
+
+      el.scrollIntoView({ block: 'center' });
+      el.classList.add('search-highlight');
+
+      timer = setTimeout(() => {
+        el.classList.remove('search-highlight');
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete('msg');
+            return next;
+          },
+          { replace: true },
+        );
+      }, 2000);
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightMsgId, isLoading]);
 
   // Auto-focus for typing while thread is open
   useAutoFocusComposer(composerRef, true);
@@ -374,7 +409,7 @@ function ParentMessage({
   };
 
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/workspaces/${workspaceId}/channels/${message.channel_id}?msg=${message.id}`;
+    const url = `${window.location.origin}/workspaces/${workspaceId}/channels/${message.channel_id}?thread=${message.id}`;
     navigator.clipboard.writeText(url);
     toast('Link copied to clipboard', 'success');
     setShowDropdown(false);
@@ -708,7 +743,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
 
   const handleCopyLink = () => {
     const channelId = message.channel_id;
-    const url = `${window.location.origin}/workspaces/${workspaceId}/channels/${channelId}?msg=${message.id}`;
+    const url = `${window.location.origin}/workspaces/${workspaceId}/channels/${channelId}?thread=${parentMessageId}&msg=${message.id}`;
     navigator.clipboard.writeText(url);
     toast('Link copied to clipboard', 'success');
     setShowDropdown(false);
@@ -738,6 +773,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
 
   return (
     <div
+      id={`message-${message.id}`}
       className={cn(
         'group relative px-4 py-2',
         message.also_send_to_channel

@@ -44,6 +44,14 @@ export function MessageList({
 
   usePrewarmSignedUrls(data?.pages);
 
+  // Read search params early so the initial-scroll layout effect can skip scroll-to-bottom
+  // when a ?msg= deep link is present (the ?msg= handler will scroll to the target instead).
+  // Skip ?msg= when ?thread= is present — ThreadPanel handles thread reply highlights.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightedMsgId = searchParams.get('thread') ? null : searchParams.get('msg');
+  const highlightedMsgIdRef = useRef(highlightedMsgId);
+  highlightedMsgIdRef.current = highlightedMsgId;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
@@ -286,6 +294,11 @@ export function MessageList({
 
     if (!initialScrollDoneRef.current) {
       initialScrollDoneRef.current = true;
+
+      // Skip scroll-to-bottom when a ?msg= deep link is present —
+      // the ?msg= handler will scroll to the target message instead.
+      if (highlightedMsgIdRef.current) return;
+
       const lastIndex = virtualItems.length - 1;
       virtualizer.scrollToIndex(lastIndex, { align: 'end' });
 
@@ -346,8 +359,6 @@ export function MessageList({
   }, [allMessages.length]);
 
   // Jump to message from ?msg= search param
-  const [searchParams, setSearchParams] = useSearchParams();
-  const highlightedMsgId = searchParams.get('msg');
   const jumpInProgressRef = useRef<string | null>(null);
 
   const scrollToAndHighlight = useCallback(

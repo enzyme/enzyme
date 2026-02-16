@@ -121,12 +121,17 @@ export function ChannelPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId, isAtBottom, channel?.unread_count]);
 
-  // Reset state when changing channels
-  // Note: closeThread intentionally omitted from deps - we only want to run
-  // this when channelId changes, not when the callback reference changes
+  // Reset state when changing channels (but not on initial mount, to preserve deep links)
+  const prevChannelIdRef = useRef<string | undefined>(undefined);
+
   useEffect(() => {
     setIsAtBottom(true);
-    closeThread();
+    const prevChannelId = prevChannelIdRef.current;
+    prevChannelIdRef.current = channelId;
+
+    if (prevChannelId && prevChannelId !== channelId) {
+      closeThread();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
 
