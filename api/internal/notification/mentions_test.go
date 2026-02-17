@@ -170,3 +170,97 @@ func TestParseMentions_MrkdwnSpecialDeduplicatesWithPlainText(t *testing.T) {
 		t.Errorf("mentions[0] = %q, want %q", mentions[0], MentionHere)
 	}
 }
+
+// mockOnlineChecker implements OnlineChecker for testing
+type mockOnlineChecker struct {
+	online map[string]bool // userID -> online
+}
+
+func (m *mockOnlineChecker) IsUserOnline(_, userID string) bool {
+	return m.online[userID]
+}
+
+func TestResolveHereMentions_ResolvesToOnlineMembers(t *testing.T) {
+	checker := &mockOnlineChecker{online: map[string]bool{
+		"user1": true,
+		"user2": false,
+		"user3": true,
+	}}
+
+	mentions := []string{MentionHere}
+	memberIDs := []string{"user1", "user2", "user3"}
+	result := ResolveHereMentions(mentions, memberIDs, "sender", checker, "ws1")
+
+	if len(result) != 2 {
+		t.Fatalf("got %d mentions, want 2: %v", len(result), result)
+	}
+	if result[0] != "user1" {
+		t.Errorf("result[0] = %q, want %q", result[0], "user1")
+	}
+	if result[1] != "user3" {
+		t.Errorf("result[1] = %q, want %q", result[1], "user3")
+	}
+}
+
+func TestResolveHereMentions_ExcludesSender(t *testing.T) {
+	checker := &mockOnlineChecker{online: map[string]bool{
+		"sender": true,
+		"user1":  true,
+	}}
+
+	mentions := []string{MentionHere}
+	memberIDs := []string{"sender", "user1"}
+	result := ResolveHereMentions(mentions, memberIDs, "sender", checker, "ws1")
+
+	if len(result) != 1 {
+		t.Fatalf("got %d mentions, want 1: %v", len(result), result)
+	}
+	if result[0] != "user1" {
+		t.Errorf("result[0] = %q, want %q", result[0], "user1")
+	}
+}
+
+func TestResolveHereMentions_DeduplicatesAlreadyMentioned(t *testing.T) {
+	checker := &mockOnlineChecker{online: map[string]bool{
+		"user1": true,
+		"user2": true,
+	}}
+
+	// user1 is already explicitly mentioned
+	mentions := []string{"user1", MentionHere}
+	memberIDs := []string{"user1", "user2"}
+	result := ResolveHereMentions(mentions, memberIDs, "sender", checker, "ws1")
+
+	if len(result) != 2 {
+		t.Fatalf("got %d mentions, want 2: %v", len(result), result)
+	}
+	if result[0] != "user1" {
+		t.Errorf("result[0] = %q, want %q", result[0], "user1")
+	}
+	if result[1] != "user2" {
+		t.Errorf("result[1] = %q, want %q", result[1], "user2")
+	}
+}
+
+func TestResolveHereMentions_PassesThroughOtherSpecialMentions(t *testing.T) {
+	checker := &mockOnlineChecker{online: map[string]bool{
+		"user1": true,
+	}}
+
+	mentions := []string{MentionChannel, MentionHere, MentionEveryone}
+	memberIDs := []string{"user1"}
+	result := ResolveHereMentions(mentions, memberIDs, "sender", checker, "ws1")
+
+	if len(result) != 3 {
+		t.Fatalf("got %d mentions, want 3: %v", len(result), result)
+	}
+	if result[0] != MentionChannel {
+		t.Errorf("result[0] = %q, want %q", result[0], MentionChannel)
+	}
+	if result[1] != "user1" {
+		t.Errorf("result[1] = %q, want %q", result[1], "user1")
+	}
+	if result[2] != MentionEveryone {
+		t.Errorf("result[2] = %q, want %q", result[2], MentionEveryone)
+	}
+}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"slices"
 	"strings"
 
 	"github.com/feather/api/internal/channel"
@@ -118,8 +120,20 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 
 	// Parse mentions from content
 	var mentions []string
+	var originalMentions []string
 	if h.notificationService != nil && content != "" {
 		mentions, _ = notification.ParseMentions(ctx, h.userRepo, ch.WorkspaceID, content)
+		originalMentions = mentions
+
+		// Resolve @here to online user IDs for storage (badge count accuracy)
+		if h.hub != nil && slices.Contains(mentions, notification.MentionHere) {
+			memberIDs, err := h.channelRepo.GetMemberUserIDs(ctx, string(request.Id))
+			if err != nil {
+				log.Printf("[mentions] failed to get channel members for @here resolution: %v", err)
+			} else {
+				mentions = notification.ResolveHereMentions(mentions, memberIDs, userID, h.hub, ch.WorkspaceID)
+			}
+		}
 	}
 
 	msg := &message.Message{
@@ -202,7 +216,7 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 			SenderID:       userID,
 			SenderName:     senderName,
 			Content:        msg.Content,
-			Mentions:       mentions,
+			Mentions:       originalMentions,
 			ThreadParentID: msg.ThreadParentID,
 		}
 		// Send notifications asynchronously

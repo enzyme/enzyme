@@ -969,9 +969,9 @@ func TestRepository_ListForWorkspace_NotificationCount_MentionsExplicit(t *testi
 	// Explicit mentions preference (same as default for channels)
 	setNotificationPreference(t, db, user1.ID, ch.ID, "mentions")
 
-	// Messages: 1 with direct mention, 1 with @here, 1 with @everyone, 1 without
+	// Messages: 1 with direct mention, 1 with resolved @here (user1 was online), 1 with @everyone, 1 without
 	createMessageWithMentions(t, db, ch.ID, user2.ID, "Hey @User 1", []string{user1.ID})
-	createMessageWithMentions(t, db, ch.ID, user2.ID, "@here check this", []string{"@here"})
+	createMessageWithMentions(t, db, ch.ID, user2.ID, "@here check this", []string{user1.ID}) // @here resolved to online user IDs at send time
 	createMessageWithMentions(t, db, ch.ID, user2.ID, "@everyone important", []string{"@everyone"})
 	createMessageWithMentions(t, db, ch.ID, user2.ID, "just chatting", []string{})
 
@@ -995,9 +995,9 @@ func TestRepository_ListForWorkspace_NotificationCount_MentionsExplicit(t *testi
 	if found.UnreadCount != 4 {
 		t.Errorf("UnreadCount = %d, want 4", found.UnreadCount)
 	}
-	// Should count: direct mention + @here + @everyone = 3
+	// Should count: direct mention + resolved @here + @everyone = 3
 	if found.NotificationCount != 3 {
-		t.Errorf("NotificationCount = %d, want 3 (1 direct + 1 @here + 1 @everyone)", found.NotificationCount)
+		t.Errorf("NotificationCount = %d, want 3 (1 direct + 1 resolved @here + 1 @everyone)", found.NotificationCount)
 	}
 }
 

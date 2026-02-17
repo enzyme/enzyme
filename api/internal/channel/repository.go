@@ -222,7 +222,7 @@ func (r *Repository) ListForWorkspace(ctx context.Context, workspaceID, userID s
 		               WHEN np.notify_level = 'mentions' OR np.notify_level IS NULL THEN
 		                 EXISTS (
 		                   SELECT 1 FROM json_each(m.mentions) je
-		                   WHERE je.value = ? OR je.value IN ('@channel', '@here', '@everyone')
+		                   WHERE je.value = ? OR je.value IN ('@channel', '@everyone')
 		                 )
 		               ELSE 0
 		             END = 1
@@ -386,7 +386,7 @@ func (r *Repository) GetWorkspaceNotificationSummaries(ctx context.Context, user
 		                WHEN np.notify_level = 'mentions' OR np.notify_level IS NULL THEN
 		                  EXISTS (
 		                    SELECT 1 FROM json_each(m.mentions) je
-		                    WHERE je.value = ? OR je.value IN ('@channel', '@here', '@everyone')
+		                    WHERE je.value = ? OR je.value IN ('@channel', '@everyone')
 		                  )
 		                ELSE 0
 		              END = 1)

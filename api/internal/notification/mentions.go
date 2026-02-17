@@ -138,3 +138,41 @@ func ParseMentions(ctx context.Context, resolver UserResolver, workspaceID, cont
 func IsSpecialMention(mention string) bool {
 	return mention == MentionChannel || mention == MentionHere || mention == MentionEveryone
 }
+
+// ResolveHereMentions replaces @here in mentions with the IDs of currently online
+// channel members. Other mentions (including @channel and @everyone) pass through
+// unchanged. The sender is excluded, and user IDs already in the mentions list
+// are not duplicated.
+func ResolveHereMentions(mentions []string, channelMemberIDs []string, senderID string, checker OnlineChecker, workspaceID string) []string {
+	var result []string
+	seen := make(map[string]bool)
+
+	// First pass: collect already-mentioned user IDs
+	for _, m := range mentions {
+		if !IsSpecialMention(m) {
+			seen[m] = true
+		}
+	}
+
+	for _, m := range mentions {
+		if m != MentionHere {
+			result = append(result, m)
+			continue
+		}
+		// Replace @here with online member IDs
+		for _, memberID := range channelMemberIDs {
+			if memberID == senderID {
+				continue
+			}
+			if seen[memberID] {
+				continue
+			}
+			if checker.IsUserOnline(workspaceID, memberID) {
+				result = append(result, memberID)
+				seen[memberID] = true
+			}
+		}
+	}
+
+	return result
+}
