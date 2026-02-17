@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"crypto/tls"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"strconv"
@@ -69,28 +69,28 @@ func New(host string, port int, handler http.Handler, tlsOpts TLSOptions) *Serve
 func (s *Server) Start() error {
 	switch s.tlsOpts.Mode {
 	case "auto":
-		log.Printf("Starting HTTPS server on %s (auto TLS for %s)", s.addr, s.tlsOpts.Domain)
+		slog.Info("starting https server", "addr", s.addr, "tls", "auto", "domain", s.tlsOpts.Domain)
 		go func() {
-			log.Printf("Starting HTTP redirect server on :80")
+			slog.Info("starting http redirect server", "addr", ":80")
 			if err := s.redirectServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Printf("HTTP redirect server error: %v", err)
+				slog.Error("http redirect server error", "error", err)
 			}
 		}()
 		return s.httpServer.ListenAndServeTLS("", "")
 	case "manual":
-		log.Printf("Starting HTTPS server on %s (manual TLS)", s.addr)
+		slog.Info("starting https server", "addr", s.addr, "tls", "manual")
 		return s.httpServer.ListenAndServeTLS(s.tlsOpts.CertFile, s.tlsOpts.KeyFile)
 	default:
-		log.Printf("Starting server on %s", s.addr)
+		slog.Info("starting server", "addr", s.addr)
 		return s.httpServer.ListenAndServe()
 	}
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
-	log.Println("Shutting down server...")
+	slog.Info("shutting down server")
 	if s.redirectServer != nil {
 		if err := s.redirectServer.Shutdown(ctx); err != nil {
-			log.Printf("HTTP redirect server shutdown error: %v", err)
+			slog.Error("http redirect server shutdown error", "error", err)
 		}
 	}
 	return s.httpServer.Shutdown(ctx)

@@ -86,6 +86,10 @@ func (d *defaultsProviderStruct) ReadBytes() ([]byte, error) {
 
 func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 	return map[string]interface{}{
+		"log": map[string]interface{}{
+			"level":  d.defaults.Log.Level,
+			"format": d.defaults.Log.Format,
+		},
 		"server": map[string]interface{}{
 			"host":            d.defaults.Server.Host,
 			"port":            d.defaults.Server.Port,
@@ -151,6 +155,8 @@ func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 func SetupFlags() *pflag.FlagSet {
 	flags := pflag.NewFlagSet("feather", pflag.ContinueOnError)
 	flags.String("config", "", "Path to config file")
+	flags.String("log.level", "", "Log level: debug, info, warn, error")
+	flags.String("log.format", "", "Log format: text or json")
 	flags.String("server.host", "", "Server host")
 	flags.Int("server.port", 0, "Server port")
 	flags.String("server.public_url", "", "Public URL")

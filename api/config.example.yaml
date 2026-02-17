@@ -1,3 +1,7 @@
+log:
+  level: "info"    # debug, info, warn, error
+  format: "text"   # text or json
+
 server:
   host: "0.0.0.0"
   port: 8080

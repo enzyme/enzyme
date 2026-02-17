@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"slices"
 	"strings"
 
@@ -129,7 +129,7 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 		if h.hub != nil && slices.Contains(mentions, notification.MentionHere) {
 			memberIDs, err := h.channelRepo.GetMemberUserIDs(ctx, string(request.Id))
 			if err != nil {
-				log.Printf("[mentions] failed to get channel members for @here resolution: %v", err)
+				slog.Error("failed to get channel members for @here resolution", "component", "mentions", "error", err)
 			} else {
 				mentions = notification.ResolveHereMentions(mentions, memberIDs, userID, h.hub, ch.WorkspaceID)
 			}

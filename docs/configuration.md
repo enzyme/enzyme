@@ -36,6 +36,13 @@ Run `./feather --help` for all available flags.
 
 ---
 
+## Logging
+
+| Key          | Env Var              | CLI Flag       | Default | Description                                                        |
+| ------------ | -------------------- | -------------- | ------- | ------------------------------------------------------------------ |
+| `log.level`  | `FEATHER_LOG_LEVEL`  | `--log.level`  | `info`  | Minimum log level: `debug`, `info`, `warn`, `error`.               |
+| `log.format` | `FEATHER_LOG_FORMAT` | `--log.format` | `text`  | Log output format: `text` (human-readable) or `json` (structured). |
+
 ## Server
 
 | Key                      | Env Var                          | CLI Flag                   | Default                     | Description                                                                                                               |
@@ -118,6 +125,10 @@ Rate limiting protects authentication endpoints from brute-force attacks. Limits
 ## Full Example
 
 ```yaml
+log:
+  level: 'info'
+  format: 'text'
+
 server:
   host: '0.0.0.0'
   port: 443

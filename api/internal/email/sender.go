@@ -3,7 +3,7 @@ package email
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/smtp"
 
 	"github.com/feather/api/internal/config"
@@ -65,17 +65,17 @@ func (s *SMTPSender) Send(ctx context.Context, to, subject, textBody, htmlBody s
 
 	err := smtp.SendMail(addr, auth, s.from, []string{to}, []byte(msg))
 	if err != nil {
-		log.Printf("[email] Failed to send email to %s: %v", to, err)
+		slog.Error("failed to send email", "component", "email", "to", to, "error", err)
 		return err
 	}
 
-	log.Printf("[email] Sent email to %s: %s", to, subject)
+	slog.Info("sent email", "component", "email", "to", to, "subject", subject)
 	return nil
 }
 
 type NoOpSender struct{}
 
 func (s *NoOpSender) Send(ctx context.Context, to, subject, textBody, htmlBody string) error {
-	log.Printf("[email/noop] Would send to %s: %s", to, subject)
+	slog.Debug("would send email", "component", "email", "to", to, "subject", subject)
 	return nil
 }

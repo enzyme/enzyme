@@ -2,7 +2,7 @@ package notification
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/feather/api/internal/email"
@@ -40,12 +40,12 @@ func (w *EmailWorker) Start(ctx context.Context) {
 	ticker := time.NewTicker(w.interval)
 	defer ticker.Stop()
 
-	log.Println("[notification] Email worker started")
+	slog.Info("email worker started", "component", "notification")
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("[notification] Email worker stopped")
+			slog.Info("email worker stopped", "component", "notification")
 			return
 		case <-ticker.C:
 			w.processPending(ctx)
@@ -58,7 +58,7 @@ func (w *EmailWorker) processPending(ctx context.Context) {
 	// Get notifications grouped by user
 	grouped, err := w.pendingRepo.GetGroupedByUser(ctx)
 	if err != nil {
-		log.Printf("[notification] Error getting pending notifications: %v", err)
+		slog.Error("error getting pending notifications", "component", "notification", "error", err)
 		return
 	}
 
@@ -89,7 +89,7 @@ func (w *EmailWorker) processPending(ctx context.Context) {
 		// Get user email
 		usr, err := w.userRepo.GetByID(ctx, userID)
 		if err != nil {
-			log.Printf("[notification] Error getting user %s: %v", userID, err)
+			slog.Error("error getting user for notification", "component", "notification", "user_id", userID, "error", err)
 			continue
 		}
 
@@ -129,7 +129,7 @@ func (w *EmailWorker) processPending(ctx context.Context) {
 				WorkspaceURL:  w.emailService.GetPublicURL(),
 			})
 			if err != nil {
-				log.Printf("[notification] Error sending digest to %s: %v", usr.Email, err)
+				slog.Error("error sending notification digest", "component", "notification", "to", usr.Email, "error", err)
 				continue
 			}
 

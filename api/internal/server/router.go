@@ -24,7 +24,7 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.S
 	r := chi.NewRouter()
 
 	// Middleware
-	r.Use(middleware.Logger)
+	r.Use(RequestLogger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RealIP)
 

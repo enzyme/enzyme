@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,13 +11,15 @@ import (
 
 	"github.com/feather/api/internal/app"
 	"github.com/feather/api/internal/config"
+	"github.com/feather/api/internal/logging"
 )
 
 func main() {
 	// Setup CLI flags
 	flags := config.SetupFlags()
 	if err := flags.Parse(os.Args[1:]); err != nil {
-		log.Fatalf("Error parsing flags: %v", err)
+		slog.Error("error parsing flags", "error", err)
+		os.Exit(1)
 	}
 
 	// Get config path from flags
@@ -26,13 +28,18 @@ func main() {
 	// Load configuration
 	cfg, err := config.Load(configPath, flags)
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		slog.Error("error loading config", "error", err)
+		os.Exit(1)
 	}
+
+	// Setup structured logging
+	logging.Setup(cfg.Log)
 
 	// Create application
 	application, err := app.New(cfg)
 	if err != nil {
-		log.Fatalf("Error creating application: %v", err)
+		slog.Error("error creating application", "error", err)
+		os.Exit(1)
 	}
 
 	// Setup context with cancellation
@@ -45,7 +52,7 @@ func main() {
 
 	go func() {
 		<-sigCh
-		log.Println("Received shutdown signal")
+		slog.Info("received shutdown signal")
 		cancel()
 
 		// Give server time to shutdown gracefully
@@ -53,14 +60,15 @@ func main() {
 		defer shutdownCancel()
 
 		if err := application.Shutdown(shutdownCtx); err != nil {
-			log.Printf("Error during shutdown: %v", err)
+			slog.Error("error during shutdown", "error", err)
 		}
 	}()
 
 	// Start application
 	if err := application.Start(ctx); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("Server error: %v", err)
+		slog.Error("server error", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Server stopped")
+	slog.Info("server stopped")
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -299,12 +299,12 @@ func (h *Hub) deleteOldEvents() {
 	cutoff := time.Now().UTC().Add(-h.retention).Format(time.RFC3339)
 	result, err := h.db.Exec(`DELETE FROM workspace_events WHERE created_at < ?`, cutoff)
 	if err != nil {
-		log.Printf("SSE event cleanup error: %v", err)
+		slog.Error("sse event cleanup error", "error", err)
 		return
 	}
 
 	if deleted, err := result.RowsAffected(); err == nil && deleted > 0 {
-		log.Printf("SSE event cleanup: deleted %d old events", deleted)
+		slog.Debug("sse event cleanup complete", "deleted", deleted)
 	}
 }
 

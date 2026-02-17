@@ -5,7 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
-	"log"
+	"log/slog"
 
 	"github.com/feather/api/internal/config"
 )
@@ -54,7 +54,7 @@ type InviteEmailData struct {
 
 func (s *Service) SendWorkspaceInvite(ctx context.Context, to string, data InviteEmailData) error {
 	if !s.enabled {
-		log.Printf("[email] Would send workspace invite to %s: %+v", to, data)
+		slog.Debug("would send workspace invite", "component", "email", "to", to, "workspace", data.WorkspaceName)
 		return nil
 	}
 
@@ -71,7 +71,7 @@ type PasswordResetEmailData struct {
 
 func (s *Service) SendPasswordReset(ctx context.Context, to string, data PasswordResetEmailData) error {
 	if !s.enabled {
-		log.Printf("[email] Would send password reset to %s: %+v", to, data)
+		slog.Debug("would send password reset", "component", "email", "to", to)
 		return nil
 	}
 
@@ -89,7 +89,7 @@ type VerifyEmailData struct {
 
 func (s *Service) SendEmailVerification(ctx context.Context, to string, data VerifyEmailData) error {
 	if !s.enabled {
-		log.Printf("[email] Would send email verification to %s: %+v", to, data)
+		slog.Debug("would send email verification", "component", "email", "to", to)
 		return nil
 	}
 
@@ -117,7 +117,7 @@ type NotificationDigestData struct {
 
 func (s *Service) SendNotificationDigest(ctx context.Context, to string, data NotificationDigestData) error {
 	if !s.enabled {
-		log.Printf("[email] Would send notification digest to %s: %d notifications from %s", to, len(data.Items), data.WorkspaceName)
+		slog.Debug("would send notification digest", "component", "email", "to", to, "count", len(data.Items), "workspace", data.WorkspaceName)
 		return nil
 	}
 

@@ -22,7 +22,7 @@ chmod +x feather-linux-amd64
 ./feather-linux-amd64
 ```
 
-The server starts on `http://localhost:8080` and serves both the API and web client. The first user to register will automatically have a workspace created for them.
+The server starts on `http://localhost:8080` and serves both the API and web client.
 
 ## Available Binaries
 
@@ -239,6 +239,38 @@ sudo systemctl start feather
 sudo systemctl status feather
 sudo journalctl -u feather -f
 ```
+
+## Logs
+
+Feather logs to stdout. Where logs end up depends on how you run the server:
+
+- **Running directly** — logs appear in your terminal. Redirect to a file if needed: `./feather >> /var/log/feather.log 2>&1`
+- **systemd service** — logs are captured by journald:
+
+```bash
+# Follow logs in real-time
+sudo journalctl -u feather -f
+
+# Show last 100 lines
+sudo journalctl -u feather -n 100
+
+# Show logs since last boot
+sudo journalctl -u feather -b
+```
+
+- **Behind a reverse proxy** — Feather's own logs still go to stdout (or journald if using systemd). The reverse proxy (nginx, Caddy, etc.) has its own access logs separate from Feather's.
+
+Configure log level and format in `config.yaml`:
+
+```yaml
+log:
+  level: 'info' # debug, info, warn, error
+  format: 'text' # text or json
+```
+
+Set `format: 'json'` for machine-parseable output (useful with log aggregation tools). Set `level: 'debug'` to see detailed output including per-request logs and email diagnostics. When running under systemd, log rotation is handled automatically by journald.
+
+See the [Configuration Reference](./configuration.md#logging) for all logging options.
 
 ## Firewall
 

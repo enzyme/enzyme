@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -118,7 +118,7 @@ func New(cfg *config.Config) (*App, error) {
 				_ = db.Close()
 				return nil, fmt.Errorf("writing signing secret: %w", err)
 			}
-			log.Printf("Generated files.signing_secret and saved to %s", secretPath)
+			slog.Info("generated signing secret", "path", secretPath)
 		}
 	}
 	signer := signing.NewSigner(cfg.Files.SigningSecret)
@@ -164,9 +164,9 @@ func New(cfg *config.Config) (*App, error) {
 	var spaHandler http.Handler
 	if web.HasContent() {
 		spaHandler = web.Handler()
-		log.Printf("Embedded web client: enabled")
+		slog.Info("embedded web client enabled")
 	} else {
-		log.Printf("Embedded web client: not found (serve frontend separately)")
+		slog.Info("embedded web client not found, serve frontend separately")
 	}
 
 	// Create router with generated handlers
@@ -245,15 +245,13 @@ func (a *App) Start(ctx context.Context) error {
 		}
 	}()
 
-	log.Printf("Feather backend starting on %s", a.Server.Addr())
-	log.Printf("Database: %s", a.Config.Database.Path)
-	log.Printf("File storage: %s", a.Config.Files.StoragePath)
-	log.Printf("TLS: %s", a.Server.TLSMode())
-	if a.EmailService.IsEnabled() {
-		log.Printf("Email: enabled")
-	} else {
-		log.Printf("Email: disabled (no SMTP configured)")
-	}
+	slog.Info("starting feather backend",
+		"addr", a.Server.Addr(),
+		"database", a.Config.Database.Path,
+		"file_storage", a.Config.Files.StoragePath,
+		"tls", a.Server.TLSMode(),
+		"email", a.EmailService.IsEnabled(),
+	)
 
 	return a.Server.Start()
 }

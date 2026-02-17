@@ -10,6 +10,20 @@ import (
 func Validate(cfg *Config) error {
 	var errs []error
 
+	// Log validation
+	switch cfg.Log.Level {
+	case "debug", "info", "warn", "error":
+		// valid
+	default:
+		errs = append(errs, fmt.Errorf("log.level must be one of: debug, info, warn, error"))
+	}
+	switch cfg.Log.Format {
+	case "text", "json":
+		// valid
+	default:
+		errs = append(errs, fmt.Errorf("log.format must be one of: text, json"))
+	}
+
 	// Server validation
 	if cfg.Server.Port < 1 || cfg.Server.Port > 65535 {
 		errs = append(errs, fmt.Errorf("server.port must be between 1 and 65535"))

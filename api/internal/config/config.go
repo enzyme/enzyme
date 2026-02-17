@@ -3,6 +3,7 @@ package config
 import "time"
 
 type Config struct {
+	Log       LogConfig       `koanf:"log"`
 	Server    ServerConfig    `koanf:"server"`
 	Database  DatabaseConfig  `koanf:"database"`
 	Auth      AuthConfig      `koanf:"auth"`
@@ -10,6 +11,11 @@ type Config struct {
 	Email     EmailConfig     `koanf:"email"`
 	RateLimit RateLimitConfig `koanf:"rate_limit"`
 	SSE       SSEConfig       `koanf:"sse"`
+}
+
+type LogConfig struct {
+	Level  string `koanf:"level"`
+	Format string `koanf:"format"`
 }
 
 type ServerConfig struct {
@@ -77,6 +83,10 @@ type SSEConfig struct {
 
 func Defaults() *Config {
 	return &Config{
+		Log: LogConfig{
+			Level:  "info",
+			Format: "text",
+		},
 		Server: ServerConfig{
 			Host:           "0.0.0.0",
 			Port:           8080,
