@@ -322,6 +322,62 @@ func TestGetWorkspace_NotMember(t *testing.T) {
 	}
 }
 
+func TestGetWorkspaceNotifications_Success(t *testing.T) {
+	h, db := testHandler(t)
+
+	user := testutil.CreateTestUser(t, db, "user@test.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, user.ID, "WS")
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user.ID, "general", "public")
+
+	// Add an unread message from another user
+	other := testutil.CreateTestUser(t, db, "other@test.com", "Other")
+	testutil.CreateTestMessage(t, db, ch.ID, other.ID, "Hello")
+
+	ctx := ctxWithUser(t, h, user.ID)
+	resp, err := h.GetWorkspaceNotifications(ctx, openapi.GetWorkspaceNotificationsRequestObject{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	r, ok := resp.(openapi.GetWorkspaceNotifications200JSONResponse)
+	if !ok {
+		t.Fatalf("expected 200 response, got %T", resp)
+	}
+	if len(r.Workspaces) == 0 {
+		t.Fatal("expected at least one workspace summary")
+	}
+
+	// Find our workspace
+	var found bool
+	for _, summary := range r.Workspaces {
+		if summary.WorkspaceId == ws.ID {
+			found = true
+			if summary.UnreadCount != 1 {
+				t.Errorf("unread_count = %d, want 1", summary.UnreadCount)
+			}
+			// No mentions, default notify level = mentions, so notification_count = 0
+			if summary.NotificationCount != 0 {
+				t.Errorf("notification_count = %d, want 0", summary.NotificationCount)
+			}
+		}
+	}
+	if !found {
+		t.Error("workspace not found in summaries")
+	}
+}
+
+func TestGetWorkspaceNotifications_Unauthenticated(t *testing.T) {
+	h, _ := testHandler(t)
+	ctx := context.Background()
+
+	resp, err := h.GetWorkspaceNotifications(ctx, openapi.GetWorkspaceNotificationsRequestObject{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := resp.(openapi.GetWorkspaceNotifications401JSONResponse); !ok {
+		t.Fatalf("expected 401 response, got %T", resp)
+	}
+}
+
 func TestCreateWorkspaceInvite_NotAdmin(t *testing.T) {
 	h, db := testHandler(t)
 

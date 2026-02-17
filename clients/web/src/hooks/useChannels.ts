@@ -64,6 +64,7 @@ export function useMarkAllChannelsAsRead(workspaceId: string) {
           };
         },
       );
+      queryClient.invalidateQueries({ queryKey: ['workspaces', 'notifications'] });
     },
   });
 }

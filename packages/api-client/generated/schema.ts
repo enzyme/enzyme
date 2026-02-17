@@ -242,6 +242,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get notification summaries for all workspaces */
+        get: operations["getWorkspaceNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/reorder": {
         parameters: {
             query?: never;
@@ -1126,6 +1143,11 @@ export interface components {
             role: components["schemas"]["WorkspaceRole"];
             /** @description User's custom sort order for this workspace */
             sort_order?: number;
+        };
+        WorkspaceNotificationSummary: {
+            workspace_id: string;
+            unread_count: number;
+            notification_count: number;
         };
         WorkspaceMembership: {
             id: string;
@@ -2093,6 +2115,29 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getWorkspaceNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notification summaries per workspace */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        workspaces: components["schemas"]["WorkspaceNotificationSummary"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
         };
     };
     reorderWorkspaces: {

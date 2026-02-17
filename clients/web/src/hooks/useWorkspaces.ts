@@ -1,10 +1,15 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   workspacesApi,
   type CreateWorkspaceInput,
   type CreateInviteInput,
 } from '../api/workspaces';
-import type { WorkspaceRole, WorkspaceSummary } from '@feather/api-client';
+import type {
+  WorkspaceRole,
+  WorkspaceSummary,
+  WorkspaceNotificationSummary,
+} from '@feather/api-client';
 
 export function useWorkspace(workspaceId: string | undefined) {
   return useQuery({
@@ -95,6 +100,27 @@ export function useDeleteWorkspaceIcon(workspaceId: string) {
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
     },
   });
+}
+
+export function useWorkspaceNotifications() {
+  const query = useQuery({
+    queryKey: ['workspaces', 'notifications'],
+    queryFn: () => workspacesApi.getNotifications(),
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+  });
+
+  const notificationMap = useMemo(() => {
+    const map = new Map<string, WorkspaceNotificationSummary>();
+    if (query.data?.workspaces) {
+      for (const ws of query.data.workspaces) {
+        map.set(ws.workspace_id, ws);
+      }
+    }
+    return map;
+  }, [query.data]);
+
+  return { ...query, notificationMap };
 }
 
 export function useReorderWorkspaces() {

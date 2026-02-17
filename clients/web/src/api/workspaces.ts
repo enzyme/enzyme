@@ -5,6 +5,7 @@ import {
   uploadFile,
   type Workspace,
   type WorkspaceMemberWithUser,
+  type WorkspaceNotificationSummary,
   type Invite,
   type WorkspaceRole,
 } from '@feather/api-client';
@@ -68,4 +69,8 @@ export const workspacesApi = {
   // Reorder workspaces
   reorder: (workspaceIds: string[]) =>
     post<{ success: boolean }>('/workspaces/reorder', { workspace_ids: workspaceIds }),
+
+  // Notification summaries across all workspaces
+  getNotifications: () =>
+    get<{ workspaces: WorkspaceNotificationSummary[] }>('/workspaces/notifications'),
 };

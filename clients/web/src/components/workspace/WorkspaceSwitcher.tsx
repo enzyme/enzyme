@@ -46,11 +46,15 @@ import {
   MenuHeader,
   MenuSeparator,
 } from '../ui';
-import { useCreateWorkspace, useReorderWorkspaces } from '../../hooks/useWorkspaces';
+import {
+  useCreateWorkspace,
+  useReorderWorkspaces,
+  useWorkspaceNotifications,
+} from '../../hooks/useWorkspaces';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import { useProfilePanel } from '../../hooks/usePanel';
 import { cn, getAvatarColor } from '../../lib/utils';
-import type { WorkspaceSummary } from '@feather/api-client';
+import type { WorkspaceSummary, WorkspaceNotificationSummary } from '@feather/api-client';
 import { WorkspaceContextMenu } from './WorkspaceContextMenu';
 
 export function WorkspaceSwitcher() {
@@ -60,6 +64,7 @@ export function WorkspaceSwitcher() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceSummary | null>(null);
   const reorderWorkspaces = useReorderWorkspaces();
+  const { notificationMap } = useWorkspaceNotifications();
 
   // Local state for immediate visual updates during drag
   const [localWorkspaces, setLocalWorkspaces] = useState<WorkspaceSummary[]>([]);
@@ -131,6 +136,7 @@ export function WorkspaceSwitcher() {
                 workspace={ws}
                 isActive={ws.id === workspaceId}
                 onPress={() => navigate(`/workspaces/${ws.id}`)}
+                notificationMap={notificationMap}
               />
             ))}
           </SortableContext>
@@ -140,6 +146,7 @@ export function WorkspaceSwitcher() {
                 workspace={activeWorkspace}
                 isActive={activeWorkspace.id === workspaceId}
                 isDragOverlay
+                notificationMap={notificationMap}
               />
             )}
           </DragOverlay>
@@ -174,9 +181,15 @@ interface SortableWorkspaceItemProps {
   workspace: WorkspaceSummary;
   isActive: boolean;
   onPress: () => void;
+  notificationMap: Map<string, WorkspaceNotificationSummary>;
 }
 
-function SortableWorkspaceItem({ workspace, isActive, onPress }: SortableWorkspaceItemProps) {
+function SortableWorkspaceItem({
+  workspace,
+  isActive,
+  onPress,
+  notificationMap,
+}: SortableWorkspaceItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: workspace.id,
   });
@@ -212,6 +225,7 @@ function SortableWorkspaceItem({ workspace, isActive, onPress }: SortableWorkspa
               workspace={workspace}
               isActive={isActive}
               isMenuOpen={isMenuOpen}
+              notificationMap={notificationMap}
             />
           </div>
         </Tooltip>
@@ -225,6 +239,7 @@ interface WorkspaceItemContentProps {
   isActive: boolean;
   isDragOverlay?: boolean;
   isMenuOpen?: boolean;
+  notificationMap: Map<string, WorkspaceNotificationSummary>;
 }
 
 function WorkspaceItemContent({
@@ -232,17 +247,28 @@ function WorkspaceItemContent({
   isActive,
   isDragOverlay,
   isMenuOpen,
+  notificationMap,
 }: WorkspaceItemContentProps) {
-  // Only fetch channel data for the active workspace (avoids extra API calls)
+  // Fetch channel data for the active workspace (real-time via SSE)
   const { data: channelsData } = useChannels(isActive ? workspace.id : undefined);
 
   const { hasUnread, totalNotifications } = useMemo(() => {
-    if (!channelsData?.channels) return { hasUnread: false, totalNotifications: 0 };
+    if (isActive) {
+      // Active workspace: use channel data for real-time accuracy
+      if (!channelsData?.channels) return { hasUnread: false, totalNotifications: 0 };
+      return {
+        hasUnread: channelsData.channels.some((c) => c.unread_count > 0),
+        totalNotifications: channelsData.channels.reduce((sum, c) => sum + c.notification_count, 0),
+      };
+    }
+    // Non-active workspace: use polled notification summaries
+    const summary = notificationMap.get(workspace.id);
+    if (!summary) return { hasUnread: false, totalNotifications: 0 };
     return {
-      hasUnread: channelsData.channels.some((c) => c.unread_count > 0),
-      totalNotifications: channelsData.channels.reduce((sum, c) => sum + c.notification_count, 0),
+      hasUnread: summary.unread_count > 0,
+      totalNotifications: summary.notification_count,
     };
-  }, [channelsData]);
+  }, [isActive, channelsData, notificationMap, workspace.id]);
 
   return (
     <div className="relative">
@@ -267,12 +293,12 @@ function WorkspaceItemContent({
           </span>
         )}
       </div>
-      {isActive && totalNotifications > 0 && (
+      {totalNotifications > 0 && (
         <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
           {totalNotifications > 99 ? '99+' : totalNotifications}
         </span>
       )}
-      {isActive && totalNotifications === 0 && hasUnread && (
+      {totalNotifications === 0 && hasUnread && (
         <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary-500" />
       )}
     </div>

@@ -1046,3 +1046,104 @@ func TestRepository_ListRecentDMs_NotificationCount(t *testing.T) {
 		t.Errorf("NotificationCount = %d, want %d (same as UnreadCount)", dmChannel.NotificationCount, dmChannel.UnreadCount)
 	}
 }
+
+func TestRepository_GetWorkspaceNotificationSummaries(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User 2")
+	ws1 := testutil.CreateTestWorkspace(t, db, user1.ID, "Workspace 1")
+	ws2 := testutil.CreateTestWorkspace(t, db, user1.ID, "Workspace 2")
+
+	// Create channels in ws1
+	ch1 := testutil.CreateTestChannel(t, db, ws1.ID, user1.ID, "general", "public")
+	// Create a DM in ws1
+	dm, err := repo.CreateDM(ctx, ws1.ID, []string{user1.ID, user2.ID})
+	if err != nil {
+		t.Fatalf("CreateDM() error = %v", err)
+	}
+
+	// Create channel in ws2
+	ch2 := testutil.CreateTestChannel(t, db, ws2.ID, user1.ID, "random", "public")
+
+	// Add unread messages to ch1 (with a mention)
+	createMessageWithMentions(t, db, ch1.ID, user2.ID, "Hey @User 1", []string{user1.ID})
+	createMessageWithMentions(t, db, ch1.ID, user2.ID, "Just chatting", []string{})
+
+	// Add unread DM messages in ws1
+	testutil.CreateTestMessage(t, db, dm.ID, user2.ID, "DM hello")
+
+	// Add unread messages to ch2 (no mentions)
+	createMessageWithMentions(t, db, ch2.ID, user2.ID, "Hey there", []string{})
+	createMessageWithMentions(t, db, ch2.ID, user2.ID, "Another msg", []string{})
+
+	summaries, err := repo.GetWorkspaceNotificationSummaries(ctx, user1.ID)
+	if err != nil {
+		t.Fatalf("GetWorkspaceNotificationSummaries() error = %v", err)
+	}
+
+	// Build lookup map
+	summaryMap := make(map[string]WorkspaceNotificationSummary)
+	for _, s := range summaries {
+		summaryMap[s.WorkspaceID] = s
+	}
+
+	// ws1: 2 unread in ch1 + 1 DM = 3 unread, 1 mention + 1 DM = 2 notifications
+	s1, ok := summaryMap[ws1.ID]
+	if !ok {
+		t.Fatal("expected summary for workspace 1")
+	}
+	if s1.UnreadCount != 3 {
+		t.Errorf("ws1 UnreadCount = %d, want 3", s1.UnreadCount)
+	}
+	if s1.NotificationCount != 2 {
+		t.Errorf("ws1 NotificationCount = %d, want 2", s1.NotificationCount)
+	}
+
+	// ws2: 2 unread, 0 notifications (no mentions, default notify level = mentions)
+	s2, ok := summaryMap[ws2.ID]
+	if !ok {
+		t.Fatal("expected summary for workspace 2")
+	}
+	if s2.UnreadCount != 2 {
+		t.Errorf("ws2 UnreadCount = %d, want 2", s2.UnreadCount)
+	}
+	if s2.NotificationCount != 0 {
+		t.Errorf("ws2 NotificationCount = %d, want 0", s2.NotificationCount)
+	}
+}
+
+func TestRepository_GetWorkspaceNotificationSummaries_NoUnreads(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User 1")
+	ws := testutil.CreateTestWorkspace(t, db, user1.ID, "Workspace 1")
+	// Create a channel (gives user a channel membership) but no messages
+	testutil.CreateTestChannel(t, db, ws.ID, user1.ID, "general", "public")
+
+	summaries, err := repo.GetWorkspaceNotificationSummaries(ctx, user1.ID)
+	if err != nil {
+		t.Fatalf("GetWorkspaceNotificationSummaries() error = %v", err)
+	}
+
+	// Should return the workspace with 0 counts
+	var found bool
+	for _, s := range summaries {
+		if s.WorkspaceID == ws.ID {
+			found = true
+			if s.UnreadCount != 0 {
+				t.Errorf("UnreadCount = %d, want 0", s.UnreadCount)
+			}
+			if s.NotificationCount != 0 {
+				t.Errorf("NotificationCount = %d, want 0", s.NotificationCount)
+			}
+		}
+	}
+	if !found {
+		t.Error("expected workspace to appear in summaries")
+	}
+}

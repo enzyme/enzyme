@@ -601,6 +601,13 @@ type WorkspaceMembership struct {
 	WorkspaceId         string        `json:"workspace_id"`
 }
 
+// WorkspaceNotificationSummary defines model for WorkspaceNotificationSummary.
+type WorkspaceNotificationSummary struct {
+	NotificationCount int    `json:"notification_count"`
+	UnreadCount       int    `json:"unread_count"`
+	WorkspaceId       string `json:"workspace_id"`
+}
+
 // WorkspaceRole defines model for WorkspaceRole.
 type WorkspaceRole string
 
@@ -995,6 +1002,9 @@ type ServerInterface interface {
 	// Create a new workspace
 	// (POST /workspaces/create)
 	CreateWorkspace(w http.ResponseWriter, r *http.Request)
+	// Get notification summaries for all workspaces
+	// (GET /workspaces/notifications)
+	GetWorkspaceNotifications(w http.ResponseWriter, r *http.Request)
 	// Reorder workspaces for current user
 	// (POST /workspaces/reorder)
 	ReorderWorkspaces(w http.ResponseWriter, r *http.Request)
@@ -1319,6 +1329,12 @@ func (_ Unimplemented) GetUser(w http.ResponseWriter, r *http.Request, id string
 // Create a new workspace
 // (POST /workspaces/create)
 func (_ Unimplemented) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get notification summaries for all workspaces
+// (GET /workspaces/notifications)
+func (_ Unimplemented) GetWorkspaceNotifications(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2656,6 +2672,26 @@ func (siw *ServerInterfaceWrapper) CreateWorkspace(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetWorkspaceNotifications operation middleware
+func (siw *ServerInterfaceWrapper) GetWorkspaceNotifications(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWorkspaceNotifications(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ReorderWorkspaces operation middleware
 func (siw *ServerInterfaceWrapper) ReorderWorkspaces(w http.ResponseWriter, r *http.Request) {
 
@@ -3478,6 +3514,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/create", wrapper.CreateWorkspace)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/workspaces/notifications", wrapper.GetWorkspaceNotifications)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/reorder", wrapper.ReorderWorkspaces)
@@ -5278,6 +5317,33 @@ func (response CreateWorkspace401JSONResponse) VisitCreateWorkspaceResponse(w ht
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetWorkspaceNotificationsRequestObject struct {
+}
+
+type GetWorkspaceNotificationsResponseObject interface {
+	VisitGetWorkspaceNotificationsResponse(w http.ResponseWriter) error
+}
+
+type GetWorkspaceNotifications200JSONResponse struct {
+	Workspaces []WorkspaceNotificationSummary `json:"workspaces"`
+}
+
+func (response GetWorkspaceNotifications200JSONResponse) VisitGetWorkspaceNotificationsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetWorkspaceNotifications401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetWorkspaceNotifications401JSONResponse) VisitGetWorkspaceNotificationsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ReorderWorkspacesRequestObject struct {
 	Body *ReorderWorkspacesJSONRequestBody
 }
@@ -6142,6 +6208,9 @@ type StrictServerInterface interface {
 	// Create a new workspace
 	// (POST /workspaces/create)
 	CreateWorkspace(ctx context.Context, request CreateWorkspaceRequestObject) (CreateWorkspaceResponseObject, error)
+	// Get notification summaries for all workspaces
+	// (GET /workspaces/notifications)
+	GetWorkspaceNotifications(ctx context.Context, request GetWorkspaceNotificationsRequestObject) (GetWorkspaceNotificationsResponseObject, error)
 	// Reorder workspaces for current user
 	// (POST /workspaces/reorder)
 	ReorderWorkspaces(ctx context.Context, request ReorderWorkspacesRequestObject) (ReorderWorkspacesResponseObject, error)
@@ -7491,6 +7560,30 @@ func (sh *strictHandler) CreateWorkspace(w http.ResponseWriter, r *http.Request)
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateWorkspaceResponseObject); ok {
 		if err := validResponse.VisitCreateWorkspaceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetWorkspaceNotifications operation middleware
+func (sh *strictHandler) GetWorkspaceNotifications(w http.ResponseWriter, r *http.Request) {
+	var request GetWorkspaceNotificationsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetWorkspaceNotifications(ctx, request.(GetWorkspaceNotificationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetWorkspaceNotifications")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetWorkspaceNotificationsResponseObject); ok {
+		if err := validResponse.VisitGetWorkspaceNotificationsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

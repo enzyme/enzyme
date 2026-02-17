@@ -12,6 +12,7 @@ export type WorkspaceMembership = components['schemas']['WorkspaceMembership'];
 export type WorkspaceMemberWithUser = components['schemas']['WorkspaceMemberWithUser'];
 export type WorkspaceRole = components['schemas']['WorkspaceRole'];
 export type Invite = components['schemas']['Invite'];
+export type WorkspaceNotificationSummary = components['schemas']['WorkspaceNotificationSummary'];
 
 // Channel types
 export type Channel = components['schemas']['Channel'];

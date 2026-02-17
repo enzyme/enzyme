@@ -64,6 +64,13 @@ const (
 	ChannelRoleViewer = "viewer"
 )
 
+// WorkspaceNotificationSummary holds aggregated unread/notification counts per workspace
+type WorkspaceNotificationSummary struct {
+	WorkspaceID       string
+	UnreadCount       int
+	NotificationCount int
+}
+
 // CanPost returns true if the role allows posting messages
 func CanPost(role *string) bool {
 	if role == nil {

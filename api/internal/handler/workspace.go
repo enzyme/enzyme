@@ -578,6 +578,32 @@ func (h *Handler) ServeWorkspaceIcon(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, iconPath)
 }
 
+// GetWorkspaceNotifications returns aggregated notification summaries for all workspaces
+func (h *Handler) GetWorkspaceNotifications(ctx context.Context, request openapi.GetWorkspaceNotificationsRequestObject) (openapi.GetWorkspaceNotificationsResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.GetWorkspaceNotifications401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+	}
+
+	summaries, err := h.channelRepo.GetWorkspaceNotificationSummaries(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	apiSummaries := make([]openapi.WorkspaceNotificationSummary, len(summaries))
+	for i, s := range summaries {
+		apiSummaries[i] = openapi.WorkspaceNotificationSummary{
+			WorkspaceId:       s.WorkspaceID,
+			UnreadCount:       s.UnreadCount,
+			NotificationCount: s.NotificationCount,
+		}
+	}
+
+	return openapi.GetWorkspaceNotifications200JSONResponse{
+		Workspaces: apiSummaries,
+	}, nil
+}
+
 // ListAllUnreads lists all unread messages across channels in a workspace
 func (h *Handler) ListAllUnreads(ctx context.Context, request openapi.ListAllUnreadsRequestObject) (openapi.ListAllUnreadsResponseObject, error) {
 	userID := h.getUserID(ctx)

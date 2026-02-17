@@ -200,6 +200,9 @@ export function useSSE(workspaceId: string | undefined) {
               };
             },
           );
+
+          // Also invalidate workspace notifications so non-active workspace indicators update
+          queryClient.invalidateQueries({ queryKey: ['workspaces', 'notifications'] });
         }
       }
     });
@@ -416,6 +419,7 @@ export function useSSE(workspaceId: string | undefined) {
           };
         },
       );
+      queryClient.invalidateQueries({ queryKey: ['workspaces', 'notifications'] });
     });
 
     // Handle custom emoji events
@@ -488,6 +492,7 @@ export function useSSE(workspaceId: string | undefined) {
             };
           },
         );
+        queryClient.invalidateQueries({ queryKey: ['workspaces', 'notifications'] });
       }
 
       // Only play sound and show browser notification when tab is not focused

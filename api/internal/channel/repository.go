@@ -361,6 +361,58 @@ func (r *Repository) fetchDMParticipants(ctx context.Context, channels []Channel
 	return rows.Err()
 }
 
+// GetWorkspaceNotificationSummaries returns aggregated unread and notification counts
+// for all workspaces a user is a member of.
+func (r *Repository) GetWorkspaceNotificationSummaries(ctx context.Context, userID string) ([]WorkspaceNotificationSummary, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT c.workspace_id,
+		       COALESCE(SUM(
+		           (SELECT COUNT(*) FROM messages m
+		            WHERE m.channel_id = c.id
+		              AND m.thread_parent_id IS NULL
+		              AND m.deleted_at IS NULL
+		              AND (cm.last_read_message_id IS NULL OR m.id > cm.last_read_message_id))
+		       ), 0) as unread_count,
+		       COALESCE(SUM(
+		           (SELECT COUNT(*) FROM messages m
+		            WHERE m.channel_id = c.id
+		              AND m.thread_parent_id IS NULL
+		              AND m.deleted_at IS NULL
+		              AND (cm.last_read_message_id IS NULL OR m.id > cm.last_read_message_id)
+		              AND CASE
+		                WHEN c.type IN ('dm', 'group_dm') THEN 1
+		                WHEN np.notify_level = 'none' THEN 0
+		                WHEN np.notify_level = 'all' THEN 1
+		                WHEN np.notify_level = 'mentions' OR np.notify_level IS NULL THEN
+		                  EXISTS (
+		                    SELECT 1 FROM json_each(m.mentions) je
+		                    WHERE je.value = ? OR je.value IN ('@channel', '@here', '@everyone')
+		                  )
+		                ELSE 0
+		              END = 1)
+		       ), 0) as notification_count
+		FROM channels c
+		JOIN channel_memberships cm ON cm.channel_id = c.id AND cm.user_id = ?
+		LEFT JOIN notification_preferences np ON np.channel_id = c.id AND np.user_id = ?
+		WHERE c.archived_at IS NULL
+		GROUP BY c.workspace_id
+	`, userID, userID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var summaries []WorkspaceNotificationSummary
+	for rows.Next() {
+		var s WorkspaceNotificationSummary
+		if err := rows.Scan(&s.WorkspaceID, &s.UnreadCount, &s.NotificationCount); err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, s)
+	}
+	return summaries, rows.Err()
+}
+
 func (r *Repository) GetMembership(ctx context.Context, userID, channelID string) (*ChannelMembership, error) {
 	var m ChannelMembership
 	var channelRole, lastReadID sql.NullString
