@@ -473,7 +473,7 @@ export function useSSE(workspaceId: string | undefined) {
       const notification = event.data as NotificationData;
 
       // Increment notification_count for the channel
-      if (notification.channel_id) {
+      if (notification.channel_id && notification.type !== 'thread_reply') {
         queryClient.setQueryData(
           ['channels', workspaceId],
           (old: { channels: ChannelWithMembership[] } | undefined) => {
