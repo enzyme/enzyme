@@ -5,7 +5,8 @@ This guide covers everything you need to deploy Feather on your own server.
 ## Requirements
 
 - A Linux, macOS, or Windows server
-- Port 443 available for HTTPS (or 8080 for local/development use)
+- A domain name with an A record pointing to your server (required for automatic TLS)
+- Ports 80 and 443 available for HTTPS (or 8080 for local/development use)
 
 ## Quick Start
 
@@ -150,7 +151,10 @@ server:
       cache_dir: './data/certs'
 ```
 
-This automatically obtains and renews certificates from Let's Encrypt. Port 443 must be reachable from the internet.
+This automatically obtains and renews certificates from Let's Encrypt. Requirements:
+
+- Your domain's A record must point to the server's IP address
+- Ports 80 and 443 must be reachable from the internet (port 80 is used for Let's Encrypt HTTP-01 challenges and HTTP-to-HTTPS redirect)
 
 ### Manual Certificates
 
@@ -218,8 +222,8 @@ Set it up:
 # Create user
 sudo useradd --system --shell /usr/sbin/nologin feather
 
-# Create directories
-sudo mkdir -p /opt/feather /var/lib/feather/uploads
+# Create directories (include certs dir if using auto TLS)
+sudo mkdir -p /opt/feather /var/lib/feather/uploads /var/lib/feather/certs
 sudo chown -R feather:feather /opt/feather /var/lib/feather
 
 # Copy files
@@ -234,6 +238,17 @@ sudo systemctl start feather
 # Check status
 sudo systemctl status feather
 sudo journalctl -u feather -f
+```
+
+## Firewall
+
+If your server runs a firewall (e.g., `ufw` on Ubuntu), make sure to open the required ports. **Always allow SSH first** to avoid locking yourself out:
+
+```bash
+sudo ufw allow 22/tcp     # SSH (do this FIRST)
+sudo ufw allow 80/tcp     # HTTP (Let's Encrypt + redirect)
+sudo ufw allow 443/tcp    # HTTPS
+sudo ufw enable
 ```
 
 ## Backups
