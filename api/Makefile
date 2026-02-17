@@ -8,7 +8,7 @@ WEB_DIST_DST=./internal/web/dist
 
 generate:
 	@mkdir -p internal/openapi
-	go generate ./internal/openapi/...
+	oapi-codegen --config oapi-codegen.yaml openapi.yaml
 
 generate-types: generate
 
