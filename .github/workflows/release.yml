@@ -92,7 +92,8 @@ jobs:
           if [ "${{ matrix.goos }}" = "windows" ]; then
             BINARY_NAME="${BINARY_NAME}.exe"
           fi
-          go build -ldflags="-s -w" -o "../${BINARY_NAME}" ./cmd/feather
+          VERSION="${GITHUB_REF_NAME#v}"
+          go build -ldflags="-s -w -X github.com/feather/api/internal/version.Version=${VERSION}" -o "../${BINARY_NAME}" ./cmd/feather
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
