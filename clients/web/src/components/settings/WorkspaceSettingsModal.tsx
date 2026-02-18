@@ -392,7 +392,7 @@ export function WorkspaceSettingsModal({
                   <div className="flex items-center gap-3">
                     {canManage ? (
                       member.role === 'owner' ? (
-                        <span className="rounded bg-yellow-100 px-2 py-0.5 text-xs font-medium capitalize text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                        <span className="rounded bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 capitalize dark:bg-yellow-900/30 dark:text-yellow-400">
                           Owner
                         </span>
                       ) : (

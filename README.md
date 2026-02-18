@@ -86,10 +86,11 @@ This builds binaries for 6 platforms (each with the web client embedded) and cre
 
 ## Documentation
 
-| Package     | README                                         |
+| Document    | Path                                           |
 | ----------- | ---------------------------------------------- |
 | API (Go)    | [api/README.md](api/README.md)                 |
 | Web (React) | [clients/web/README.md](clients/web/README.md) |
+| Permissions | [docs/permissions.md](docs/permissions.md)     |
 
 ## Tech Stack
 
