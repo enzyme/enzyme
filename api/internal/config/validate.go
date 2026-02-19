@@ -64,9 +64,29 @@ func Validate(cfg *Config) error {
 		errs = append(errs, fmt.Errorf("server.tls.mode must be off, auto, or manual"))
 	}
 
+	// Server timeout validation
+	if cfg.Server.ReadTimeout < time.Second {
+		errs = append(errs, fmt.Errorf("server.read_timeout must be at least 1s"))
+	}
+	if cfg.Server.WriteTimeout < time.Second {
+		errs = append(errs, fmt.Errorf("server.write_timeout must be at least 1s"))
+	}
+	if cfg.Server.IdleTimeout < time.Second {
+		errs = append(errs, fmt.Errorf("server.idle_timeout must be at least 1s"))
+	}
+
 	// Database validation
 	if cfg.Database.Path == "" {
 		errs = append(errs, fmt.Errorf("database.path is required"))
+	}
+	if cfg.Database.MaxOpenConns < 1 {
+		errs = append(errs, fmt.Errorf("database.max_open_conns must be at least 1"))
+	}
+	if cfg.Database.BusyTimeout < 0 {
+		errs = append(errs, fmt.Errorf("database.busy_timeout must be at least 0"))
+	}
+	if cfg.Database.MmapSize < 0 {
+		errs = append(errs, fmt.Errorf("database.mmap_size must be at least 0"))
 	}
 
 	// Auth validation
@@ -116,6 +136,14 @@ func Validate(cfg *Config) error {
 				errs = append(errs, fmt.Errorf("%s.window must be at least 1s", ep.name))
 			}
 		}
+	}
+
+	// SSE validation
+	if cfg.SSE.HeartbeatInterval < 5*time.Second {
+		errs = append(errs, fmt.Errorf("sse.heartbeat_interval must be at least 5s"))
+	}
+	if cfg.SSE.ClientBufferSize < 16 {
+		errs = append(errs, fmt.Errorf("sse.client_buffer_size must be at least 16"))
 	}
 
 	if len(errs) > 0 {

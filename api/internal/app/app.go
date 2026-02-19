@@ -48,7 +48,12 @@ type App struct {
 
 func New(cfg *config.Config) (*App, error) {
 	// Open database
-	db, err := database.Open(cfg.Database.Path)
+	db, err := database.Open(cfg.Database.Path, database.Options{
+		MaxOpenConns: cfg.Database.MaxOpenConns,
+		BusyTimeout:  cfg.Database.BusyTimeout,
+		CacheSize:    cfg.Database.CacheSize,
+		MmapSize:     cfg.Database.MmapSize,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +132,7 @@ func New(cfg *config.Config) (*App, error) {
 	cfg.Server.PublicURL = strings.TrimRight(cfg.Server.PublicURL, "/")
 
 	// Initialize SSE handler (kept separate as it requires streaming)
-	sseHandler := sse.NewHandler(hub, workspaceRepo)
+	sseHandler := sse.NewHandler(hub, workspaceRepo, cfg.SSE.HeartbeatInterval, cfg.SSE.ClientBufferSize)
 
 	// Initialize main handler implementing StrictServerInterface
 	h := handler.New(handler.Dependencies{
@@ -189,7 +194,8 @@ func New(cfg *config.Config) (*App, error) {
 	}
 
 	// Create server
-	srv := server.New(cfg.Server.Host, cfg.Server.Port, router, tlsOpts)
+	srv := server.New(cfg.Server.Host, cfg.Server.Port, router, tlsOpts,
+		cfg.Server.ReadTimeout, cfg.Server.WriteTimeout, cfg.Server.IdleTimeout)
 
 	return &App{
 		Config:              cfg,

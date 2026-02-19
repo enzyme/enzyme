@@ -3,10 +3,11 @@ package server
 import (
 	"net/http"
 	"testing"
+	"time"
 )
 
 func TestNew_ModeOff(t *testing.T) {
-	s := New("localhost", 8080, http.NewServeMux(), TLSOptions{Mode: "off"})
+	s := New("localhost", 8080, http.NewServeMux(), TLSOptions{Mode: "off"}, 30*time.Second, 60*time.Second, 120*time.Second)
 
 	if s.httpServer.TLSConfig != nil {
 		t.Fatal("expected no TLSConfig for mode off")
@@ -28,7 +29,7 @@ func TestNew_ModeAuto(t *testing.T) {
 		Domain:   "example.com",
 		Email:    "admin@example.com",
 		CacheDir: t.TempDir(),
-	})
+	}, 30*time.Second, 60*time.Second, 120*time.Second)
 
 	if s.httpServer.TLSConfig == nil {
 		t.Fatal("expected TLSConfig to be set for mode auto")
@@ -55,7 +56,7 @@ func TestNew_ModeManual(t *testing.T) {
 		Mode:     "manual",
 		CertFile: "/path/to/cert.pem",
 		KeyFile:  "/path/to/key.pem",
-	})
+	}, 30*time.Second, 60*time.Second, 120*time.Second)
 
 	if s.httpServer.TLSConfig != nil {
 		t.Fatal("expected no TLSConfig for mode manual (certs loaded from file)")
@@ -72,7 +73,7 @@ func TestNew_ModeManual(t *testing.T) {
 }
 
 func TestNew_ModeEmpty(t *testing.T) {
-	s := New("localhost", 8080, http.NewServeMux(), TLSOptions{})
+	s := New("localhost", 8080, http.NewServeMux(), TLSOptions{}, 30*time.Second, 60*time.Second, 120*time.Second)
 
 	if s.httpServer.TLSConfig != nil {
 		t.Fatal("expected no TLSConfig for empty mode")
@@ -90,7 +91,7 @@ func TestTLSMode(t *testing.T) {
 				opts.Domain = "example.com"
 				opts.CacheDir = t.TempDir()
 			}
-			s := New("localhost", 8080, http.NewServeMux(), opts)
+			s := New("localhost", 8080, http.NewServeMux(), opts, 30*time.Second, 60*time.Second, 120*time.Second)
 			if s.TLSMode() != mode {
 				t.Fatalf("expected TLSMode %q, got %q", mode, s.TLSMode())
 			}

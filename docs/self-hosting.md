@@ -240,6 +240,10 @@ sudo systemctl status enzyme
 sudo journalctl -u enzyme -f
 ```
 
+## Scaling
+
+The default configuration is tuned for a small server (2 GB RAM / 1 vCPU, ~100 users). If you're running on larger hardware or expect more users, see the [Scaling Guide](./scaling.md) for SQLite, HTTP, SSE, and OS-level tuning recommendations with example configs for small, medium, and large deployments.
+
 ## Logs
 
 Enzyme logs to stdout. Where logs end up depends on how you run the server:

@@ -13,20 +13,19 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
-const (
-	HeartbeatInterval = 30 * time.Second
-	ClientBufferSize  = 256
-)
-
 type Handler struct {
-	hub           *Hub
-	workspaceRepo *workspace.Repository
+	hub               *Hub
+	workspaceRepo     *workspace.Repository
+	heartbeatInterval time.Duration
+	clientBufferSize  int
 }
 
-func NewHandler(hub *Hub, workspaceRepo *workspace.Repository) *Handler {
+func NewHandler(hub *Hub, workspaceRepo *workspace.Repository, heartbeatInterval time.Duration, clientBufferSize int) *Handler {
 	return &Handler{
-		hub:           hub,
-		workspaceRepo: workspaceRepo,
+		hub:               hub,
+		workspaceRepo:     workspaceRepo,
+		heartbeatInterval: heartbeatInterval,
+		clientBufferSize:  clientBufferSize,
 	}
 }
 
@@ -66,7 +65,7 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 		ID:          ulid.Make().String(),
 		UserID:      userID,
 		WorkspaceID: workspaceID,
-		Send:        make(chan Event, ClientBufferSize),
+		Send:        make(chan Event, h.clientBufferSize),
 		Done:        make(chan struct{}),
 	}
 
@@ -104,7 +103,7 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Start heartbeat
-	heartbeat := time.NewTicker(HeartbeatInterval)
+	heartbeat := time.NewTicker(h.heartbeatInterval)
 	defer heartbeat.Stop()
 
 	for {

@@ -105,9 +105,16 @@ func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 					"cache_dir": d.defaults.Server.TLS.Auto.CacheDir,
 				},
 			},
+			"read_timeout":  d.defaults.Server.ReadTimeout.String(),
+			"write_timeout": d.defaults.Server.WriteTimeout.String(),
+			"idle_timeout":  d.defaults.Server.IdleTimeout.String(),
 		},
 		"database": map[string]interface{}{
-			"path": d.defaults.Database.Path,
+			"path":           d.defaults.Database.Path,
+			"max_open_conns": d.defaults.Database.MaxOpenConns,
+			"busy_timeout":   d.defaults.Database.BusyTimeout,
+			"cache_size":     d.defaults.Database.CacheSize,
+			"mmap_size":      d.defaults.Database.MmapSize,
 		},
 		"auth": map[string]interface{}{
 			"session_duration": d.defaults.Auth.SessionDuration.String(),
@@ -146,8 +153,10 @@ func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 			},
 		},
 		"sse": map[string]interface{}{
-			"event_retention":  d.defaults.SSE.EventRetention.String(),
-			"cleanup_interval": d.defaults.SSE.CleanupInterval.String(),
+			"event_retention":    d.defaults.SSE.EventRetention.String(),
+			"cleanup_interval":   d.defaults.SSE.CleanupInterval.String(),
+			"heartbeat_interval": d.defaults.SSE.HeartbeatInterval.String(),
+			"client_buffer_size": d.defaults.SSE.ClientBufferSize,
 		},
 	}, nil
 }

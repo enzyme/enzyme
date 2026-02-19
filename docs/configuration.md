@@ -51,6 +51,9 @@ Run `./enzyme --help` for all available flags.
 | `server.port`            | `ENZYME_SERVER_PORT`            | `--server.port`            | `8080`                      | Port to listen on.                                                                                                        |
 | `server.public_url`      | `ENZYME_SERVER_PUBLIC_URL`      | `--server.public_url`      | `http://localhost:8080`     | Public-facing URL. Used in emails (invite links, password resets). Must include the scheme.                               |
 | `server.allowed_origins` | `ENZYME_SERVER_ALLOWED_ORIGINS` | `--server.allowed_origins` | `["http://localhost:3000"]` | CORS allowed origins. Set to `[]` for production (same-origin with embedded frontend). Each origin must include a scheme. |
+| `server.read_timeout`    | `ENZYME_SERVER_READ_TIMEOUT`    |                            | `30s`                       | Max duration for reading the entire request (including body). Minimum: 1s.                                                |
+| `server.write_timeout`   | `ENZYME_SERVER_WRITE_TIMEOUT`   |                            | `60s`                       | Max duration for writing the response. SSE connections override this per-connection. Minimum: 1s.                         |
+| `server.idle_timeout`    | `ENZYME_SERVER_IDLE_TIMEOUT`    |                            | `120s`                      | Max duration to wait for the next request on a keep-alive connection. Minimum: 1s.                                        |
 
 ### TLS
 
@@ -65,11 +68,15 @@ Run `./enzyme --help` for all available flags.
 
 ## Database
 
-| Key             | Env Var                | CLI Flag          | Default            | Description                                                 |
-| --------------- | ---------------------- | ----------------- | ------------------ | ----------------------------------------------------------- |
-| `database.path` | `ENZYME_DATABASE_PATH` | `--database.path` | `./data/enzyme.db` | Path to the SQLite database file. The directory must exist. |
+| Key                       | Env Var                          | CLI Flag          | Default            | Description                                                                                              |
+| ------------------------- | -------------------------------- | ----------------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `database.path`           | `ENZYME_DATABASE_PATH`           | `--database.path` | `./data/enzyme.db` | Path to the SQLite database file. The directory must exist.                                              |
+| `database.max_open_conns` | `ENZYME_DATABASE_MAX_OPEN_CONNS` |                   | `2`                | Max open database connections. Allows concurrent reads with WAL mode. Minimum: 1.                        |
+| `database.busy_timeout`   | `ENZYME_DATABASE_BUSY_TIMEOUT`   |                   | `5000`             | Milliseconds to wait when the database is locked before returning SQLITE_BUSY. Minimum: 0.               |
+| `database.cache_size`     | `ENZYME_DATABASE_CACHE_SIZE`     |                   | `-2000`            | SQLite page cache size. Negative values = KB (e.g., `-2000` = ~2 MB). Positive values = number of pages. |
+| `database.mmap_size`      | `ENZYME_DATABASE_MMAP_SIZE`      |                   | `0`                | Memory-mapped I/O size in bytes. `0` disables mmap. Set higher for large databases on capable hardware.  |
 
-Enzyme uses SQLite in WAL mode with a single connection. No external database server is needed.
+Enzyme uses SQLite in WAL mode. No external database server is needed. See [Scaling Guide](scaling.md) for tuning guidance.
 
 ## Authentication
 
@@ -117,10 +124,12 @@ Rate limiting protects authentication endpoints from brute-force attacks. Limits
 
 ## SSE (Real-Time Events)
 
-| Key                    | Env Var                       | Default | Description                                               |
-| ---------------------- | ----------------------------- | ------- | --------------------------------------------------------- |
-| `sse.event_retention`  | `ENZYME_SSE_EVENT_RETENTION`  | `24h`   | How long SSE events are stored for reconnection catch-up. |
-| `sse.cleanup_interval` | `ENZYME_SSE_CLEANUP_INTERVAL` | `1h`    | How often old SSE events are purged from the database.    |
+| Key                      | Env Var                         | Default | Description                                                                            |
+| ------------------------ | ------------------------------- | ------- | -------------------------------------------------------------------------------------- |
+| `sse.event_retention`    | `ENZYME_SSE_EVENT_RETENTION`    | `24h`   | How long SSE events are stored for reconnection catch-up.                              |
+| `sse.cleanup_interval`   | `ENZYME_SSE_CLEANUP_INTERVAL`   | `1h`    | How often old SSE events are purged from the database.                                 |
+| `sse.heartbeat_interval` | `ENZYME_SSE_HEARTBEAT_INTERVAL` | `30s`   | How often heartbeat events are sent to keep SSE connections alive. Minimum: 5s.        |
+| `sse.client_buffer_size` | `ENZYME_SSE_CLIENT_BUFFER_SIZE` | `256`   | Channel buffer size per SSE client. Increase for high-traffic workspaces. Minimum: 16. |
 
 ## Full Example
 
@@ -140,9 +149,16 @@ server:
       domain: 'chat.example.com'
       email: 'admin@example.com'
       cache_dir: './data/certs'
+  read_timeout: '30s'
+  write_timeout: '60s'
+  idle_timeout: '120s'
 
 database:
   path: '/var/lib/enzyme/enzyme.db'
+  max_open_conns: 2
+  busy_timeout: 5000
+  cache_size: -2000
+  mmap_size: 0
 
 auth:
   session_duration: '720h'
@@ -179,4 +195,6 @@ rate_limit:
 sse:
   event_retention: '24h'
   cleanup_interval: '1h'
+  heartbeat_interval: '30s'
+  client_buffer_size: 256
 ```

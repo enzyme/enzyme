@@ -16,7 +16,11 @@ import (
 func TestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
-	db, err := database.Open(":memory:")
+	db, err := database.Open(":memory:", database.Options{
+		MaxOpenConns: 1, // single connection for test determinism
+		BusyTimeout:  5000,
+		CacheSize:    -2000,
+	})
 	if err != nil {
 		t.Fatalf("opening test database: %v", err)
 	}

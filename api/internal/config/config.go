@@ -19,11 +19,14 @@ type LogConfig struct {
 }
 
 type ServerConfig struct {
-	Host           string    `koanf:"host"`
-	Port           int       `koanf:"port"`
-	PublicURL      string    `koanf:"public_url"`
-	AllowedOrigins []string  `koanf:"allowed_origins"`
-	TLS            TLSConfig `koanf:"tls"`
+	Host           string        `koanf:"host"`
+	Port           int           `koanf:"port"`
+	PublicURL      string        `koanf:"public_url"`
+	AllowedOrigins []string      `koanf:"allowed_origins"`
+	TLS            TLSConfig     `koanf:"tls"`
+	ReadTimeout    time.Duration `koanf:"read_timeout"`
+	WriteTimeout   time.Duration `koanf:"write_timeout"`
+	IdleTimeout    time.Duration `koanf:"idle_timeout"`
 }
 
 type TLSConfig struct {
@@ -40,7 +43,11 @@ type AutoTLSConfig struct {
 }
 
 type DatabaseConfig struct {
-	Path string `koanf:"path"`
+	Path         string `koanf:"path"`
+	MaxOpenConns int    `koanf:"max_open_conns"`
+	BusyTimeout  int    `koanf:"busy_timeout"`
+	CacheSize    int    `koanf:"cache_size"`
+	MmapSize     int64  `koanf:"mmap_size"`
 }
 
 type AuthConfig struct {
@@ -77,8 +84,10 @@ type RateLimitEndpoint struct {
 }
 
 type SSEConfig struct {
-	EventRetention  time.Duration `koanf:"event_retention"`
-	CleanupInterval time.Duration `koanf:"cleanup_interval"`
+	EventRetention    time.Duration `koanf:"event_retention"`
+	CleanupInterval   time.Duration `koanf:"cleanup_interval"`
+	HeartbeatInterval time.Duration `koanf:"heartbeat_interval"`
+	ClientBufferSize  int           `koanf:"client_buffer_size"`
 }
 
 func Defaults() *Config {
@@ -98,9 +107,15 @@ func Defaults() *Config {
 					CacheDir: "./data/certs",
 				},
 			},
+			ReadTimeout:  30 * time.Second,
+			WriteTimeout: 60 * time.Second,
+			IdleTimeout:  120 * time.Second,
 		},
 		Database: DatabaseConfig{
-			Path: "./data/enzyme.db",
+			Path:         "./data/enzyme.db",
+			MaxOpenConns: 2,
+			BusyTimeout:  5000,
+			CacheSize:    -2000,
 		},
 		Auth: AuthConfig{
 			SessionDuration: 720 * time.Hour, // 30 days
@@ -122,8 +137,10 @@ func Defaults() *Config {
 			ResetPassword:  RateLimitEndpoint{Limit: 10, Window: 15 * time.Minute},
 		},
 		SSE: SSEConfig{
-			EventRetention:  24 * time.Hour,
-			CleanupInterval: time.Hour,
+			EventRetention:    24 * time.Hour,
+			CleanupInterval:   time.Hour,
+			HeartbeatInterval: 30 * time.Second,
+			ClientBufferSize:  256,
 		},
 	}
 }

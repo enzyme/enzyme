@@ -14,33 +14,47 @@ type DB struct {
 	*sql.DB
 }
 
-func Open(path string) (*DB, error) {
-	// Ensure the directory exists
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return nil, fmt.Errorf("creating database directory: %w", err)
+// Options controls SQLite connection pool and pragma settings.
+type Options struct {
+	MaxOpenConns int   // max open connections (default: 2)
+	BusyTimeout  int   // milliseconds to wait on lock (default: 5000)
+	CacheSize    int   // negative = KB, positive = pages (default: -2000)
+	MmapSize     int64 // bytes, 0 = disabled (default: 0)
+}
+
+func Open(path string, opts Options) (*DB, error) {
+	// Ensure the directory exists (skip for in-memory databases)
+	if path != ":memory:" {
+		dir := filepath.Dir(path)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return nil, fmt.Errorf("creating database directory: %w", err)
+		}
 	}
 
-	db, err := sql.Open("sqlite", path)
+	// Build DSN with pragmas applied per-connection, ensuring every connection
+	// in the pool gets all pragmas (fixes foreign_keys correctness with pool > 1).
+	dsn := fmt.Sprintf("%s?_pragma=journal_mode%%28WAL%%29&_pragma=busy_timeout%%28%d%%29&_pragma=foreign_keys%%28ON%%29&_pragma=synchronous%%28NORMAL%%29&_pragma=cache_size%%28%d%%29&_pragma=mmap_size%%28%d%%29",
+		path, opts.BusyTimeout, opts.CacheSize, opts.MmapSize)
+
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
 
-	// Single connection to avoid SQLITE_BUSY
-	db.SetMaxOpenConns(1)
+	db.SetMaxOpenConns(opts.MaxOpenConns)
 
-	// Configure SQLite pragmas
-	pragmas := []string{
-		"PRAGMA journal_mode = WAL",
-		"PRAGMA busy_timeout = 5000",
-		"PRAGMA foreign_keys = ON",
-		"PRAGMA synchronous = NORMAL",
-	}
-
-	for _, pragma := range pragmas {
-		if _, err := db.Exec(pragma); err != nil {
+	// Verify WAL mode took effect. journal_mode returns a result rather than
+	// silently applying, so DSN-based setting can't be confirmed without a
+	// read-back check. Skip for :memory: databases which don't support WAL.
+	if path != ":memory:" {
+		var journalMode string
+		if err := db.QueryRow("PRAGMA journal_mode").Scan(&journalMode); err != nil {
 			_ = db.Close()
-			return nil, fmt.Errorf("executing %s: %w", pragma, err)
+			return nil, fmt.Errorf("checking journal_mode: %w", err)
+		}
+		if journalMode != "wal" {
+			_ = db.Close()
+			return nil, fmt.Errorf("expected journal_mode=wal, got %q", journalMode)
 		}
 	}
 

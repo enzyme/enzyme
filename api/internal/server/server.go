@@ -29,7 +29,7 @@ type Server struct {
 	redirectServer *http.Server
 }
 
-func New(host string, port int, handler http.Handler, tlsOpts TLSOptions) *Server {
+func New(host string, port int, handler http.Handler, tlsOpts TLSOptions, readTimeout, writeTimeout, idleTimeout time.Duration) *Server {
 	addr := net.JoinHostPort(host, strconv.Itoa(port))
 
 	s := &Server{
@@ -38,9 +38,9 @@ func New(host string, port int, handler http.Handler, tlsOpts TLSOptions) *Serve
 		httpServer: &http.Server{
 			Addr:         addr,
 			Handler:      handler,
-			ReadTimeout:  30 * time.Second,
-			WriteTimeout: 60 * time.Second,
-			IdleTimeout:  120 * time.Second,
+			ReadTimeout:  readTimeout,
+			WriteTimeout: writeTimeout,
+			IdleTimeout:  idleTimeout,
 		},
 	}
 
