@@ -228,7 +228,7 @@ export function ChannelSidebar({
         <div className="flex items-center justify-between gap-1">
           <Menu
             trigger={
-              <AriaButton className="flex min-w-0 flex-1 items-center gap-1 rounded px-2 py-1.5 text-left outline-none hover:bg-gray-100 dark:hover:bg-gray-800">
+              <AriaButton className="flex min-w-0 cursor-pointer items-center gap-1 rounded px-2 py-1.5 text-left outline-none hover:bg-gray-100 dark:hover:bg-gray-800">
                 <h2 className="truncate font-bold text-gray-900 dark:text-white">
                   {workspaceData?.workspace.name || 'Loading...'}
                 </h2>
@@ -452,7 +452,7 @@ function DroppableChannelSection({
         {onAddClick && (
           <button
             onClick={onAddClick}
-            className="mr-2 rounded p-0.5 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+            className="mr-2 cursor-pointer rounded p-0.5 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-300"
           >
             <PlusIcon className="h-4 w-4" />
           </button>
@@ -562,7 +562,7 @@ function DroppableDMSection({
         {onAddClick && (
           <button
             onClick={onAddClick}
-            className="mr-2 rounded p-0.5 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+            className="mr-2 cursor-pointer rounded p-0.5 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-300"
           >
             <PlusIcon className="h-4 w-4" />
           </button>

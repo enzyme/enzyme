@@ -168,7 +168,7 @@ export function WorkspaceSwitcher({
         <Tooltip content="Add workspace" placement="right">
           <AriaButton
             onPress={() => setIsCreateModalOpen(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-gray-300"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-gray-300"
           >
             <PlusIcon className="h-4 w-4" />
           </AriaButton>
@@ -209,7 +209,7 @@ function SortableWorkspaceItem({
   onOpenWorkspaceSettings,
   canInvite,
 }: SortableWorkspaceItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: workspace.id,
   });
 
@@ -218,6 +218,14 @@ function SortableWorkspaceItem({
     transition,
     cursor: isDragging ? 'grabbing' : 'grab',
   };
+
+  // Only forward pointer listeners from dnd-kit — keyboard Enter/Space
+  // should navigate (via AriaButton onPress), not start a drag.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { onKeyDown: _dndKeyDown, ...pointerListeners } = (listeners || {}) as Record<
+    string,
+    unknown
+  >;
 
   return (
     <WorkspaceContextMenu
@@ -228,22 +236,14 @@ function SortableWorkspaceItem({
     >
       {(onContextMenu, isMenuOpen) => (
         <Tooltip content={workspace.name} placement="right">
-          <div
+          <AriaButton
             ref={setNodeRef}
             style={style}
-            {...attributes}
-            {...listeners}
-            onClick={onPress}
+            onPress={onPress}
+            aria-label={workspace.name}
+            className={cn('cursor-grab outline-none', isDragging && 'cursor-grabbing opacity-50')}
+            {...(pointerListeners as React.DOMAttributes<HTMLButtonElement>)}
             onContextMenu={onContextMenu}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onPress();
-              }
-            }}
-            className={cn(isDragging && 'opacity-50')}
           >
             <WorkspaceItemContent
               workspace={workspace}
@@ -251,7 +251,7 @@ function SortableWorkspaceItem({
               isMenuOpen={isMenuOpen}
               notificationMap={notificationMap}
             />
-          </div>
+          </AriaButton>
         </Tooltip>
       )}
     </WorkspaceContextMenu>
@@ -363,7 +363,7 @@ function UserMenu({ onOpenWorkspaceSettings, onOpenServerSettings }: UserMenuPro
       align="start"
       placement="top"
       trigger={
-        <AriaButton className="outline-none">
+        <AriaButton className="cursor-pointer rounded-lg outline-none hover:opacity-80">
           <Avatar
             src={user?.avatar_url}
             name={user?.display_name || 'User'}

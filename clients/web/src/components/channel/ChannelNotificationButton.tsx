@@ -60,11 +60,11 @@ export function ChannelNotificationButton({
           aria-label="Channel notification settings"
         >
           {currentLevel === 'none' ? (
-            <BellSlashIcon className="h-5 w-5" />
+            <BellSlashIcon className="h-4 w-4" />
           ) : currentLevel === 'mentions' ? (
-            <BellIcon className="h-5 w-5" />
+            <BellIcon className="h-4 w-4" />
           ) : (
-            <BellAlertIcon className="h-5 w-5" />
+            <BellAlertIcon className="h-4 w-4" />
           )}
         </AriaButton>
       }

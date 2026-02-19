@@ -268,13 +268,13 @@ export function ChannelPage() {
                     starChannel.mutate(channelId);
                   }
                 }}
-                className="flex-shrink-0 p-1 text-gray-400 transition-colors hover:text-yellow-500 dark:hover:text-yellow-400"
+                className="flex-shrink-0 cursor-pointer rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-yellow-500 dark:hover:bg-gray-800 dark:hover:text-yellow-400"
                 title={channel.is_starred ? 'Unstar channel' : 'Star channel'}
               >
                 {channel.is_starred ? (
-                  <StarIconSolid className="h-5 w-5 text-yellow-500" />
+                  <StarIconSolid className="h-4 w-4 text-yellow-500" />
                 ) : (
-                  <StarIcon className="h-5 w-5" />
+                  <StarIcon className="h-4 w-4" />
                 )}
               </button>
             )}
