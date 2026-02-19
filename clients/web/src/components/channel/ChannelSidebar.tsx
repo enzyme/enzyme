@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
-  CheckCircleIcon,
   PlusIcon,
   LockClosedIcon,
   HashtagIcon,
@@ -38,7 +37,6 @@ import {
 } from '../ui';
 import {
   useCreateChannel,
-  useMarkAllChannelsAsRead,
   useCreateDM,
   useJoinChannel,
   useDMSuggestions,
@@ -86,7 +84,6 @@ export function ChannelSidebar({ workspaceId, onSearchClick }: ChannelSidebarPro
   const { data, isLoading } = useChannels(workspaceId);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isNewDMModalOpen, setIsNewDMModalOpen] = useState(false);
-  const markAllAsRead = useMarkAllChannelsAsRead(workspaceId || '');
   const starChannel = useStarChannel(workspaceId || '');
   const unstarChannel = useUnstarChannel(workspaceId || '');
   const [activeChannel, setActiveChannel] = useState<ChannelWithMembership | null>(null);
@@ -226,19 +223,10 @@ export function ChannelSidebar({ workspaceId, onSearchClick }: ChannelSidebarPro
             {onSearchClick && (
               <button
                 onClick={onSearchClick}
-                className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                className="cursor-pointer rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-300"
                 title="Search messages (Cmd+K)"
               >
                 <MagnifyingGlassIcon className="h-5 w-5" />
-              </button>
-            )}
-            {(hasUnread || hasNotifications) && (
-              <button
-                onClick={() => markAllAsRead.mutate()}
-                className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                title="Mark all as read"
-              >
-                <CheckCircleIcon className="h-5 w-5" />
               </button>
             )}
           </div>
