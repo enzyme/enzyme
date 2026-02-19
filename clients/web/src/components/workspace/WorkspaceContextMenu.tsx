@@ -1,7 +1,9 @@
-import { Cog6ToothIcon, UserPlusIcon } from '@heroicons/react/24/outline';
-import { ContextMenu, useContextMenu, MenuItem } from '../ui';
+import { Cog6ToothIcon, UserPlusIcon, EnvelopeOpenIcon } from '@heroicons/react/24/outline';
+import { ContextMenu, useContextMenu, MenuItem, MenuSeparator } from '../ui';
+import { useMarkAllChannelsAsRead } from '../../hooks/useChannels';
 
 interface WorkspaceContextMenuProps {
+  workspaceId: string;
   onOpenWorkspaceSettings: () => void;
   onOpenInvite: () => void;
   canInvite?: boolean;
@@ -9,12 +11,14 @@ interface WorkspaceContextMenuProps {
 }
 
 export function WorkspaceContextMenu({
+  workspaceId,
   onOpenWorkspaceSettings,
   onOpenInvite,
   canInvite,
   children,
 }: WorkspaceContextMenuProps) {
   const { isOpen, setIsOpen, position, onContextMenu } = useContextMenu();
+  const markAllAsRead = useMarkAllChannelsAsRead(workspaceId);
 
   return (
     <>
@@ -28,6 +32,13 @@ export function WorkspaceContextMenu({
             Invite People
           </MenuItem>
         )}
+        <MenuSeparator />
+        <MenuItem
+          onAction={() => markAllAsRead.mutate()}
+          icon={<EnvelopeOpenIcon className="h-4 w-4" />}
+        >
+          Mark All as Read
+        </MenuItem>
       </ContextMenu>
     </>
   );
