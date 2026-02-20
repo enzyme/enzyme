@@ -61,12 +61,21 @@ import type { ChannelWithMembership, ChannelType, SuggestedUser } from '@enzyme/
 import { ChannelContextMenu } from './ChannelContextMenu';
 import type { WorkspaceSettingsTab } from '../settings/WorkspaceSettingsModal';
 
-function ChannelIcon({ type, className }: { type: string; className?: string }) {
+function ChannelIcon({
+  type,
+  className,
+  bold,
+}: {
+  type: string;
+  className?: string;
+  bold?: boolean;
+}) {
+  const iconClass = cn('h-4 w-4', bold && '[stroke-width:2.5]');
   const icon =
     type === 'private' ? (
-      <LockClosedIcon className="h-4 w-4" />
+      <LockClosedIcon className={iconClass} />
     ) : type === 'public' ? (
-      <HashtagIcon className="h-4 w-4" />
+      <HashtagIcon className={iconClass} />
     ) : null;
 
   return <span className={cn('flex w-5 items-center justify-center', className)}>{icon}</span>;
@@ -300,14 +309,7 @@ export function ChannelSidebar({
             )}
           >
             <span className="flex w-5 items-center justify-center">
-              <InboxIcon
-                className={cn(
-                  'h-4 w-4',
-                  isUnreadsPage
-                    ? 'text-blue-700 dark:text-blue-300'
-                    : 'text-gray-500 dark:text-gray-400',
-                )}
-              />
+              <InboxIcon className={cn('h-4 w-4', hasUnread && '[stroke-width:2.5]')} />
             </span>
             <span className={cn('truncate', hasUnread && 'font-semibold')}>All Unreads</span>
             {hasNotifications && (
@@ -327,12 +329,7 @@ export function ChannelSidebar({
           >
             <span className="flex w-5 items-center justify-center">
               <ChatBubbleLeftEllipsisIcon
-                className={cn(
-                  'h-4 w-4',
-                  isThreadsPage
-                    ? 'text-blue-700 dark:text-blue-300'
-                    : 'text-gray-500 dark:text-gray-400',
-                )}
+                className={cn('h-4 w-4', unreadThreadCount > 0 && '[stroke-width:2.5]')}
               />
             </span>
             <span className={cn('truncate', unreadThreadCount > 0 && 'font-semibold')}>
@@ -685,7 +682,7 @@ function ChannelItemLink({ channel, workspaceId, isActive, isMenuOpen }: Channel
         !isActive && isMenuOpen && 'bg-gray-100 dark:bg-gray-800',
       )}
     >
-      <ChannelItemContent channel={channel} isActive={isActive} />
+      <ChannelItemContent channel={channel} />
       {hasNotifications && (
         <span className="ml-auto rounded-full bg-blue-600 px-1.5 py-0.5 text-xs text-white">
           {channel.notification_count}
@@ -697,10 +694,9 @@ function ChannelItemLink({ channel, workspaceId, isActive, isMenuOpen }: Channel
 
 interface ChannelItemContentProps {
   channel: ChannelWithMembership;
-  isActive?: boolean;
 }
 
-function ChannelItemContent({ channel, isActive }: ChannelItemContentProps) {
+function ChannelItemContent({ channel }: ChannelItemContentProps) {
   const isDM = channel.type === 'dm' || channel.type === 'group_dm';
   const dmParticipant = isDM && channel.dm_participants?.[0];
 
@@ -737,12 +733,7 @@ function ChannelItemContent({ channel, isActive }: ChannelItemContentProps) {
           status={participantPresence}
         />
       ) : (
-        <ChannelIcon
-          type={channel.type}
-          className={
-            isActive ? 'text-blue-700 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400'
-          }
-        />
+        <ChannelIcon type={channel.type} bold={hasUnread} />
       )}
       <span className={cn('truncate', hasUnread && 'font-semibold')}>{displayName}</span>
     </>
