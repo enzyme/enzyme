@@ -181,7 +181,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
           <Menu
             align="end"
             trigger={
-              <AriaButton className="cursor-pointer rounded p-1.5 text-gray-500 outline-none hover:bg-gray-100 dark:hover:bg-gray-700">
+              <AriaButton className="cursor-pointer rounded p-1.5 text-gray-500 outline-none hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                 <EllipsisVerticalIcon className="h-4 w-4" />
               </AriaButton>
             }
@@ -216,7 +216,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
           </Menu>
           <button
             onClick={closeThread}
-            className="cursor-pointer rounded p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="cursor-pointer rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-200"
           >
             <XMarkIcon className="h-4 w-4" />
           </button>
@@ -1023,7 +1023,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
           ) : (
             <>
               {message.content && (
-                <div className="text-sm break-words whitespace-pre-wrap text-gray-800 dark:text-gray-200">
+                <div className="break-words whitespace-pre-wrap text-gray-800 dark:text-gray-200">
                   <MessageContent
                     content={message.content}
                     members={members}

@@ -38,12 +38,12 @@ const toolbar = tv({
   slots: {
     container: [
       'flex items-center gap-0.5 px-2 py-1',
-      'bg-gray-50 dark:bg-gray-800',
+      'bg-gray-100 dark:bg-gray-800',
       'rounded-t-lg',
     ],
     button: [
       'p-1.5 rounded transition-colors text-gray-500 dark:text-gray-400 cursor-pointer',
-      'hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200',
+      'hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200',
       'selected:bg-gray-200 dark:selected:bg-gray-700',
       'selected:text-gray-900 dark:selected:text-white',
       'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',

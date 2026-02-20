@@ -115,7 +115,7 @@ const editorStyles = tv({
     actionButton: [
       'p-1.5 rounded transition-colors cursor-pointer',
       'text-gray-500 dark:text-gray-400',
-      'hover:text-gray-700 dark:hover:text-gray-200',
+      'hover:text-gray-900 dark:hover:text-gray-200',
       'hover:bg-gray-100 dark:hover:bg-gray-700',
       'disabled:opacity-50 disabled:cursor-not-allowed',
     ],
@@ -232,6 +232,10 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
             );
 
             return filtered.sort((a, b) => {
+              // Special mentions always go to the bottom
+              if (a.type === 'special' && b.type !== 'special') return 1;
+              if (a.type !== 'special' && b.type === 'special') return -1;
+
               const aStartsWith = a.displayName.toLowerCase().startsWith(lowerQuery);
               const bStartsWith = b.displayName.toLowerCase().startsWith(lowerQuery);
 
@@ -255,7 +259,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       () =>
         createChannelSuggestion((query: string): ChannelOption[] => {
           const channels = channelsRef.current
-            .filter((c) => c.type !== 'dm')
+            .filter((c) => c.type !== 'dm' && c.type !== 'group_dm')
             .map((c) => ({
               id: c.id,
               name: c.name,

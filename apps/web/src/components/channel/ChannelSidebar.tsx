@@ -13,6 +13,7 @@ import {
   UserPlusIcon,
   FaceSmileIcon,
   EnvelopeOpenIcon,
+  InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import {
   DndContext,
@@ -474,8 +475,11 @@ function DroppableChannelSection({
             </div>
           )}
           {channels.length === 0 && !showWhenEmpty && isStarredSection && (
-            <div className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
-              Drag important stuff here
+            <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
+              <span className="flex w-5 items-center justify-center">
+                <InformationCircleIcon className="h-4 w-4" />
+              </span>
+              <span>Drag here to star</span>
             </div>
           )}
           {channels.map((channel) => (

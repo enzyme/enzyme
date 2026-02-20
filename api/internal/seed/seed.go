@@ -10,7 +10,6 @@ import (
 
 	"github.com/enzyme/api/internal/auth"
 	"github.com/enzyme/api/internal/channel"
-	"github.com/enzyme/api/internal/emoji"
 	"github.com/enzyme/api/internal/message"
 	"github.com/enzyme/api/internal/user"
 	"github.com/enzyme/api/internal/workspace"
@@ -35,7 +34,6 @@ func Run(ctx context.Context, db *sql.DB) error {
 	workspaceRepo := workspace.NewRepository(db)
 	channelRepo := channel.NewRepository(db)
 	messageRepo := message.NewRepository(db)
-	emojiRepo := emoji.NewRepository(db)
 
 	// Hash password once (bcrypt cost 4 for speed)
 	hash, err := auth.HashPassword("password", 4)
@@ -336,29 +334,6 @@ func Run(ctx context.Context, db *sql.DB) error {
 
 	slog.Info("generated messages", "total", totalGenerated)
 
-	// --- Custom emojis ---
-	customEmojis := []struct {
-		name string
-	}{
-		{"shipit"},
-		{"lgtm"},
-		{"partyparrot"},
-		{"rocket"},
-	}
-	for _, ce := range customEmojis {
-		if err := emojiRepo.Create(ctx, &emoji.CustomEmoji{
-			WorkspaceID: ws1.ID,
-			Name:        ce.name,
-			CreatedBy:   alice.ID,
-			ContentType: "image/png",
-			SizeBytes:   1024,
-			StoragePath: fmt.Sprintf("emojis/%s.png", ce.name),
-		}); err != nil {
-			return fmt.Errorf("create custom emoji %s: %w", ce.name, err)
-		}
-	}
-
-	slog.Info("created custom emojis")
 	slog.Info("database seeded successfully")
 	return nil
 }

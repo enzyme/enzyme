@@ -33,7 +33,7 @@ export function ProfilePane({ userId }: ProfilePaneProps) {
         <h3 className="font-semibold text-gray-900 dark:text-white">Profile</h3>
         <AriaButton
           onClick={closeProfile}
-          className="cursor-pointer rounded p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="cursor-pointer rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-200"
         >
           <XMarkIcon className="h-4 w-4" />
         </AriaButton>

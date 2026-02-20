@@ -19,7 +19,7 @@ const styles = tv({
     itemSelected: ['bg-gray-100 dark:bg-gray-700'],
     displayName: ['text-sm font-medium text-gray-900 dark:text-white truncate'],
     specialIcon: [
-      'w-6 h-6 p-1 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400',
+      'w-6 h-6 p-1 rounded-full bg-yellow-500 dark:bg-yellow-500 text-white dark:text-white',
     ],
     emptyState: ['px-3 py-2 text-sm text-gray-500 dark:text-gray-400'],
   },
