@@ -19,6 +19,7 @@ import {
   MenuSeparator,
 } from '../ui';
 import { AttachmentDisplay } from './AttachmentDisplay';
+import { CollapsibleMessage } from './CollapsibleMessage';
 import { MessageContent } from './MessageContent';
 import { ThreadRepliesIndicator } from './ThreadRepliesIndicator';
 import { MessageActionBar } from './MessageActionBar';
@@ -314,7 +315,7 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
               </div>
             </div>
           ) : (
-            <>
+            <CollapsibleMessage>
               {message.content && (
                 <div className="break-words whitespace-pre-wrap text-gray-800 dark:text-gray-200">
                   <MessageContent
@@ -328,7 +329,7 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
               {message.attachments && message.attachments.length > 0 && (
                 <AttachmentDisplay attachments={message.attachments} />
               )}
-            </>
+            </CollapsibleMessage>
           )}
 
           {/* Reactions */}

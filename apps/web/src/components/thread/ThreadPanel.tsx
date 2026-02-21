@@ -49,6 +49,7 @@ import {
 } from '../../hooks/useThreadSubscription';
 import { MessageActionBar } from '../message/MessageActionBar';
 import { AttachmentDisplay } from '../message/AttachmentDisplay';
+import { CollapsibleMessage } from '../message/CollapsibleMessage';
 import { MessageContent } from '../message/MessageContent';
 import { MessageComposer, type MessageComposerRef } from '../message/MessageComposer';
 import { cn, formatTime } from '../../lib/utils';
@@ -1021,7 +1022,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
               </div>
             </div>
           ) : (
-            <>
+            <CollapsibleMessage>
               {message.content && (
                 <div className="break-words whitespace-pre-wrap text-gray-800 dark:text-gray-200">
                   <MessageContent
@@ -1035,7 +1036,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
               {message.attachments && message.attachments.length > 0 && (
                 <AttachmentDisplay attachments={message.attachments} />
               )}
-            </>
+            </CollapsibleMessage>
           )}
 
           {/* Reactions */}

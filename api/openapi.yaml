@@ -1120,6 +1120,7 @@ paths:
               properties:
                 content:
                   type: string
+                  maxLength: 40000
       responses:
         '200':
           description: Message updated
@@ -3121,6 +3122,7 @@ components:
       properties:
         content:
           type: string
+          maxLength: 40000
         thread_parent_id:
           type: string
         attachment_ids:

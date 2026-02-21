@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 
+	"unicode/utf8"
+
 	"github.com/enzyme/api/internal/channel"
 	"github.com/enzyme/api/internal/file"
 	"github.com/enzyme/api/internal/gravatar"
@@ -17,6 +19,8 @@ import (
 	"github.com/enzyme/api/internal/sse"
 	"github.com/enzyme/api/internal/workspace"
 )
+
+const maxMessageLength = 40000
 
 // SendMessage sends a message to a channel
 func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRequestObject) (openapi.SendMessageResponseObject, error) {
@@ -67,6 +71,10 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 	if request.Body.Content != nil {
 		content = strings.TrimSpace(*request.Body.Content)
 	}
+	if utf8.RuneCountInString(content) > maxMessageLength {
+		return openapi.SendMessage400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, fmt.Sprintf("Message content exceeds maximum length of %d characters", maxMessageLength))}, nil
+	}
+
 	hasContent := content != ""
 	hasAttachments := request.Body.AttachmentIds != nil && len(*request.Body.AttachmentIds) > 0
 
@@ -313,6 +321,10 @@ func (h *Handler) UpdateMessage(ctx context.Context, request openapi.UpdateMessa
 
 	if strings.TrimSpace(request.Body.Content) == "" {
 		return openapi.UpdateMessage400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Message content is required")}, nil
+	}
+
+	if utf8.RuneCountInString(request.Body.Content) > maxMessageLength {
+		return openapi.UpdateMessage400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, fmt.Sprintf("Message content exceeds maximum length of %d characters", maxMessageLength))}, nil
 	}
 
 	if err := h.messageRepo.Update(ctx, string(request.Id), request.Body.Content); err != nil {

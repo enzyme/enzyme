@@ -72,7 +72,7 @@ const editorStyles = tv({
       '[&_.mention]:rounded',
       '[&_.mention]:px-0.5',
       // Code styles
-      '[&_.ProseMirror_code]:bg-gray-100',
+      '[&_.ProseMirror_code]:bg-gray-200',
       '[&_.ProseMirror_code]:dark:bg-gray-700',
       '[&_.ProseMirror_code]:px-1',
       '[&_.ProseMirror_code]:py-0.5',
@@ -82,8 +82,8 @@ const editorStyles = tv({
       '[&_.ProseMirror_code]:text-pink-600',
       '[&_.ProseMirror_code]:dark:text-pink-400',
       // Code block styles
-      '[&_.ProseMirror_pre]:bg-gray-100',
-      '[&_.ProseMirror_pre]:dark:bg-gray-800',
+      '[&_.ProseMirror_pre]:bg-gray-200',
+      '[&_.ProseMirror_pre]:dark:bg-gray-700',
       '[&_.ProseMirror_pre]:p-3',
       '[&_.ProseMirror_pre]:rounded-lg',
       '[&_.ProseMirror_pre]:overflow-x-auto',
@@ -136,6 +136,8 @@ export interface RichTextEditorRef {
   insertHashSymbol: () => void;
   insertText: (text: string) => void;
 }
+
+const MAX_MESSAGE_LENGTH = 40_000;
 
 export interface RichTextEditorProps {
   initialContent?: string;
@@ -190,6 +192,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     const submittingRef = useRef(false);
     const suggestionOpenRef = useRef(false);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+    const [contentLength, setContentLength] = useState(0);
 
     // Use refs so suggestion closures (captured by TipTap on mount) always see latest data
     const membersRef = useRef(workspaceMembers);
@@ -492,8 +495,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
           return false;
         },
       },
-      onUpdate: () => {
+      onUpdate: ({ editor: e }) => {
         onTyping?.();
+        setContentLength([...toMrkdwn(e.getJSON()).trim()].length);
       },
       onBlur: () => {
         onBlur?.();
@@ -501,10 +505,12 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     });
 
     const handleSubmit = () => {
-      if (!editor || submittingRef.current) return;
+      if (!editor || submittingRef.current || disabled || isPending) return;
 
       const isEmpty = editor.isEmpty;
       if (isEmpty) return;
+
+      if (contentLength > MAX_MESSAGE_LENGTH) return;
 
       submittingRef.current = true;
 
@@ -514,6 +520,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       if (mrkdwn.trim()) {
         onSubmit(mrkdwn.trim());
         editor.commands.clearContent();
+        setContentLength(0);
       }
 
       submittingRef.current = false;
@@ -595,7 +602,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       }
     }, [editor, disabled]);
 
-    const canSend = !disabled && !isPending;
+    const isOverLimit = contentLength > MAX_MESSAGE_LENGTH;
+    const canSend = !disabled && !isPending && !isOverLimit;
 
     return (
       <div className={s.container()}>
@@ -676,21 +684,37 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
               </Tooltip>
             </div>
 
-            {/* Send button */}
-            <Tooltip content="Send message">
-              <AriaButton
-                isDisabled={!canSend}
-                className={cn(
-                  s.sendButton(),
-                  canSend
-                    ? 'cursor-pointer text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900'
-                    : 'cursor-not-allowed text-gray-400',
-                )}
-                onPress={handleSubmit}
-              >
-                <PaperAirplaneIcon className="h-4 w-4" />
-              </AriaButton>
-            </Tooltip>
+            <div className="flex items-center gap-1.5">
+              {/* Character count (visible when approaching or over limit) */}
+              {contentLength > MAX_MESSAGE_LENGTH * 0.9 && (
+                <span
+                  className={cn(
+                    'text-xs tabular-nums',
+                    isOverLimit
+                      ? 'font-medium text-red-600 dark:text-red-400'
+                      : 'text-gray-400 dark:text-gray-500',
+                  )}
+                >
+                  {contentLength.toLocaleString()}/{MAX_MESSAGE_LENGTH.toLocaleString()}
+                </span>
+              )}
+
+              {/* Send button */}
+              <Tooltip content="Send message">
+                <AriaButton
+                  isDisabled={!canSend}
+                  className={cn(
+                    s.sendButton(),
+                    canSend
+                      ? 'cursor-pointer text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900'
+                      : 'cursor-not-allowed text-gray-400',
+                  )}
+                  onPress={handleSubmit}
+                >
+                  <PaperAirplaneIcon className="h-4 w-4" />
+                </AriaButton>
+              </Tooltip>
+            </div>
           </div>
         )}
       </div>
