@@ -155,7 +155,7 @@ export interface RichTextEditorProps {
   workspaceChannels?: Array<{
     id: string;
     name: string;
-    type: 'public' | 'private' | 'dm';
+    type: 'public' | 'private' | 'dm' | 'group_dm';
   }>;
   showToolbar?: boolean;
   showActionRow?: boolean;
@@ -165,6 +165,8 @@ export interface RichTextEditorProps {
   customEmojis?: CustomEmoji[];
   onAddEmoji?: () => void;
   belowEditor?: React.ReactNode;
+  onEscape?: () => void;
+  submitLabel?: string;
 }
 
 export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
@@ -185,14 +187,21 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       customEmojis = [],
       onAddEmoji,
       belowEditor,
+      onEscape,
+      submitLabel,
     },
     ref,
   ) => {
     const s = editorStyles();
     const submittingRef = useRef(false);
     const suggestionOpenRef = useRef(false);
+    const onEscapeRef = useRef(onEscape);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
     const [contentLength, setContentLength] = useState(0);
+
+    useEffect(() => {
+      onEscapeRef.current = onEscape;
+    }, [onEscape]);
 
     // Use refs so suggestion closures (captured by TipTap on mount) always see latest data
     const membersRef = useRef(workspaceMembers);
@@ -481,6 +490,17 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
             }
           }
 
+          if (event.key === 'Escape') {
+            // If a suggestion popup is open, let TipTap close it first
+            if (suggestionOpenRef.current) {
+              return false;
+            }
+            if (onEscapeRef.current) {
+              onEscapeRef.current();
+              return true;
+            }
+          }
+
           if (event.key === 'Enter' && !event.shiftKey) {
             // If a suggestion popup is open, let TipTap's suggestion handle Enter
             if (suggestionOpenRef.current) {
@@ -519,8 +539,10 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
 
       if (mrkdwn.trim()) {
         onSubmit(mrkdwn.trim());
-        editor.commands.clearContent();
-        setContentLength(0);
+        if (!submitLabel) {
+          editor.commands.clearContent();
+          setContentLength(0);
+        }
       }
 
       submittingRef.current = false;
@@ -699,21 +721,46 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
                 </span>
               )}
 
-              {/* Send button */}
-              <Tooltip content="Send message">
-                <AriaButton
-                  isDisabled={!canSend}
-                  className={cn(
-                    s.sendButton(),
-                    canSend
-                      ? 'cursor-pointer text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900'
-                      : 'cursor-not-allowed text-gray-400',
+              {/* Send / Save button */}
+              {submitLabel ? (
+                <div className="flex items-center gap-1.5">
+                  {onEscape && (
+                    <AriaButton
+                      className="cursor-pointer rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
+                      onPress={onEscape}
+                    >
+                      Cancel
+                    </AriaButton>
                   )}
-                  onPress={handleSubmit}
-                >
-                  <PaperAirplaneIcon className="h-4 w-4" />
-                </AriaButton>
-              </Tooltip>
+                  <AriaButton
+                    isDisabled={!canSend}
+                    className={cn(
+                      'rounded px-2 py-1 text-xs font-medium transition-colors',
+                      canSend
+                        ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
+                        : 'cursor-not-allowed bg-blue-600/50 text-white/70',
+                    )}
+                    onPress={handleSubmit}
+                  >
+                    {isPending ? 'Saving...' : submitLabel}
+                  </AriaButton>
+                </div>
+              ) : (
+                <Tooltip content="Send message">
+                  <AriaButton
+                    isDisabled={!canSend}
+                    className={cn(
+                      s.sendButton(),
+                      canSend
+                        ? 'cursor-pointer text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900'
+                        : 'cursor-not-allowed text-gray-400',
+                    )}
+                    onPress={handleSubmit}
+                  >
+                    <PaperAirplaneIcon className="h-4 w-4" />
+                  </AriaButton>
+                </Tooltip>
+              )}
             </div>
           </div>
         )}

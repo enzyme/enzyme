@@ -20,7 +20,12 @@ import {
 import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useTypingUsers } from '../../lib/presenceStore';
 import { cn } from '../../lib/utils';
-import { LazyRichTextEditor, type RichTextEditorRef } from '../editor';
+import {
+  LazyRichTextEditor,
+  useEditorMembers,
+  useEditorChannels,
+  type RichTextEditorRef,
+} from '../editor';
 import { AddEmojiModal } from '../editor/AddEmojiModal';
 
 export interface MessageComposerRef {
@@ -192,20 +197,8 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
     };
 
     // Convert workspace members to the format expected by RichTextEditor
-    const workspaceMembers =
-      membersData?.members.map((m) => ({
-        user_id: m.user_id,
-        display_name: m.display_name,
-        avatar_url: m.avatar_url,
-      })) || [];
-
-    // Convert channels to the format expected by RichTextEditor
-    const workspaceChannels =
-      channelsData?.channels.map((c) => ({
-        id: c.id,
-        name: c.name,
-        type: c.type as 'public' | 'private' | 'dm',
-      })) || [];
+    const workspaceMembers = useEditorMembers(membersData?.members);
+    const workspaceChannels = useEditorChannels(channelsData?.channels);
 
     // Attachment size classes based on variant
     const attachmentSizeClass = isThreadVariant ? 'w-12 h-12' : 'w-20 h-20';

@@ -18,6 +18,8 @@ import {
   MenuItem,
   MenuSeparator,
 } from '../ui';
+import { LazyRichTextEditor, useEditorMembers, useEditorChannels } from '../editor';
+import type { RichTextEditorRef } from '../editor';
 import { AttachmentDisplay } from './AttachmentDisplay';
 import { CollapsibleMessage } from './CollapsibleMessage';
 import { MessageContent } from './MessageContent';
@@ -74,10 +76,9 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const editEditorRef = useRef<RichTextEditorRef>(null);
   const messageRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { openThread } = useThreadPanel();
@@ -119,25 +120,22 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
   };
 
   const handleStartEdit = () => {
-    setEditContent(message.content);
     setIsEditing(true);
     setShowDropdown(false);
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
-    setEditContent('');
   };
 
-  const handleSaveEdit = () => {
-    if (editContent.trim() && editContent.trim() !== message.content) {
+  const handleSaveEdit = (content: string) => {
+    if (content.trim() && content.trim() !== message.content) {
       updateMessage.mutate({
         messageId: message.id,
-        content: editContent.trim(),
+        content: content.trim(),
       });
     }
     setIsEditing(false);
-    setEditContent('');
   };
 
   const handleDeleteClick = () => {
@@ -174,23 +172,16 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
     }
   };
 
-  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Escape') {
-      handleCancelEdit();
-    } else if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSaveEdit();
-    }
-  };
-
-  // Auto-focus textarea when entering edit mode
+  // Auto-focus editor when entering edit mode
   useEffect(() => {
-    if (isEditing && editTextareaRef.current) {
-      editTextareaRef.current.focus();
-      // Move cursor to end
-      editTextareaRef.current.selectionStart = editTextareaRef.current.value.length;
+    if (isEditing) {
+      const timer = setTimeout(() => editEditorRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
     }
   }, [isEditing]);
+
+  const workspaceMembers = useEditorMembers(membersData?.members);
+  const workspaceChannels = useEditorChannels(channels);
 
   // Deleted messages without replies: render nothing
   if (isDeleted && message.reply_count === 0) {
@@ -234,8 +225,13 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
         'group relative px-4 py-1.5',
         isDeleting
           ? '!max-h-0 overflow-hidden bg-red-400 !py-0 opacity-0 transition-all duration-500 dark:bg-red-700'
-          : 'hover:bg-gray-100 dark:hover:bg-gray-800',
-        (showDropdown || msgCtx.isOpen) && !isDeleting && 'bg-gray-100 dark:bg-gray-800',
+          : isEditing
+            ? 'bg-yellow-50 dark:bg-yellow-900/10'
+            : 'hover:bg-gray-100 dark:hover:bg-gray-800',
+        (showDropdown || msgCtx.isOpen) &&
+          !isDeleting &&
+          !isEditing &&
+          'bg-gray-100 dark:bg-gray-800',
       )}
       style={isDeleting ? { marginTop: 0, marginBottom: 0 } : undefined}
       onContextMenu={msgCtx.onContextMenu}
@@ -286,33 +282,21 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
 
           {/* Message content */}
           {isEditing ? (
-            <div className="mt-1 space-y-2">
-              <textarea
-                ref={editTextareaRef}
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                onKeyDown={handleEditKeyDown}
-                className="w-full resize-none rounded-lg border border-gray-300 bg-white p-2 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
-                rows={3}
+            <div className="mt-1">
+              <LazyRichTextEditor
+                ref={editEditorRef}
+                initialContent={message.content}
+                onSubmit={handleSaveEdit}
+                onEscape={handleCancelEdit}
+                workspaceMembers={workspaceMembers}
+                workspaceChannels={workspaceChannels}
+                customEmojis={customEmojis}
+                showToolbar
+                showActionRow
+                isPending={updateMessage.isPending}
+                placeholder="Edit message..."
+                submitLabel="Save"
               />
-              <div className="flex items-center gap-2 text-sm">
-                <button
-                  onClick={handleSaveEdit}
-                  disabled={updateMessage.isPending || !editContent.trim()}
-                  className="cursor-pointer rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {updateMessage.isPending ? 'Saving...' : 'Save'}
-                </button>
-                <button
-                  onClick={handleCancelEdit}
-                  className="cursor-pointer rounded px-3 py-1 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-                >
-                  Cancel
-                </button>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Escape to cancel, Enter to save
-                </span>
-              </div>
             </div>
           ) : (
             <CollapsibleMessage>
