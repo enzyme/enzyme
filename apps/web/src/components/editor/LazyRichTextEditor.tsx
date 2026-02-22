@@ -8,8 +8,8 @@ const RichTextEditorLazy = lazy(() =>
 function EditorSkeleton() {
   return (
     <div className="rounded-lg border border-gray-300 bg-white dark:border-gray-700 dark:bg-gray-900">
-      {/* Toolbar placeholder — matches real toolbar: gap-0.5 px-2 py-1, buttons are p-1.5 + w-4 h-4 icon */}
-      <div className="flex items-center gap-0.5 rounded-t-lg bg-gray-50 px-2 py-1 dark:bg-gray-800">
+      {/* Toolbar placeholder — matches real toolbar: gap-0.5 p-1.5, buttons are p-1.5 + w-4 h-4 icon */}
+      <div className="flex items-center gap-0.5 rounded-t-lg bg-gray-50 p-1.5 dark:bg-gray-800">
         <div className="h-7 w-7 rounded" />
         <div className="h-7 w-7 rounded" />
         <div className="h-7 w-7 rounded" />
@@ -19,8 +19,8 @@ function EditorSkeleton() {
       <div className="min-h-[3rem] px-4 py-3">
         <div className="h-6 w-32 rounded bg-gray-100 dark:bg-gray-800" />
       </div>
-      {/* Action row placeholder — matches real: justify-between px-2 py-1 */}
-      <div className="flex items-center justify-between px-2 py-1">
+      {/* Action row placeholder — matches real: justify-between p-1.5 */}
+      <div className="flex items-center justify-between p-1.5">
         <div className="flex items-center gap-0.5">
           <div className="h-7 w-7 rounded" />
           <div className="h-7 w-7 rounded" />

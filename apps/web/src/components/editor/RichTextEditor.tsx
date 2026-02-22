@@ -23,6 +23,10 @@ import {
 } from '@heroicons/react/24/outline';
 import { Button as AriaButton, FileTrigger, Popover, DialogTrigger } from 'react-aria-components';
 import { Toolbar } from './Toolbar';
+import { LinkModal } from './LinkModal';
+import type { LinkModalData } from './LinkModal';
+import { LinkBubbleMenu } from './LinkBubbleMenu';
+import { getLinkRange } from './linkUtils';
 import { EmojiPicker } from './EmojiPicker';
 import { UserMention, SpecialMention, ChannelMention, EmojiNode } from './extensions';
 import {
@@ -109,7 +113,7 @@ const editorStyles = tv({
       '[&_.ProseMirror_a]:underline',
     ],
     actionRow: [
-      'flex items-center justify-between px-2 py-1',
+      'flex items-center justify-between p-1.5',
       'bg-white dark:bg-gray-900 rounded-b-lg',
     ],
     actionButton: [
@@ -198,6 +202,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     const onEscapeRef = useRef(onEscape);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
     const [contentLength, setContentLength] = useState(0);
+    const [showLinkModal, setShowLinkModal] = useState(false);
+    const [linkModalData, setLinkModalData] = useState<LinkModalData | undefined>();
 
     useEffect(() => {
       onEscapeRef.current = onEscape;
@@ -302,11 +308,16 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
           heading: false,
           horizontalRule: false,
           trailingNode: false,
+          link: false,
         }),
         Placeholder.configure({
           placeholder,
         }),
-        Link.configure({
+        Link.extend({
+          inclusive() {
+            return false;
+          },
+        }).configure({
           openOnClick: false,
           HTMLAttributes: {
             rel: 'noopener noreferrer',
@@ -586,6 +597,57 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       [editor],
     );
 
+    const openLinkModal = useCallback(() => {
+      if (!editor) return;
+      const { from, to } = editor.state.selection;
+      let selectedText = editor.state.doc.textBetween(from, to, '');
+      const existingHref = editor.getAttributes('link').href || '';
+
+      // When cursor is inside a link with no selection, grab the full link text
+      if (!selectedText && existingHref) {
+        const range = getLinkRange(editor.state, from);
+        if (range) {
+          selectedText = editor.state.doc.textBetween(range.from, range.to, '');
+        }
+      }
+
+      setLinkModalData({
+        text: selectedText,
+        url: existingHref,
+        isEdit: !!existingHref,
+      });
+      setShowLinkModal(true);
+    }, [editor]);
+
+    const handleLinkSave = useCallback(
+      (text: string, url: string) => {
+        if (!editor) return;
+
+        if (text) {
+          const { from, to } = editor.state.selection;
+          const hasSelection = from !== to;
+          const chain = editor.chain().focus();
+
+          if (hasSelection || editor.isActive('link')) {
+            // Replace selected text or existing link
+            chain.extendMarkRange('link').deleteSelection();
+          }
+
+          chain
+            .insertContent({
+              type: 'text',
+              text,
+              marks: [{ type: 'link', attrs: { href: url } }],
+            })
+            .run();
+        } else {
+          // No display text provided - just set link on current selection or extend mark range
+          editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+        }
+      },
+      [editor],
+    );
+
     useImperativeHandle(
       ref,
       () => ({
@@ -629,8 +691,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
 
     return (
       <div className={s.container()}>
-        {showToolbar && <Toolbar editor={editor} />}
+        {showToolbar && <Toolbar editor={editor} onLinkClick={openLinkModal} />}
         <EditorContent editor={editor} className={s.content()} />
+        {showToolbar && <LinkBubbleMenu editor={editor} onEditLink={openLinkModal} />}
         {belowEditor}
         {showActionRow && (
           <div className={s.actionRow()}>
@@ -737,8 +800,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
                     className={cn(
                       'rounded px-2 py-1 text-xs font-medium transition-colors',
                       canSend
-                        ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
-                        : 'cursor-not-allowed bg-blue-600/50 text-white/70',
+                        ? 'cursor-pointer bg-green-600 text-white hover:bg-green-700 dark:bg-green-800 dark:hover:bg-green-700'
+                        : 'cursor-not-allowed bg-green-600/50 text-white/70',
                     )}
                     onPress={handleSubmit}
                   >
@@ -752,8 +815,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
                     className={cn(
                       s.sendButton(),
                       canSend
-                        ? 'cursor-pointer text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900'
-                        : 'cursor-not-allowed text-gray-400',
+                        ? 'cursor-pointer bg-green-600 text-white hover:bg-green-700 dark:bg-green-800 dark:hover:bg-green-700'
+                        : 'cursor-not-allowed bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500',
                     )}
                     onPress={handleSubmit}
                   >
@@ -764,6 +827,12 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
             </div>
           </div>
         )}
+        <LinkModal
+          isOpen={showLinkModal}
+          onClose={() => setShowLinkModal(false)}
+          onSave={handleLinkSave}
+          initialData={linkModalData}
+        />
       </div>
     );
   },

@@ -36,11 +36,7 @@ function BlockquoteIcon({ className }: { className?: string }) {
 
 const toolbar = tv({
   slots: {
-    container: [
-      'flex items-center gap-0.5 px-2 py-1',
-      'bg-gray-100 dark:bg-gray-800',
-      'rounded-t-lg',
-    ],
+    container: ['flex items-center gap-0.5 p-1.5', 'bg-gray-100 dark:bg-gray-800', 'rounded-t-lg'],
     button: [
       'p-1.5 rounded transition-colors text-gray-500 dark:text-gray-400 cursor-pointer',
       'hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200',
@@ -56,9 +52,10 @@ const toolbar = tv({
 
 interface ToolbarProps {
   editor: Editor | null;
+  onLinkClick?: () => void;
 }
 
-export function Toolbar({ editor }: ToolbarProps) {
+export function Toolbar({ editor, onLinkClick }: ToolbarProps) {
   const s = toolbar();
 
   // Use useEditorState to reactively track active states
@@ -94,19 +91,9 @@ export function Toolbar({ editor }: ToolbarProps) {
   }
 
   const addLink = () => {
-    const previousUrl = editor.getAttributes('link').href;
-    const url = window.prompt('URL', previousUrl);
-
-    if (url === null) {
-      return;
+    if (onLinkClick) {
+      onLinkClick();
     }
-
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
-    }
-
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   };
 
   return (
