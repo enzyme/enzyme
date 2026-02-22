@@ -58,6 +58,7 @@ export function MessageList({
   const isAtBottomRef = useRef(true);
   const lastBottomMessageIdRef = useRef<string | null>(null);
   const scrollAnchorRef = useRef<{ itemKey: string; offsetFromContainerTop: number } | null>(null);
+  const programmaticScrollRef = useRef(true); // Start true — initial scroll pending
   const [showJumpButton, setShowJumpButton] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
 
@@ -70,7 +71,6 @@ export function MessageList({
   hasNextPageRef.current = hasNextPage ?? false;
   isFetchingPrevRef.current = isFetchingPreviousPage;
   hasPreviousPageRef.current = hasPreviousPage ?? false;
-
   // Flatten and sort messages (pages come newest-first within each page, sort by ID for correctness)
   const allMessages = useMemo(() => {
     if (!data?.pages) return [];
@@ -92,21 +92,25 @@ export function MessageList({
     [allMessages, lastReadMessageId, unreadCount],
   );
 
-  // Estimate size for virtual items
-  const estimateSize = useCallback(
-    (index: number) => {
-      const item = virtualItems[index];
-      if (!item) return 72;
-      if (item.type === 'date-separator') return 44;
-      if (item.type === 'unread-divider') return 40;
-      return 72; // average message height
-    },
-    [virtualItems],
-  );
+  // Use refs for virtualItems in estimateSize/getItemKey to keep function identity
+  // stable. If estimateSize identity changes, TanStack Virtual clears its entire
+  // measurement cache — which resets all item sizes to estimates and causes the
+  // total virtual size to collapse, triggering cascading scroll corrections.
+  const virtualItemsRef = useRef(virtualItems);
+  virtualItemsRef.current = virtualItems;
+
+  const estimateSize = useCallback((index: number) => {
+    const item = virtualItemsRef.current[index];
+    if (!item) return 72;
+    if (item.type === 'date-separator') return 44;
+    if (item.type === 'unread-divider') return 40;
+    if (item.type === 'message' && item.message.link_preview) return 150;
+    return 72; // average message height
+  }, []);
 
   const getItemKey = useCallback(
-    (index: number) => virtualItems[index]?.key ?? String(index),
-    [virtualItems],
+    (index: number) => virtualItemsRef.current[index]?.key ?? String(index),
+    [],
   );
 
   const virtualizer = useVirtualizer({
@@ -117,6 +121,14 @@ export function MessageList({
     overscan: 10,
     measureElement: (el) => el.getBoundingClientRect().height,
   });
+
+  // Disable TanStack Virtual's scroll correction mechanism. When a rendered item's
+  // measured size differs from its estimate, the virtualizer normally calls
+  // scrollTo(offset + delta) to keep viewport content stable. But this fires from
+  // ResizeObserver in the same frame as our rAF settle loops, using a stale scroll
+  // offset and overriding our scrollTop assignments — causing jitter.
+  // We manage scroll position ourselves via settle loops and anchor restoration.
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = () => false;
 
   // Track new messages arriving while scrolled up by comparing against the
   // newest message ID from when the user was last at the bottom. This avoids
@@ -165,8 +177,6 @@ export function MessageList({
   // Save a scroll anchor before fetching so we can restore position after maxPages
   // evicts items from the opposite end. Uses virtualizer data (not DOM queries) so
   // it works even if the anchor element isn't rendered after re-render.
-  const virtualItemsRef = useRef(virtualItems);
-  virtualItemsRef.current = virtualItems;
   const virtualizerRef = useRef(virtualizer);
   virtualizerRef.current = virtualizer;
 
@@ -184,6 +194,9 @@ export function MessageList({
             itemKey: itemData.key,
             offsetFromContainerTop: vItem.start - scrollTop,
           };
+          console.debug(
+            `[scroll:saveAnchor] ${JSON.stringify({ itemKey: itemData.key, offset: vItem.start - scrollTop, scrollTop })}`,
+          );
         }
         return;
       }
@@ -198,7 +211,15 @@ export function MessageList({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && hasNextPageRef.current && !isFetchingNextRef.current) {
+        console.debug(
+          `[scroll:observer] ${JSON.stringify({ isIntersecting: entry.isIntersecting, hasNext: hasNextPageRef.current, isFetching: isFetchingNextRef.current, blocked: programmaticScrollRef.current, scrollTop: container.scrollTop })}`,
+        );
+        if (
+          entry.isIntersecting &&
+          hasNextPageRef.current &&
+          !isFetchingNextRef.current &&
+          !programmaticScrollRef.current
+        ) {
           saveScrollAnchor();
           fetchNextPage();
         }
@@ -239,7 +260,11 @@ export function MessageList({
       if (container && sentinel && hasNextPage) {
         const containerRect = container.getBoundingClientRect();
         const sentinelRect = sentinel.getBoundingClientRect();
-        if (sentinelRect.bottom > containerRect.top - 500) {
+        const sentinelVisible = sentinelRect.bottom > containerRect.top - 500;
+        console.debug(
+          `[scroll:postFetchRecheck] ${JSON.stringify({ blocked: programmaticScrollRef.current, sentinelVisible })}`,
+        );
+        if (sentinelVisible && !programmaticScrollRef.current) {
           saveScrollAnchor();
           fetchNextPage();
         }
@@ -267,20 +292,38 @@ export function MessageList({
 
   // Preserve scroll position when messages are loaded and maxPages evicts from the opposite end.
   // Uses a scroll anchor: before each fetch, we save a visible item's key and its viewport offset.
-  // After re-render, we find that item's new index and use scrollToIndex (which uses the
-  // key-based measurement cache) to restore position — works even if the element isn't rendered.
+  // After re-render, we find that item's new index and use getOffsetForIndex (read-only) + direct
+  // scrollTop assignment to restore position. We avoid scrollToIndex because its persistent retry
+  // loop "undoes" the viewport-relative offset adjustment, causing visible jitter.
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container || !scrollAnchorRef.current) return;
 
     const { itemKey, offsetFromContainerTop } = scrollAnchorRef.current;
     const newIndex = virtualItems.findIndex((item) => item.key === itemKey);
-    if (newIndex !== -1) {
-      virtualizerRef.current.scrollToIndex(newIndex, { align: 'start' });
-      // scrollToIndex puts the item at the viewport top — adjust for the original offset
-      container.scrollTop += offsetFromContainerTop;
-    }
     scrollAnchorRef.current = null;
+
+    if (newIndex !== -1) {
+      console.debug(
+        `[scroll:restoreAnchor] ${JSON.stringify({ itemKey, newIndex, offset: offsetFromContainerTop })}`,
+      );
+      // Use getOffsetForIndex (read-only) + direct scrollTop assignment.
+      // scrollToIndex has a persistent retry loop that "undoes" the offset adjustment.
+      const offsetInfo = virtualizerRef.current.getOffsetForIndex(newIndex, 'start');
+      if (offsetInfo) {
+        container.scrollTop = offsetInfo[0] + offsetFromContainerTop;
+      }
+    }
+
+    // Second pass after items near the restored position are measured
+    requestAnimationFrame(() => {
+      if (newIndex !== -1) {
+        const offsetInfo = virtualizerRef.current.getOffsetForIndex(newIndex, 'start');
+        if (offsetInfo) {
+          container.scrollTop = offsetInfo[0] + offsetFromContainerTop;
+        }
+      }
+    });
   }, [virtualItems]);
 
   // Scroll to bottom on initial load and when channel changes
@@ -297,20 +340,44 @@ export function MessageList({
 
       // Skip scroll-to-bottom when a ?msg= deep link is present —
       // the ?msg= handler will scroll to the target message instead.
-      if (highlightedMsgIdRef.current) return;
-
-      const lastIndex = virtualItems.length - 1;
-      virtualizer.scrollToIndex(lastIndex, { align: 'end' });
-
-      // Let the virtualizer measure visible items, then snap to bottom.
-      requestAnimationFrame(() => {
+      if (highlightedMsgIdRef.current) {
+        // Clear guard after 3 rAFs (same timing as normal initial scroll)
         requestAnimationFrame(() => {
-          virtualizer.scrollToIndex(lastIndex, { align: 'end' });
           requestAnimationFrame(() => {
-            container.scrollTop = container.scrollHeight;
+            requestAnimationFrame(() => {
+              programmaticScrollRef.current = false;
+              console.debug(
+                `[scroll:settled:deeplink] ${JSON.stringify({ scrollTop: container.scrollTop, scrollHeight: container.scrollHeight })}`,
+              );
+            });
           });
         });
-      });
+        return;
+      }
+
+      console.debug(
+        `[scroll:initialScroll] ${JSON.stringify({ count: virtualItems.length, scrollTop: container.scrollTop, scrollHeight: container.scrollHeight })}`,
+      );
+      virtualizer.scrollToOffset(virtualizer.getTotalSize());
+
+      let prevHeight = -1;
+      let attempts = 0;
+      const settle = () => {
+        requestAnimationFrame(() => {
+          container.scrollTop = container.scrollHeight;
+          if (container.scrollHeight !== prevHeight && attempts < 10) {
+            prevHeight = container.scrollHeight;
+            attempts++;
+            settle();
+          } else {
+            programmaticScrollRef.current = false;
+            console.debug(
+              `[scroll:settled] ${JSON.stringify({ scrollTop: container.scrollTop, scrollHeight: container.scrollHeight, gap: container.scrollHeight - container.scrollTop - container.clientHeight, attempts })}`,
+            );
+          }
+        });
+      };
+      settle();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally omit virtualizer; we only want this on virtualItems change
   }, [virtualItems]);
@@ -318,6 +385,7 @@ export function MessageList({
   // Reset state when channel changes
   useEffect(() => {
     initialScrollDoneRef.current = false;
+    programmaticScrollRef.current = true; // Block observer for new channel's initial scroll
     scrollAnchorRef.current = null;
     lastBottomMessageIdRef.current = null;
     wasFetchingNextRef.current = false;
@@ -346,9 +414,11 @@ export function MessageList({
     return () => ro.disconnect();
   }, [channelId, isLoading]);
 
-  // Auto-scroll to bottom when new messages arrive and user is at bottom.
+  // Auto-scroll to bottom when new messages arrive or content height changes
+  // (e.g. link preview loads on an existing message) and user is at bottom.
   // Only when at the live edge (no newer pages to load) — otherwise loading
   // older pages via fetchPreviousPage would snap the scroll to the bottom.
+  const totalSize = virtualizer.getTotalSize();
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container || !initialScrollDoneRef.current) return;
@@ -356,7 +426,7 @@ export function MessageList({
     if (isAtBottomRef.current && !hasPreviousPageRef.current) {
       container.scrollTop = container.scrollHeight;
     }
-  }, [allMessages.length]);
+  }, [allMessages.length, totalSize]);
 
   // Jump to message from ?msg= search param
   const jumpInProgressRef = useRef<string | null>(null);
@@ -426,16 +496,37 @@ export function MessageList({
 
   // Handle jump to latest button click
   const handleJumpToLatest = useCallback(() => {
+    console.debug(
+      `[scroll:jumpToLatest] ${JSON.stringify({ isDetached, hasPreviousPage, path: isDetached || hasPreviousPage ? 'detached' : 'local' })}`,
+    );
     if (isDetached || hasPreviousPage) {
+      programmaticScrollRef.current = true; // Block observer — cleared by initial scroll rAF chain
       jumpToLatest();
+      // Reset so initial scroll logic runs again for the fresh data
+      initialScrollDoneRef.current = false;
     } else {
-      const lastIndex = virtualItems.length - 1;
-      // First pass: jump near the end using estimated sizes
-      virtualizer.scrollToIndex(lastIndex, { align: 'end' });
-      // Second pass after items at the end are measured and sizes corrected
-      requestAnimationFrame(() => {
-        virtualizer.scrollToIndex(lastIndex, { align: 'end' });
-      });
+      programmaticScrollRef.current = true;
+      const container = containerRef.current;
+      virtualizer.scrollToOffset(virtualizer.getTotalSize());
+      let prevHeight = -1;
+      let attempts = 0;
+      const settle = () => {
+        requestAnimationFrame(() => {
+          if (!container) return;
+          container.scrollTop = container.scrollHeight;
+          if (container.scrollHeight !== prevHeight && attempts < 10) {
+            prevHeight = container.scrollHeight;
+            attempts++;
+            settle();
+          } else {
+            programmaticScrollRef.current = false;
+            console.debug(
+              `[scroll:settled:jumpLocal] ${JSON.stringify({ scrollTop: container?.scrollTop, scrollHeight: container?.scrollHeight, attempts })}`,
+            );
+          }
+        });
+      };
+      settle();
     }
     const msgs = allMessagesRef.current;
     if (msgs.length > 0) {
@@ -445,14 +536,7 @@ export function MessageList({
     setShowJumpButton(false);
     isAtBottomRef.current = true;
     onAtBottomChange?.(true);
-  }, [
-    isDetached,
-    hasPreviousPage,
-    jumpToLatest,
-    virtualizer,
-    virtualItems.length,
-    onAtBottomChange,
-  ]);
+  }, [isDetached, hasPreviousPage, jumpToLatest, virtualizer, onAtBottomChange]);
 
   if (isLoading) {
     return (
@@ -492,7 +576,7 @@ export function MessageList({
 
         <div
           style={{
-            height: virtualizer.getTotalSize(),
+            height: totalSize,
             width: '100%',
             position: 'relative',
           }}

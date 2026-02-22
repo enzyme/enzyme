@@ -214,13 +214,16 @@ export function useSSE(workspaceId: string | undefined) {
         { queryKey: ['messages'] },
         (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
           if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
+          let changed = false;
+          const pages = old.pages.map((page) => {
+            if (!page.messages.some((m) => m.id === message.id)) return page;
+            changed = true;
+            return {
               ...page,
               messages: page.messages.map((m) => (m.id === message.id ? { ...m, ...message } : m)),
-            })),
-          };
+            };
+          });
+          return changed ? { ...old, pages } : old;
         },
       );
     });
