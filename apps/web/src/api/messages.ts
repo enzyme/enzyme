@@ -37,6 +37,9 @@ export const messagesApi = {
 
   delete: (messageId: string) => post<{ success: boolean }>(`/messages/${messageId}/delete`),
 
+  deleteLinkPreview: (messageId: string) =>
+    post<{ success: boolean }>(`/messages/${messageId}/link-preview/delete`),
+
   addReaction: (messageId: string, emoji: string) =>
     post<{ reaction: Reaction }>(`/messages/${messageId}/reactions/add`, { emoji }),
 

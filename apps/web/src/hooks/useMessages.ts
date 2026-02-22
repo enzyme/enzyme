@@ -246,6 +246,46 @@ export function useUpdateMessage() {
   });
 }
 
+export function useDeleteLinkPreview() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (messageId: string) => messagesApi.deleteLinkPreview(messageId),
+    onMutate: async (messageId) => {
+      await queryClient.cancelQueries({ queryKey: ['messages'] });
+      const previousData = queryClient.getQueriesData({ queryKey: ['messages'] });
+
+      queryClient.setQueriesData(
+        { queryKey: ['messages'] },
+        (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
+          if (!old) return old;
+          let changed = false;
+          const pages = old.pages.map((page) => {
+            if (!page.messages.some((m) => m.id === messageId && m.link_preview)) return page;
+            changed = true;
+            return {
+              ...page,
+              messages: page.messages.map((m) =>
+                m.id === messageId ? { ...m, link_preview: undefined } : m,
+              ),
+            };
+          });
+          return changed ? { ...old, pages } : old;
+        },
+      );
+
+      return { previousData };
+    },
+    onError: (_err, _messageId, context) => {
+      if (context?.previousData) {
+        for (const [key, data] of context.previousData) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+    },
+  });
+}
+
 export function useDeleteMessage() {
   const queryClient = useQueryClient();
 

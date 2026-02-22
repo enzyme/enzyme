@@ -689,6 +689,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/messages/{id}/link-preview/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete a message's link preview */
+        post: operations["deleteLinkPreview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/messages/{id}/reactions/add": {
         parameters: {
             query?: never;
@@ -2937,6 +2954,32 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Message deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteLinkPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Message ID */
+                id: components["parameters"]["messageId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link preview deleted */
             200: {
                 headers: {
                     [name: string]: unknown;

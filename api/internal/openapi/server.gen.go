@@ -990,6 +990,9 @@ type ServerInterface interface {
 	// Delete a message
 	// (POST /messages/{id}/delete)
 	DeleteMessage(w http.ResponseWriter, r *http.Request, id MessageId)
+	// Delete a message's link preview
+	// (POST /messages/{id}/link-preview/delete)
+	DeleteLinkPreview(w http.ResponseWriter, r *http.Request, id MessageId)
 	// Mark message as unread
 	// (POST /messages/{id}/mark-unread)
 	MarkMessageUnread(w http.ResponseWriter, r *http.Request, id MessageId)
@@ -1272,6 +1275,12 @@ func (_ Unimplemented) GetMessage(w http.ResponseWriter, r *http.Request, id Mes
 // Delete a message
 // (POST /messages/{id}/delete)
 func (_ Unimplemented) DeleteMessage(w http.ResponseWriter, r *http.Request, id MessageId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a message's link preview
+// (POST /messages/{id}/link-preview/delete)
+func (_ Unimplemented) DeleteLinkPreview(w http.ResponseWriter, r *http.Request, id MessageId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2292,6 +2301,37 @@ func (siw *ServerInterfaceWrapper) DeleteMessage(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteMessage(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteLinkPreview operation middleware
+func (siw *ServerInterfaceWrapper) DeleteLinkPreview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id MessageId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteLinkPreview(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3502,6 +3542,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/messages/{id}/delete", wrapper.DeleteMessage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/messages/{id}/link-preview/delete", wrapper.DeleteLinkPreview)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/messages/{id}/mark-unread", wrapper.MarkMessageUnread)
@@ -4773,6 +4816,50 @@ func (response DeleteMessage403JSONResponse) VisitDeleteMessageResponse(w http.R
 type DeleteMessage404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response DeleteMessage404JSONResponse) VisitDeleteMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteLinkPreviewRequestObject struct {
+	Id MessageId `json:"id"`
+}
+
+type DeleteLinkPreviewResponseObject interface {
+	VisitDeleteLinkPreviewResponse(w http.ResponseWriter) error
+}
+
+type DeleteLinkPreview200JSONResponse SuccessResponse
+
+func (response DeleteLinkPreview200JSONResponse) VisitDeleteLinkPreviewResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteLinkPreview401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteLinkPreview401JSONResponse) VisitDeleteLinkPreviewResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteLinkPreview403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteLinkPreview403JSONResponse) VisitDeleteLinkPreviewResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteLinkPreview404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteLinkPreview404JSONResponse) VisitDeleteLinkPreviewResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
 
@@ -6196,6 +6283,9 @@ type StrictServerInterface interface {
 	// Delete a message
 	// (POST /messages/{id}/delete)
 	DeleteMessage(ctx context.Context, request DeleteMessageRequestObject) (DeleteMessageResponseObject, error)
+	// Delete a message's link preview
+	// (POST /messages/{id}/link-preview/delete)
+	DeleteLinkPreview(ctx context.Context, request DeleteLinkPreviewRequestObject) (DeleteLinkPreviewResponseObject, error)
 	// Mark message as unread
 	// (POST /messages/{id}/mark-unread)
 	MarkMessageUnread(ctx context.Context, request MarkMessageUnreadRequestObject) (MarkMessageUnreadResponseObject, error)
@@ -7157,6 +7247,32 @@ func (sh *strictHandler) DeleteMessage(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DeleteMessageResponseObject); ok {
 		if err := validResponse.VisitDeleteMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteLinkPreview operation middleware
+func (sh *strictHandler) DeleteLinkPreview(w http.ResponseWriter, r *http.Request, id MessageId) {
+	var request DeleteLinkPreviewRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteLinkPreview(ctx, request.(DeleteLinkPreviewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteLinkPreview")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteLinkPreviewResponseObject); ok {
+		if err := validResponse.VisitDeleteLinkPreviewResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

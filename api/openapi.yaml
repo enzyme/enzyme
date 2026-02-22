@@ -1163,6 +1163,29 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /messages/{id}/link-preview/delete:
+    post:
+      tags: [messages]
+      summary: Delete a message's link preview
+      operationId: deleteLinkPreview
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      responses:
+        '200':
+          description: Link preview deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /messages/{id}/reactions/add:
     post:
       tags: [messages]

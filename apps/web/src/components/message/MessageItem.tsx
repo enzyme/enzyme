@@ -30,7 +30,12 @@ import { ReactionsDisplay } from './ReactionsDisplay';
 import { groupReactionsByEmoji, createMemberNamesMap } from './reactionUtils';
 import { useAuth, useAddReaction, useRemoveReaction, useWorkspaceMembers } from '../../hooks';
 import { useCreateDM } from '../../hooks/useChannels';
-import { useMarkMessageUnread, useUpdateMessage, useDeleteMessage } from '../../hooks/useMessages';
+import {
+  useMarkMessageUnread,
+  useUpdateMessage,
+  useDeleteMessage,
+  useDeleteLinkPreview,
+} from '../../hooks/useMessages';
 import { useCustomEmojiMap, useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { cn, formatTime } from '../../lib/utils';
@@ -89,6 +94,7 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
   const markUnread = useMarkMessageUnread(workspaceId || '');
   const updateMessage = useUpdateMessage();
   const deleteMessage = useDeleteMessage();
+  const deleteLinkPreview = useDeleteLinkPreview();
   const { data: membersData } = useWorkspaceMembers(workspaceId);
   const navigate = useNavigate();
   const createDM = useCreateDM(workspaceId || '');
@@ -314,7 +320,12 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
               {message.attachments && message.attachments.length > 0 && (
                 <AttachmentDisplay attachments={message.attachments} />
               )}
-              {message.link_preview && <LinkPreviewDisplay preview={message.link_preview} />}
+              {message.link_preview && (
+                <LinkPreviewDisplay
+                  preview={message.link_preview}
+                  onDismiss={isOwnMessage ? () => deleteLinkPreview.mutate(message.id) : undefined}
+                />
+              )}
             </CollapsibleMessage>
           )}
 

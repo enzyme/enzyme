@@ -488,6 +488,47 @@ func (h *Handler) DeleteMessage(ctx context.Context, request openapi.DeleteMessa
 	}, nil
 }
 
+// DeleteLinkPreview deletes the link preview for a message
+func (h *Handler) DeleteLinkPreview(ctx context.Context, request openapi.DeleteLinkPreviewRequestObject) (openapi.DeleteLinkPreviewResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.DeleteLinkPreview401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+	}
+
+	msg, err := h.messageRepo.GetByID(ctx, string(request.Id))
+	if err != nil {
+		return nil, err
+	}
+
+	// Only the message author can dismiss the link preview
+	if msg.UserID == nil || *msg.UserID != userID {
+		return openapi.DeleteLinkPreview403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Permission denied")}, nil
+	}
+
+	if err := h.linkPreviewRepo.DeleteForMessage(ctx, string(request.Id)); err != nil {
+		return nil, err
+	}
+
+	// Broadcast updated message via SSE (without link preview)
+	ch, err := h.channelRepo.GetByID(ctx, msg.ChannelID)
+	if err == nil {
+		msgWithUser, loadErr := h.messageRepo.GetByIDWithUser(ctx, string(request.Id))
+		if loadErr == nil && h.hub != nil {
+			attachments, _ := h.fileRepo.ListForMessage(ctx, msg.ID)
+			msgWithUser.Attachments = attachments
+			apiMsg := messageWithUserToAPI(msgWithUser)
+			h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
+				Type: sse.EventMessageUpdated,
+				Data: apiMsg,
+			})
+		}
+	}
+
+	return openapi.DeleteLinkPreview200JSONResponse{
+		Success: true,
+	}, nil
+}
+
 // AddReaction adds a reaction to a message
 func (h *Handler) AddReaction(ctx context.Context, request openapi.AddReactionRequestObject) (openapi.AddReactionResponseObject, error) {
 	userID := h.getUserID(ctx)

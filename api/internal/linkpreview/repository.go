@@ -151,6 +151,12 @@ func (r *Repository) ListForMessages(ctx context.Context, messageIDs []string) (
 	return result, rows.Err()
 }
 
+// DeleteForMessage removes the preview for a message.
+func (r *Repository) DeleteForMessage(ctx context.Context, messageID string) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM link_previews WHERE message_id = ?`, messageID)
+	return err
+}
+
 // CleanExpiredCache removes expired entries from the cache table.
 func (r *Repository) CleanExpiredCache(ctx context.Context) error {
 	_, err := r.db.ExecContext(ctx, `DELETE FROM link_preview_cache WHERE expires_at < ?`, time.Now().UTC().Format(time.RFC3339))
