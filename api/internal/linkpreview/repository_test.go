@@ -106,7 +106,7 @@ func TestCreatePreview_Idempotent(t *testing.T) {
 		t.Fatalf("first CreatePreview: %v", err)
 	}
 
-	// Second insert with same message_id should be silently ignored
+	// Second insert with same message_id should replace the first
 	p2 := &Preview{
 		MessageID: msg.ID,
 		URL:       "https://other.com",
@@ -116,7 +116,7 @@ func TestCreatePreview_Idempotent(t *testing.T) {
 		t.Fatalf("second CreatePreview: %v", err)
 	}
 
-	// Should still return the first preview
+	// Should return the second (replaced) preview
 	got, err := repo.GetForMessage(ctx, msg.ID)
 	if err != nil {
 		t.Fatalf("GetForMessage: %v", err)
@@ -124,8 +124,8 @@ func TestCreatePreview_Idempotent(t *testing.T) {
 	if got == nil {
 		t.Fatal("expected preview, got nil")
 	}
-	if got.URL != "https://example.com" {
-		t.Errorf("url = %q, want %q", got.URL, "https://example.com")
+	if got.URL != "https://other.com" {
+		t.Errorf("url = %q, want %q", got.URL, "https://other.com")
 	}
 }
 

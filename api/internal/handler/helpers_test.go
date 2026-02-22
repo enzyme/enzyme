@@ -14,6 +14,7 @@ import (
 	"github.com/enzyme/api/internal/channel"
 	"github.com/enzyme/api/internal/emoji"
 	"github.com/enzyme/api/internal/file"
+	"github.com/enzyme/api/internal/linkpreview"
 	"github.com/enzyme/api/internal/message"
 	"github.com/enzyme/api/internal/notification"
 	"github.com/enzyme/api/internal/signing"
@@ -141,4 +142,70 @@ func createFileAttachment(t *testing.T, db *sql.DB, channelID, userID string) st
 		t.Fatalf("creating file attachment: %v", err)
 	}
 	return id
+}
+
+// testHandlerWithLinkPreviews creates a Handler with link preview support wired in.
+// The httpClient is used by the fetcher (pass a test server's client).
+func testHandlerWithLinkPreviews(t *testing.T, httpClient *http.Client) (*Handler, *sql.DB) {
+	t.Helper()
+
+	db := testutil.TestDB(t)
+
+	userRepo := user.NewRepository(db)
+	workspaceRepo := workspace.NewRepository(db)
+	channelRepo := channel.NewRepository(db)
+	messageRepo := message.NewRepository(db)
+	fileRepo := file.NewRepository(db)
+	threadRepo := thread.NewRepository(db)
+	emojiRepo := emoji.NewRepository(db)
+	hub := sse.NewHub(db, 24*time.Hour, time.Hour)
+
+	passwordResets := auth.NewPasswordResetRepo(db)
+	authService := auth.NewService(userRepo, passwordResets, 4)
+
+	sessionStore := auth.NewSessionStore(db, 24*time.Hour)
+
+	notifPrefsRepo := notification.NewPreferencesRepository(db)
+	notifPendingRepo := notification.NewPendingRepository(db)
+	notifService := notification.NewService(notifPrefsRepo, notifPendingRepo, channelRepo, hub)
+
+	lpRepo := linkpreview.NewRepository(db)
+	lpFetcher := linkpreview.NewFetcherWithClient(lpRepo, httpClient)
+
+	h := New(Dependencies{
+		AuthService:         authService,
+		SessionStore:        sessionStore,
+		UserRepo:            userRepo,
+		WorkspaceRepo:       workspaceRepo,
+		ChannelRepo:         channelRepo,
+		MessageRepo:         messageRepo,
+		FileRepo:            fileRepo,
+		LinkPreviewRepo:     lpRepo,
+		LinkPreviewFetcher:  lpFetcher,
+		ThreadRepo:          threadRepo,
+		EmojiRepo:           emojiRepo,
+		NotificationService: notifService,
+		Hub:                 hub,
+		Signer:              signing.NewSigner("test-signing-secret"),
+		StoragePath:         t.TempDir(),
+		MaxUploadSize:       10 * 1024 * 1024,
+		PublicURL:           "http://localhost:8080",
+	})
+
+	return h, db
+}
+
+// seedLinkPreviewCache populates the link preview cache for a URL so that
+// fetchLinkPreview gets a synchronous cache hit (no async goroutine).
+func seedLinkPreviewCache(t *testing.T, db *sql.DB, url, title string) {
+	t.Helper()
+
+	now := time.Now().UTC()
+	_, err := db.ExecContext(context.Background(), `
+		INSERT OR REPLACE INTO link_preview_cache (url, title, description, image_url, site_name, fetched_at, expires_at, fetch_error)
+		VALUES (?, ?, NULL, NULL, NULL, ?, ?, NULL)
+	`, url, title, now.Format(time.RFC3339), now.Add(24*time.Hour).Format(time.RFC3339))
+	if err != nil {
+		t.Fatalf("seeding link preview cache: %v", err)
+	}
 }

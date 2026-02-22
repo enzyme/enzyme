@@ -62,7 +62,7 @@ func (r *Repository) SetCachedURL(ctx context.Context, c *CacheEntry) error {
 	return err
 }
 
-// CreatePreview inserts a per-message preview row. Duplicate message_id is silently ignored.
+// CreatePreview inserts or replaces a per-message preview row.
 func (r *Repository) CreatePreview(ctx context.Context, p *Preview) error {
 	if p.ID == "" {
 		p.ID = ulid.Make().String()
@@ -72,7 +72,7 @@ func (r *Repository) CreatePreview(ctx context.Context, p *Preview) error {
 	}
 
 	_, err := r.db.ExecContext(ctx, `
-		INSERT OR IGNORE INTO link_previews (id, message_id, url, title, description, image_url, site_name, created_at)
+		INSERT OR REPLACE INTO link_previews (id, message_id, url, title, description, image_url, site_name, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`, p.ID, p.MessageID, p.URL, nullString(p.Title), nullString(p.Description), nullString(p.ImageURL), nullString(p.SiteName),
 		p.CreatedAt.Format(time.RFC3339))

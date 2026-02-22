@@ -2,9 +2,11 @@ package handler
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/enzyme/api/internal/channel"
+	"github.com/enzyme/api/internal/linkpreview"
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/testutil"
 	"github.com/oklog/ulid/v2"
@@ -613,5 +615,182 @@ func TestAddReaction_Duplicate(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error for duplicate reaction")
+	}
+}
+
+func TestUpdateMessage_LinkPreview_SameURL(t *testing.T) {
+	h, db := testHandlerWithLinkPreviews(t, &http.Client{})
+
+	user := testutil.CreateTestUser(t, db, "user@test.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, user.ID, "WS")
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user.ID, "general", channel.TypePublic)
+	msg := testutil.CreateTestMessage(t, db, ch.ID, user.ID, "Check https://example.com")
+
+	// Seed cache and create preview for the message
+	seedLinkPreviewCache(t, db, "https://example.com", "Example")
+	ctx := ctxWithUser(t, h, user.ID)
+	// Send to trigger link preview creation
+	h.linkPreviewRepo.CreatePreview(ctx, &linkpreview.Preview{
+		MessageID: msg.ID,
+		URL:       "https://example.com",
+		Title:     "Example",
+	})
+
+	// Edit message text but keep same URL
+	resp, err := h.UpdateMessage(ctx, openapi.UpdateMessageRequestObject{
+		Id: msg.ID,
+		Body: &openapi.UpdateMessageJSONRequestBody{
+			Content: "Updated text https://example.com",
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	r, ok := resp.(openapi.UpdateMessage200JSONResponse)
+	if !ok {
+		t.Fatalf("expected 200 response, got %T", resp)
+	}
+	if r.Message.LinkPreview == nil {
+		t.Fatal("expected link preview to be preserved")
+	}
+	if r.Message.LinkPreview.Url != "https://example.com" {
+		t.Errorf("url = %q, want %q", r.Message.LinkPreview.Url, "https://example.com")
+	}
+}
+
+func TestUpdateMessage_LinkPreview_URLRemoved(t *testing.T) {
+	h, db := testHandlerWithLinkPreviews(t, &http.Client{})
+
+	user := testutil.CreateTestUser(t, db, "user@test.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, user.ID, "WS")
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user.ID, "general", channel.TypePublic)
+	msg := testutil.CreateTestMessage(t, db, ch.ID, user.ID, "Check https://example.com")
+
+	// Create existing preview
+	ctx := ctxWithUser(t, h, user.ID)
+	h.linkPreviewRepo.CreatePreview(ctx, &linkpreview.Preview{
+		MessageID: msg.ID,
+		URL:       "https://example.com",
+		Title:     "Example",
+	})
+
+	// Edit to remove the URL
+	resp, err := h.UpdateMessage(ctx, openapi.UpdateMessageRequestObject{
+		Id: msg.ID,
+		Body: &openapi.UpdateMessageJSONRequestBody{
+			Content: "No link here anymore",
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	r, ok := resp.(openapi.UpdateMessage200JSONResponse)
+	if !ok {
+		t.Fatalf("expected 200 response, got %T", resp)
+	}
+	if r.Message.LinkPreview != nil {
+		t.Errorf("expected link preview to be removed, got %+v", r.Message.LinkPreview)
+	}
+
+	// Verify deleted from database
+	preview, err := h.linkPreviewRepo.GetForMessage(ctx, msg.ID)
+	if err != nil {
+		t.Fatalf("GetForMessage: %v", err)
+	}
+	if preview != nil {
+		t.Errorf("expected preview to be deleted from DB, got %+v", preview)
+	}
+}
+
+func TestUpdateMessage_LinkPreview_URLChanged(t *testing.T) {
+	h, db := testHandlerWithLinkPreviews(t, &http.Client{})
+
+	user := testutil.CreateTestUser(t, db, "user@test.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, user.ID, "WS")
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user.ID, "general", channel.TypePublic)
+	msg := testutil.CreateTestMessage(t, db, ch.ID, user.ID, "Check https://old.com")
+
+	// Create existing preview for old URL
+	ctx := ctxWithUser(t, h, user.ID)
+	h.linkPreviewRepo.CreatePreview(ctx, &linkpreview.Preview{
+		MessageID: msg.ID,
+		URL:       "https://old.com",
+		Title:     "Old",
+	})
+
+	// Seed cache for the new URL so it resolves synchronously
+	seedLinkPreviewCache(t, db, "https://new.com", "New")
+
+	// Edit to change the URL
+	resp, err := h.UpdateMessage(ctx, openapi.UpdateMessageRequestObject{
+		Id: msg.ID,
+		Body: &openapi.UpdateMessageJSONRequestBody{
+			Content: "Check https://new.com instead",
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	r, ok := resp.(openapi.UpdateMessage200JSONResponse)
+	if !ok {
+		t.Fatalf("expected 200 response, got %T", resp)
+	}
+	if r.Message.LinkPreview == nil {
+		t.Fatal("expected new link preview")
+	}
+	if r.Message.LinkPreview.Url != "https://new.com" {
+		t.Errorf("url = %q, want %q", r.Message.LinkPreview.Url, "https://new.com")
+	}
+	if *r.Message.LinkPreview.Title != "New" {
+		t.Errorf("title = %q, want %q", *r.Message.LinkPreview.Title, "New")
+	}
+
+	// Verify old preview is gone from database
+	preview, err := h.linkPreviewRepo.GetForMessage(ctx, msg.ID)
+	if err != nil {
+		t.Fatalf("GetForMessage: %v", err)
+	}
+	if preview == nil {
+		t.Fatal("expected new preview in DB")
+	}
+	if preview.URL != "https://new.com" {
+		t.Errorf("DB preview url = %q, want %q", preview.URL, "https://new.com")
+	}
+}
+
+func TestUpdateMessage_LinkPreview_URLAdded(t *testing.T) {
+	h, db := testHandlerWithLinkPreviews(t, &http.Client{})
+
+	user := testutil.CreateTestUser(t, db, "user@test.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, user.ID, "WS")
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user.ID, "general", channel.TypePublic)
+	msg := testutil.CreateTestMessage(t, db, ch.ID, user.ID, "No link here")
+
+	// Seed cache so the fetch resolves synchronously
+	seedLinkPreviewCache(t, db, "https://added.com", "Added")
+
+	// Edit to add a URL
+	ctx := ctxWithUser(t, h, user.ID)
+	resp, err := h.UpdateMessage(ctx, openapi.UpdateMessageRequestObject{
+		Id: msg.ID,
+		Body: &openapi.UpdateMessageJSONRequestBody{
+			Content: "Now with https://added.com",
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	r, ok := resp.(openapi.UpdateMessage200JSONResponse)
+	if !ok {
+		t.Fatalf("expected 200 response, got %T", resp)
+	}
+	if r.Message.LinkPreview == nil {
+		t.Fatal("expected link preview to be added")
+	}
+	if r.Message.LinkPreview.Url != "https://added.com" {
+		t.Errorf("url = %q, want %q", r.Message.LinkPreview.Url, "https://added.com")
+	}
+	if *r.Message.LinkPreview.Title != "Added" {
+		t.Errorf("title = %q, want %q", *r.Message.LinkPreview.Title, "Added")
 	}
 }

@@ -199,62 +199,10 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 	// Link preview: extract first URL and fetch/cache preview
 	if h.linkPreviewFetcher != nil && content != "" {
 		if firstURL := linkpreview.ExtractFirstURL(content); firstURL != "" {
-			// Check cache synchronously
-			cached, cacheErr := h.linkPreviewRepo.GetCachedURL(ctx, firstURL)
-			if cacheErr != nil {
-				slog.Error("link preview cache lookup failed", "url", firstURL, "error", cacheErr)
-			}
-			if cached != nil && cached.FetchError == "" {
-				// Cache hit — attach synchronously
-				preview := &linkpreview.Preview{
-					MessageID:   msg.ID,
-					URL:         cached.URL,
-					Title:       cached.Title,
-					Description: cached.Description,
-					ImageURL:    cached.ImageURL,
-					SiteName:    cached.SiteName,
-				}
-				if err := h.linkPreviewRepo.CreatePreview(ctx, preview); err != nil {
-					slog.Error("link preview create failed", "url", firstURL, "error", err)
-				}
+			preview := h.fetchLinkPreview(ctx, firstURL, msg.ID, msg.ChannelID, ch.WorkspaceID)
+			if preview != nil {
 				msgWithUser.LinkPreview = preview
-			} else if cached == nil && cacheErr == nil {
-				// Cache miss — fetch asynchronously
-				go func() {
-					bgCtx := context.Background()
-					p, fetchErr := h.linkPreviewFetcher.FetchPreview(bgCtx, firstURL)
-					if fetchErr != nil {
-						slog.Error("link preview fetch failed", "url", firstURL, "error", fetchErr)
-						return
-					}
-					if p == nil {
-						slog.Debug("link preview returned no data", "url", firstURL)
-						return
-					}
-					p.MessageID = msg.ID
-					if createErr := h.linkPreviewRepo.CreatePreview(bgCtx, p); createErr != nil {
-						slog.Error("link preview create failed", "url", firstURL, "error", createErr)
-						return
-					}
-					// Re-load full message and broadcast update
-					updated, loadErr := h.messageRepo.GetByIDWithUser(bgCtx, msg.ID)
-					if loadErr != nil {
-						return
-					}
-					if attch, attErr := h.fileRepo.ListForMessage(bgCtx, msg.ID); attErr == nil {
-						updated.Attachments = attch
-					}
-					updated.LinkPreview = p
-					apiUpdated := messageWithUserToAPI(updated)
-					if h.hub != nil {
-						h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
-							Type: sse.EventMessageUpdated,
-							Data: apiUpdated,
-						})
-					}
-				}()
 			}
-			// cached with FetchError — skip (error cached, don't retry)
 		}
 	}
 
@@ -408,10 +356,43 @@ func (h *Handler) UpdateMessage(ctx context.Context, request openapi.UpdateMessa
 		attachments, _ := h.fileRepo.ListForMessage(ctx, msg.ID)
 		msgWithUser.Attachments = attachments
 
-		// Load link preview for the message
+		// Update link preview based on URL changes
 		if h.linkPreviewRepo != nil {
-			if preview, err := h.linkPreviewRepo.GetForMessage(ctx, msg.ID); err == nil && preview != nil {
-				msgWithUser.LinkPreview = preview
+			var oldURL string
+			var existingPreview *linkpreview.Preview
+			if existing, err := h.linkPreviewRepo.GetForMessage(ctx, msg.ID); err == nil && existing != nil {
+				oldURL = existing.URL
+				existingPreview = existing
+			}
+
+			newContent := strings.TrimSpace(request.Body.Content)
+			newURL := ""
+			if h.linkPreviewFetcher != nil && newContent != "" {
+				newURL = linkpreview.ExtractFirstURL(newContent)
+			}
+
+			if oldURL == newURL {
+				// Same URL — keep existing preview
+				if existingPreview != nil {
+					msgWithUser.LinkPreview = existingPreview
+				}
+			} else {
+				// URL changed or removed — delete old preview
+				if oldURL != "" {
+					_ = h.linkPreviewRepo.DeleteForMessage(ctx, msg.ID)
+				}
+
+				// URL added or changed — fetch new preview
+				if newURL != "" {
+					wsID := ""
+					if ch != nil {
+						wsID = ch.WorkspaceID
+					}
+					preview := h.fetchLinkPreview(ctx, newURL, msg.ID, msg.ChannelID, wsID)
+					if preview != nil {
+						msgWithUser.LinkPreview = preview
+					}
+				}
 			}
 		}
 	}
@@ -886,6 +867,68 @@ func (h *Handler) loadAttachmentsForMessages(ctx context.Context, messages []mes
 			messages[i].Attachments = attachments
 		}
 	}
+}
+
+// fetchLinkPreview checks the cache and either returns a preview synchronously
+// or kicks off an async fetch. Returns the preview if a cache hit, nil otherwise.
+func (h *Handler) fetchLinkPreview(ctx context.Context, url, msgID, channelID, workspaceID string) *linkpreview.Preview {
+	cached, cacheErr := h.linkPreviewRepo.GetCachedURL(ctx, url)
+	if cacheErr != nil {
+		slog.Error("link preview cache lookup failed", "url", url, "error", cacheErr)
+	}
+	if cached != nil && cached.FetchError == "" {
+		// Cache hit — attach synchronously
+		preview := &linkpreview.Preview{
+			MessageID:   msgID,
+			URL:         cached.URL,
+			Title:       cached.Title,
+			Description: cached.Description,
+			ImageURL:    cached.ImageURL,
+			SiteName:    cached.SiteName,
+		}
+		if err := h.linkPreviewRepo.CreatePreview(ctx, preview); err != nil {
+			slog.Error("link preview create failed", "url", url, "error", err)
+		}
+		return preview
+	}
+	if cached == nil && cacheErr == nil {
+		// Cache miss — fetch asynchronously
+		go func() {
+			bgCtx := context.Background()
+			p, fetchErr := h.linkPreviewFetcher.FetchPreview(bgCtx, url)
+			if fetchErr != nil {
+				slog.Error("link preview fetch failed", "url", url, "error", fetchErr)
+				return
+			}
+			if p == nil {
+				slog.Debug("link preview returned no data", "url", url)
+				return
+			}
+			p.MessageID = msgID
+			if createErr := h.linkPreviewRepo.CreatePreview(bgCtx, p); createErr != nil {
+				slog.Error("link preview create failed", "url", url, "error", createErr)
+				return
+			}
+			// Re-load full message and broadcast update
+			updated, loadErr := h.messageRepo.GetByIDWithUser(bgCtx, msgID)
+			if loadErr != nil {
+				return
+			}
+			if attch, attErr := h.fileRepo.ListForMessage(bgCtx, msgID); attErr == nil {
+				updated.Attachments = attch
+			}
+			updated.LinkPreview = p
+			apiUpdated := messageWithUserToAPI(updated)
+			if h.hub != nil && workspaceID != "" {
+				h.hub.BroadcastToChannel(workspaceID, channelID, sse.Event{
+					Type: sse.EventMessageUpdated,
+					Data: apiUpdated,
+				})
+			}
+		}()
+	}
+	// cached with FetchError — skip (error cached, don't retry)
+	return nil
 }
 
 // linkPreviewToAPI converts a linkpreview.Preview to openapi.LinkPreview
