@@ -2367,10 +2367,14 @@ components:
 
     LinkPreview:
       type: object
-      required: [url]
+      required: [url, type]
       properties:
         url:
           type: string
+        type:
+          type: string
+          enum: [external, message]
+          default: external
         title:
           type: string
         description:
@@ -2379,6 +2383,27 @@ components:
           type: string
         site_name:
           type: string
+        linked_message_id:
+          type: string
+        linked_channel_id:
+          type: string
+        linked_channel_name:
+          type: string
+        linked_channel_type:
+          type: string
+        message_author_id:
+          type: string
+        message_author_name:
+          type: string
+        message_author_avatar_url:
+          type: string
+        message_author_gravatar_url:
+          type: string
+        message_content:
+          type: string
+        message_created_at:
+          type: string
+          format: date-time
 
     Reaction:
       type: object

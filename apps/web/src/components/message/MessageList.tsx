@@ -130,6 +130,33 @@ export function MessageList({
   // We manage scroll position ourselves via settle loops and anchor restoration.
   virtualizer.shouldAdjustScrollPositionOnItemSizeChange = () => false;
 
+  // Synchronously correct element sizes after DOM commits. When content changes
+  // (e.g. a link preview is dismissed via optimistic update), the DOM updates
+  // immediately but the virtualizer's ResizeObserver notification is async — the
+  // position recalculation paints one frame late, leaving a visible layout gap.
+  // This effect runs in useLayoutEffect (before paint), collects all size
+  // discrepancies first, then calls resizeItem for each — batching avoids
+  // multiple intermediate notify/re-render cycles.
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const vItems = virtualizer.getVirtualItems();
+    const pending: Array<{ index: number; size: number }> = [];
+    for (const vItem of vItems) {
+      const el = container.querySelector(`[data-index="${vItem.index}"]`) as HTMLElement;
+      if (el) {
+        const actualHeight = el.getBoundingClientRect().height;
+        if (Math.abs(actualHeight - vItem.size) > 0.5) {
+          pending.push({ index: vItem.index, size: actualHeight });
+        }
+      }
+    }
+    for (const { index, size } of pending) {
+      virtualizer.resizeItem(index, size);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-check when message data changes
+  }, [virtualItems]);
+
   // Track new messages arriving while scrolled up by comparing against the
   // newest message ID from when the user was last at the bottom. This avoids
   // counting older messages loaded via infinite scroll as "new".

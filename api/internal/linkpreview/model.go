@@ -9,6 +9,12 @@ const (
 	ErrorCacheTTL = 1 * time.Hour
 )
 
+// Preview types.
+const (
+	PreviewTypeExternal = "external"
+	PreviewTypeMessage  = "message"
+)
+
 // CacheEntry is a URL-level cache row shared across messages.
 type CacheEntry struct {
 	URL         string
@@ -26,9 +32,22 @@ type Preview struct {
 	ID          string
 	MessageID   string
 	URL         string
+	Type        string // "external" or "message"
 	Title       string
 	Description string
 	ImageURL    string
 	SiteName    string
 	CreatedAt   time.Time
+
+	// Internal message preview fields (Type == "message")
+	LinkedMessageID        string
+	LinkedChannelID        string
+	LinkedChannelName      string
+	LinkedChannelType      string
+	MessageAuthorID        string
+	MessageAuthorName      string
+	MessageAuthorAvatarURL string
+	MessageAuthorGravatar  string
+	MessageContent         string
+	MessageCreatedAt       string
 }

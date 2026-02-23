@@ -1292,10 +1292,26 @@ export interface components {
         };
         LinkPreview: {
             url: string;
+            /**
+             * @default external
+             * @enum {string}
+             */
+            type: "external" | "message";
             title?: string;
             description?: string;
             image_url?: string;
             site_name?: string;
+            linked_message_id?: string;
+            linked_channel_id?: string;
+            linked_channel_name?: string;
+            linked_channel_type?: string;
+            message_author_id?: string;
+            message_author_name?: string;
+            message_author_avatar_url?: string;
+            message_author_gravatar_url?: string;
+            message_content?: string;
+            /** Format: date-time */
+            message_created_at?: string;
         };
         Reaction: {
             id: string;

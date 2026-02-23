@@ -70,39 +70,94 @@ func (r *Repository) CreatePreview(ctx context.Context, p *Preview) error {
 	if p.CreatedAt.IsZero() {
 		p.CreatedAt = time.Now().UTC()
 	}
+	if p.Type == "" {
+		p.Type = PreviewTypeExternal
+	}
 
 	_, err := r.db.ExecContext(ctx, `
-		INSERT OR REPLACE INTO link_previews (id, message_id, url, title, description, image_url, site_name, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, p.ID, p.MessageID, p.URL, nullString(p.Title), nullString(p.Description), nullString(p.ImageURL), nullString(p.SiteName),
-		p.CreatedAt.Format(time.RFC3339))
+		INSERT OR REPLACE INTO link_previews (
+			id, message_id, url, type, title, description, image_url, site_name, created_at,
+			linked_message_id, linked_channel_id, linked_channel_name, linked_channel_type,
+			message_author_id, message_author_name, message_author_avatar_url, message_author_gravatar_url,
+			message_content, message_created_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, p.ID, p.MessageID, p.URL, p.Type,
+		nullString(p.Title), nullString(p.Description), nullString(p.ImageURL), nullString(p.SiteName),
+		p.CreatedAt.Format(time.RFC3339),
+		nullString(p.LinkedMessageID), nullString(p.LinkedChannelID),
+		nullString(p.LinkedChannelName), nullString(p.LinkedChannelType),
+		nullString(p.MessageAuthorID), nullString(p.MessageAuthorName),
+		nullString(p.MessageAuthorAvatarURL), nullString(p.MessageAuthorGravatar),
+		nullString(p.MessageContent), nullString(p.MessageCreatedAt))
 	return err
 }
 
-// GetForMessage returns the preview for a single message, or nil.
-func (r *Repository) GetForMessage(ctx context.Context, messageID string) (*Preview, error) {
+// previewColumns is the column list used by scan helpers.
+const previewColumns = `id, message_id, url, type, title, description, image_url, site_name, created_at,
+	linked_message_id, linked_channel_id, linked_channel_name, linked_channel_type,
+	message_author_id, message_author_name, message_author_avatar_url, message_author_gravatar_url,
+	message_content, message_created_at`
+
+// scanPreview scans a row into a Preview.
+func scanPreview(scanner interface{ Scan(dest ...any) error }) (*Preview, error) {
 	var p Preview
 	var title, description, imageURL, siteName sql.NullString
+	var linkedMsgID, linkedChID, linkedChName, linkedChType sql.NullString
+	var authorID, authorName, authorAvatar, authorGravatar sql.NullString
+	var msgContent, msgCreatedAt sql.NullString
 	var createdAt string
+	var previewType sql.NullString
 
-	err := r.db.QueryRowContext(ctx, `
-		SELECT id, message_id, url, title, description, image_url, site_name, created_at
-		FROM link_previews WHERE message_id = ?
-	`, messageID).Scan(&p.ID, &p.MessageID, &p.URL, &title, &description, &imageURL, &siteName, &createdAt)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
+	err := scanner.Scan(
+		&p.ID, &p.MessageID, &p.URL, &previewType,
+		&title, &description, &imageURL, &siteName, &createdAt,
+		&linkedMsgID, &linkedChID, &linkedChName, &linkedChType,
+		&authorID, &authorName, &authorAvatar, &authorGravatar,
+		&msgContent, &msgCreatedAt,
+	)
 	if err != nil {
 		return nil, err
 	}
 
+	p.Type = previewType.String
+	if p.Type == "" {
+		p.Type = PreviewTypeExternal
+	}
 	p.Title = title.String
 	p.Description = description.String
 	p.ImageURL = imageURL.String
 	p.SiteName = siteName.String
 	p.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 
+	p.LinkedMessageID = linkedMsgID.String
+	p.LinkedChannelID = linkedChID.String
+	p.LinkedChannelName = linkedChName.String
+	p.LinkedChannelType = linkedChType.String
+	p.MessageAuthorID = authorID.String
+	p.MessageAuthorName = authorName.String
+	p.MessageAuthorAvatarURL = authorAvatar.String
+	p.MessageAuthorGravatar = authorGravatar.String
+	p.MessageContent = msgContent.String
+	p.MessageCreatedAt = msgCreatedAt.String
+
 	return &p, nil
+}
+
+// GetForMessage returns the preview for a single message, or nil.
+func (r *Repository) GetForMessage(ctx context.Context, messageID string) (*Preview, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT `+previewColumns+`
+		FROM link_previews WHERE message_id = ?
+	`, messageID)
+
+	p, err := scanPreview(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 // ListForMessages returns previews for multiple messages, keyed by message ID.
@@ -119,7 +174,7 @@ func (r *Repository) ListForMessages(ctx context.Context, messageIDs []string) (
 	}
 
 	query := `
-		SELECT id, message_id, url, title, description, image_url, site_name, created_at
+		SELECT ` + previewColumns + `
 		FROM link_previews
 		WHERE message_id IN (` + strings.Join(placeholders, ",") + `)`
 
@@ -131,21 +186,11 @@ func (r *Repository) ListForMessages(ctx context.Context, messageIDs []string) (
 
 	result := make(map[string]*Preview)
 	for rows.Next() {
-		var p Preview
-		var title, description, imageURL, siteName sql.NullString
-		var createdAt string
-
-		if err := rows.Scan(&p.ID, &p.MessageID, &p.URL, &title, &description, &imageURL, &siteName, &createdAt); err != nil {
+		p, err := scanPreview(rows)
+		if err != nil {
 			return nil, err
 		}
-
-		p.Title = title.String
-		p.Description = description.String
-		p.ImageURL = imageURL.String
-		p.SiteName = siteName.String
-		p.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-
-		result[p.MessageID] = &p
+		result[p.MessageID] = p
 	}
 
 	return result, rows.Err()

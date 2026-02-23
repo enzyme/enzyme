@@ -24,7 +24,12 @@ import {
   useChannels,
   useAutoFocusComposer,
 } from '../../hooks';
-import { useUpdateMessage, useDeleteMessage, useMarkMessageUnread } from '../../hooks/useMessages';
+import {
+  useUpdateMessage,
+  useDeleteMessage,
+  useMarkMessageUnread,
+  useDeleteLinkPreview,
+} from '../../hooks/useMessages';
 import { useCreateDM } from '../../hooks/useChannels';
 import { usePrewarmSignedUrls } from '../../hooks/usePrewarmSignedUrls';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
@@ -51,6 +56,8 @@ import { MessageActionBar } from '../message/MessageActionBar';
 import { LazyRichTextEditor, useEditorMembers, useEditorChannels } from '../editor';
 import type { RichTextEditorRef } from '../editor';
 import { AttachmentDisplay } from '../message/AttachmentDisplay';
+import { LinkPreviewDisplay } from '../message/LinkPreviewDisplay';
+import { MessagePreviewDisplay } from '../message/MessagePreviewDisplay';
 import { CollapsibleMessage } from '../message/CollapsibleMessage';
 import { MessageContent } from '../message/MessageContent';
 import { MessageComposer, type MessageComposerRef } from '../message/MessageComposer';
@@ -347,6 +354,7 @@ function ParentMessage({
   const [localReactions, setLocalReactions] = useState(message.reactions || []);
   const updateMessage = useUpdateMessage();
   const deleteMessage = useDeleteMessage();
+  const deleteLinkPreview = useDeleteLinkPreview();
   const markUnread = useMarkMessageUnread(workspaceId || '');
 
   const onUserContextMenu = (e: React.MouseEvent) => {
@@ -585,6 +593,25 @@ function ParentMessage({
               {message.attachments && message.attachments.length > 0 && (
                 <AttachmentDisplay attachments={message.attachments} />
               )}
+              {message.link_preview &&
+                (message.link_preview.type === 'message' ? (
+                  <MessagePreviewDisplay
+                    preview={message.link_preview}
+                    onDismiss={
+                      isOwnMessage ? () => deleteLinkPreview.mutate(message.id) : undefined
+                    }
+                    members={members}
+                    channels={channels}
+                    customEmojiMap={customEmojiMap}
+                  />
+                ) : (
+                  <LinkPreviewDisplay
+                    preview={message.link_preview}
+                    onDismiss={
+                      isOwnMessage ? () => deleteLinkPreview.mutate(message.id) : undefined
+                    }
+                  />
+                ))}
             </>
           )}
 
@@ -750,6 +777,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
   const editEditorRef = useRef<RichTextEditorRef>(null);
   const updateMessage = useUpdateMessage();
   const deleteMessage = useDeleteMessage();
+  const deleteLinkPreview = useDeleteLinkPreview();
   const markUnread = useMarkMessageUnread(workspaceId || '');
 
   const isOwnMessage = user?.id === message.user_id;
@@ -998,6 +1026,25 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
               {message.attachments && message.attachments.length > 0 && (
                 <AttachmentDisplay attachments={message.attachments} />
               )}
+              {message.link_preview &&
+                (message.link_preview.type === 'message' ? (
+                  <MessagePreviewDisplay
+                    preview={message.link_preview}
+                    onDismiss={
+                      isOwnMessage ? () => deleteLinkPreview.mutate(message.id) : undefined
+                    }
+                    members={members}
+                    channels={channels}
+                    customEmojiMap={customEmojiMap}
+                  />
+                ) : (
+                  <LinkPreviewDisplay
+                    preview={message.link_preview}
+                    onDismiss={
+                      isOwnMessage ? () => deleteLinkPreview.mutate(message.id) : undefined
+                    }
+                  />
+                ))}
             </CollapsibleMessage>
           )}
 

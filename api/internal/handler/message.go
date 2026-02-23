@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"time"
 
 	"unicode/utf8"
 
@@ -869,9 +870,98 @@ func (h *Handler) loadAttachmentsForMessages(ctx context.Context, messages []mes
 	}
 }
 
+// resolveInternalMessagePreview checks if the URL is an internal message link,
+// looks up the referenced message in the database, persists the preview row,
+// and returns it. Returns nil if the URL is not an internal link or the message
+// is not found.
+func (h *Handler) resolveInternalMessagePreview(ctx context.Context, rawURL, msgID string) *linkpreview.Preview {
+	ref := linkpreview.ParseInternalMessageURL(rawURL)
+	if ref == nil {
+		return nil
+	}
+
+	// Skip self-referential links
+	if ref.MessageID == msgID {
+		return nil
+	}
+
+	// Look up the referenced message
+	refMsg, err := h.messageRepo.GetByIDWithUser(ctx, ref.MessageID)
+	if err != nil {
+		return nil
+	}
+
+	// Verify message belongs to claimed channel and channel belongs to claimed workspace
+	if refMsg.ChannelID != ref.ChannelID {
+		return nil
+	}
+	ch, err := h.channelRepo.GetByID(ctx, ref.ChannelID)
+	if err != nil {
+		return nil
+	}
+	if ch.WorkspaceID != ref.WorkspaceID {
+		return nil
+	}
+
+	// Truncate content to 300 chars
+	content := refMsg.Content
+	if len([]rune(content)) > 300 {
+		content = string([]rune(content)[:300]) + "..."
+	}
+
+	// Build gravatar URL
+	gravatarURL := ""
+	if refMsg.UserEmail != "" {
+		gravatarURL = gravatar.URL(refMsg.UserEmail)
+	}
+
+	avatarURL := ""
+	if refMsg.UserAvatarURL != nil {
+		avatarURL = *refMsg.UserAvatarURL
+	}
+
+	// Resolve author ID
+	authorID := ""
+	if refMsg.UserID != nil {
+		authorID = *refMsg.UserID
+	}
+
+	preview := &linkpreview.Preview{
+		MessageID:              msgID,
+		URL:                    rawURL,
+		Type:                   linkpreview.PreviewTypeMessage,
+		LinkedMessageID:        ref.MessageID,
+		LinkedChannelID:        ch.ID,
+		LinkedChannelName:      ch.Name,
+		LinkedChannelType:      ch.Type,
+		MessageAuthorID:        authorID,
+		MessageAuthorName:      refMsg.UserDisplayName,
+		MessageAuthorAvatarURL: avatarURL,
+		MessageAuthorGravatar:  gravatarURL,
+		MessageContent:         content,
+		MessageCreatedAt:       refMsg.CreatedAt.Format(time.RFC3339),
+	}
+
+	if err := h.linkPreviewRepo.CreatePreview(ctx, preview); err != nil {
+		slog.Error("internal link preview create failed", "url", rawURL, "error", err)
+	}
+	return preview
+}
+
 // fetchLinkPreview checks the cache and either returns a preview synchronously
 // or kicks off an async fetch. Returns the preview if a cache hit, nil otherwise.
 func (h *Handler) fetchLinkPreview(ctx context.Context, url, msgID, channelID, workspaceID string) *linkpreview.Preview {
+	// Try internal message link first
+	if preview := h.resolveInternalMessagePreview(ctx, url, msgID); preview != nil {
+		return preview
+	}
+
+	// Skip external fetch for internal app URLs (e.g. channel links without ?msg=)
+	// to avoid fetching our own login page.
+	if linkpreview.IsInternalURL(url) {
+		return nil
+	}
+
 	cached, cacheErr := h.linkPreviewRepo.GetCachedURL(ctx, url)
 	if cacheErr != nil {
 		slog.Error("link preview cache lookup failed", "url", url, "error", cacheErr)
@@ -933,7 +1023,11 @@ func (h *Handler) fetchLinkPreview(ctx context.Context, url, msgID, channelID, w
 
 // linkPreviewToAPI converts a linkpreview.Preview to openapi.LinkPreview
 func linkPreviewToAPI(p *linkpreview.Preview) openapi.LinkPreview {
-	lp := openapi.LinkPreview{Url: p.URL}
+	previewType := openapi.LinkPreviewType(p.Type)
+	if previewType == "" {
+		previewType = openapi.LinkPreviewTypeExternal
+	}
+	lp := openapi.LinkPreview{Url: p.URL, Type: previewType}
 	if p.Title != "" {
 		lp.Title = &p.Title
 	}
@@ -946,14 +1040,144 @@ func linkPreviewToAPI(p *linkpreview.Preview) openapi.LinkPreview {
 	if p.SiteName != "" {
 		lp.SiteName = &p.SiteName
 	}
+	// Internal message preview fields
+	if p.LinkedMessageID != "" {
+		lp.LinkedMessageId = &p.LinkedMessageID
+	}
+	if p.LinkedChannelID != "" {
+		lp.LinkedChannelId = &p.LinkedChannelID
+	}
+	if p.LinkedChannelName != "" {
+		lp.LinkedChannelName = &p.LinkedChannelName
+	}
+	if p.LinkedChannelType != "" {
+		lp.LinkedChannelType = &p.LinkedChannelType
+	}
+	if p.MessageAuthorID != "" {
+		lp.MessageAuthorId = &p.MessageAuthorID
+	}
+	if p.MessageAuthorName != "" {
+		lp.MessageAuthorName = &p.MessageAuthorName
+	}
+	if p.MessageAuthorAvatarURL != "" {
+		lp.MessageAuthorAvatarUrl = &p.MessageAuthorAvatarURL
+	}
+	if p.MessageAuthorGravatar != "" {
+		lp.MessageAuthorGravatarUrl = &p.MessageAuthorGravatar
+	}
+	if p.MessageContent != "" {
+		lp.MessageContent = &p.MessageContent
+	}
+	if p.MessageCreatedAt != "" {
+		if t, err := time.Parse(time.RFC3339, p.MessageCreatedAt); err == nil {
+			lp.MessageCreatedAt = &t
+		}
+	}
 	return lp
 }
 
-// loadLinkPreviewsForMessages loads link previews for a slice of messages in batch
+// canViewChannel checks if a user can view a channel.
+// Public channels are always viewable; private/DM channels require membership.
+func (h *Handler) canViewChannel(ctx context.Context, userID, channelID, channelType string) bool {
+	if channelType == channel.TypePublic {
+		return true
+	}
+	_, err := h.channelRepo.GetMembership(ctx, userID, channelID)
+	return err == nil
+}
+
+// clearPreviewContent redacts all content fields from an internal message preview,
+// used when the referenced message is deleted or the viewer lacks access.
+func clearPreviewContent(p *linkpreview.Preview) {
+	p.MessageContent = ""
+	p.MessageAuthorID = ""
+	p.MessageAuthorName = ""
+	p.MessageAuthorAvatarURL = ""
+	p.MessageAuthorGravatar = ""
+	p.MessageCreatedAt = ""
+	p.LinkedChannelName = ""
+}
+
+// refreshInternalPreview re-fetches the referenced message, user, and channel
+// data so the preview stays in sync with edits, renames, and deletions.
+func (h *Handler) refreshInternalPreview(ctx context.Context, p *linkpreview.Preview) {
+	if p.Type != linkpreview.PreviewTypeMessage || p.LinkedMessageID == "" {
+		return
+	}
+
+	refMsg, err := h.messageRepo.GetByIDWithUser(ctx, p.LinkedMessageID)
+	if err != nil {
+		// Message not found (hard-deleted or DB error) — clear content
+		clearPreviewContent(p)
+		p.LinkedChannelType = "deleted"
+		return
+	}
+
+	// Soft-deleted: clear content and mark as deleted
+	if refMsg.DeletedAt != nil {
+		clearPreviewContent(p)
+		p.LinkedChannelType = "deleted"
+		return
+	}
+
+	// Refresh author info from current user data
+	if refMsg.UserID != nil {
+		p.MessageAuthorID = *refMsg.UserID
+	}
+	p.MessageAuthorName = refMsg.UserDisplayName
+	if refMsg.UserAvatarURL != nil {
+		p.MessageAuthorAvatarURL = *refMsg.UserAvatarURL
+	} else {
+		p.MessageAuthorAvatarURL = ""
+	}
+	if refMsg.UserEmail != "" {
+		p.MessageAuthorGravatar = gravatar.URL(refMsg.UserEmail)
+	} else {
+		p.MessageAuthorGravatar = ""
+	}
+
+	// Refresh content (re-truncate in case of edit)
+	content := refMsg.Content
+	if len([]rune(content)) > 300 {
+		content = string([]rune(content)[:300]) + "..."
+	}
+	p.MessageContent = content
+	p.MessageCreatedAt = refMsg.CreatedAt.Format(time.RFC3339)
+
+	// Refresh channel info (name/type may have changed)
+	if ch, err := h.channelRepo.GetByID(ctx, p.LinkedChannelID); err == nil {
+		p.LinkedChannelName = ch.Name
+		p.LinkedChannelType = ch.Type
+	}
+}
+
+// prepareInternalPreview refreshes an internal message preview from source data
+// and applies viewer access checks. Call this before returning any preview to a client.
+func (h *Handler) prepareInternalPreview(ctx context.Context, p *linkpreview.Preview, viewerID string) {
+	if p.Type != linkpreview.PreviewTypeMessage {
+		return
+	}
+	h.refreshInternalPreview(ctx, p)
+	// After refresh, linked_channel_type may be "deleted" — skip access check in that case
+	if p.LinkedChannelType == "deleted" {
+		return
+	}
+	if p.LinkedChannelID != "" && viewerID != "" {
+		if !h.canViewChannel(ctx, viewerID, p.LinkedChannelID, p.LinkedChannelType) {
+			clearPreviewContent(p)
+			p.LinkedChannelType = "inaccessible"
+		}
+	}
+}
+
+// loadLinkPreviewsForMessages loads link previews for a slice of messages in batch.
+// Internal message previews are refreshed from source and access-checked.
 func (h *Handler) loadLinkPreviewsForMessages(ctx context.Context, messages []message.MessageWithUser) {
 	if h.linkPreviewRepo == nil || len(messages) == 0 {
 		return
 	}
+
+	userID := h.getUserID(ctx)
 
 	messageIDs := make([]string, len(messages))
 	for i, m := range messages {
@@ -966,9 +1190,12 @@ func (h *Handler) loadLinkPreviewsForMessages(ctx context.Context, messages []me
 	}
 
 	for i := range messages {
-		if p, ok := previewMap[messages[i].ID]; ok {
-			messages[i].LinkPreview = p
+		p, ok := previewMap[messages[i].ID]
+		if !ok {
+			continue
 		}
+		h.prepareInternalPreview(ctx, p, userID)
+		messages[i].LinkPreview = p
 	}
 }
 
@@ -1071,6 +1298,7 @@ func (h *Handler) GetMessage(ctx context.Context, request openapi.GetMessageRequ
 	// Load link preview for the message
 	if h.linkPreviewRepo != nil {
 		if preview, err := h.linkPreviewRepo.GetForMessage(ctx, msgWithUser.ID); err == nil && preview != nil {
+			h.prepareInternalPreview(ctx, preview, userID)
 			msgWithUser.LinkPreview = preview
 		}
 	}

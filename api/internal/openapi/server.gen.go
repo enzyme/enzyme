@@ -37,6 +37,12 @@ const (
 	ChannelTypePublic  ChannelType = "public"
 )
 
+// Defines values for LinkPreviewType.
+const (
+	LinkPreviewTypeExternal LinkPreviewType = "external"
+	LinkPreviewTypeMessage  LinkPreviewType = "message"
+)
+
 // Defines values for ListMessagesInputDirection.
 const (
 	After  ListMessagesInputDirection = "after"
@@ -229,12 +235,26 @@ type Invite struct {
 
 // LinkPreview defines model for LinkPreview.
 type LinkPreview struct {
-	Description *string `json:"description,omitempty"`
-	ImageUrl    *string `json:"image_url,omitempty"`
-	SiteName    *string `json:"site_name,omitempty"`
-	Title       *string `json:"title,omitempty"`
-	Url         string  `json:"url"`
+	Description              *string         `json:"description,omitempty"`
+	ImageUrl                 *string         `json:"image_url,omitempty"`
+	LinkedChannelId          *string         `json:"linked_channel_id,omitempty"`
+	LinkedChannelName        *string         `json:"linked_channel_name,omitempty"`
+	LinkedChannelType        *string         `json:"linked_channel_type,omitempty"`
+	LinkedMessageId          *string         `json:"linked_message_id,omitempty"`
+	MessageAuthorAvatarUrl   *string         `json:"message_author_avatar_url,omitempty"`
+	MessageAuthorGravatarUrl *string         `json:"message_author_gravatar_url,omitempty"`
+	MessageAuthorId          *string         `json:"message_author_id,omitempty"`
+	MessageAuthorName        *string         `json:"message_author_name,omitempty"`
+	MessageContent           *string         `json:"message_content,omitempty"`
+	MessageCreatedAt         *time.Time      `json:"message_created_at,omitempty"`
+	SiteName                 *string         `json:"site_name,omitempty"`
+	Title                    *string         `json:"title,omitempty"`
+	Type                     LinkPreviewType `json:"type"`
+	Url                      string          `json:"url"`
 }
+
+// LinkPreviewType defines model for LinkPreview.Type.
+type LinkPreviewType string
 
 // ListMessagesInput defines model for ListMessagesInput.
 type ListMessagesInput struct {

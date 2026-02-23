@@ -283,6 +283,9 @@ export function useDeleteLinkPreview() {
         }
       }
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+    },
   });
 }
 
