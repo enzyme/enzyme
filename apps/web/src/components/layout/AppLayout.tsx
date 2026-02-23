@@ -16,7 +16,7 @@ import { cn } from '../../lib/utils';
 
 export function AppLayout() {
   const { workspaceId, channelId } = useParams<{ workspaceId: string; channelId: string }>();
-  const { isConnected } = useSSE(workspaceId);
+  const { isReconnecting } = useSSE(workspaceId);
   const { threadId } = useThreadPanel();
   const { profileUserId } = useProfilePanel();
   const { collapsed: sidebarCollapsed } = useSidebar();
@@ -49,7 +49,7 @@ export function AppLayout() {
   return (
     <div className="flex h-screen flex-col bg-white dark:bg-gray-900">
       {/* Connection Status - full width */}
-      {!isConnected && workspaceId && (
+      {isReconnecting && workspaceId && (
         <div className="flex-shrink-0 border-b border-yellow-200 bg-yellow-100 px-4 py-1.5 text-center text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200">
           Reconnecting...
         </div>

@@ -20,6 +20,7 @@ import type {
 
 export function useSSE(workspaceId: string | undefined) {
   const [isConnected, setIsConnected] = useState(false);
+  const [hasBeenConnected, setHasBeenConnected] = useState(false);
   const connectionRef = useRef<SSEConnection | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ export function useSSE(workspaceId: string | undefined) {
 
     // Handle connected event
     connection.on('connected', () => {
+      setHasBeenConnected(true);
       setIsConnected(true);
     });
 
@@ -539,11 +541,14 @@ export function useSSE(workspaceId: string | undefined) {
     return () => {
       connection.disconnect();
       connectionRef.current = null;
+      setHasBeenConnected(false);
       setIsConnected(false);
     };
   }, [workspaceId, queryClient]);
 
-  return { isConnected };
+  const isReconnecting = hasBeenConnected && !isConnected;
+
+  return { isReconnecting };
 }
 
 // Helper to format notification title
