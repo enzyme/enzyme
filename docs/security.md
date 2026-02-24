@@ -79,7 +79,7 @@ The signing secret is 32 bytes from `crypto/rand` (hex-encoded). On first startu
 ### Upload Protections
 
 - **Filename sanitization**: `filepath.Base` strips directory components; forward slashes, backslashes, and null bytes are removed; filenames are truncated to 255 characters. Files are stored on disk using a generated ULID, not the user-supplied name.
-- **Size limits**: 10 MB for file uploads, 5 MB for avatars and workspace icons, 256 KB for custom emoji.
+- **Size limits**: 10 MB for file uploads by default (configurable via [`files.max_upload_size`](configuration.md#file-storage)), 5 MB for avatars and workspace icons, 256 KB for custom emoji.
 
 ### Download Access Control
 
