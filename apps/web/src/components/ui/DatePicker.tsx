@@ -25,11 +25,11 @@ const datePicker = tv({
     root: 'group flex flex-col',
     label: 'mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300',
     fieldGroup: [
-      'flex items-center rounded border border-gray-300 bg-white text-xs text-gray-700',
+      'flex items-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm',
       'focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500',
       'dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300',
     ],
-    input: 'flex flex-1 px-2 py-1',
+    input: 'flex flex-1 px-3 py-2',
     segment: [
       'rounded px-0.5 text-end tabular-nums outline-none',
       'focused:bg-blue-500 focused:text-white',

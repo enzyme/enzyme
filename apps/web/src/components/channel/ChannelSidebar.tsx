@@ -7,6 +7,7 @@ import {
   HashtagIcon,
   InboxIcon,
   ChatBubbleLeftEllipsisIcon,
+  ClockIcon,
   MagnifyingGlassIcon,
   Cog6ToothIcon,
   UsersIcon,
@@ -29,6 +30,7 @@ import {
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useChannels, useWorkspace, useAuth } from '../../hooks';
 import { useUserThreads } from '../../hooks/useThreads';
+import { useScheduledMessages } from '../../hooks/useScheduledMessages';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
 import {
   ChannelListSkeleton,
@@ -139,8 +141,11 @@ export function ChannelSidebar({
   const hasNotifications = totalNotificationCount > 0;
   const isUnreadsPage = location.pathname.includes('/unreads');
   const isThreadsPage = location.pathname.includes('/threads');
+  const isScheduledPage = location.pathname.includes('/scheduled');
   const { data: threadsData } = useUserThreads({ workspaceId: workspaceId || '' });
   const unreadThreadCount = threadsData?.pages[0]?.unread_thread_count ?? 0;
+  const { data: scheduledData } = useScheduledMessages(workspaceId || '');
+  const scheduledCount = scheduledData?.count ?? 0;
 
   const groupedChannels = useMemo(() => {
     const groups = {
@@ -340,6 +345,25 @@ export function ChannelSidebar({
             {unreadThreadCount > 0 && (
               <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-xs text-white">
                 {unreadThreadCount}
+              </span>
+            )}
+          </Link>
+          <Link
+            to={`/workspaces/${workspaceId}/scheduled`}
+            className={cn(
+              'flex items-center gap-2 rounded px-2 py-1',
+              isScheduledPage
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
+            )}
+          >
+            <span className="flex w-5 items-center justify-center">
+              <ClockIcon className={cn('h-4 w-4', scheduledCount > 0 && '[stroke-width:2]')} />
+            </span>
+            <span className={cn('truncate', scheduledCount > 0 && 'font-semibold')}>Scheduled</span>
+            {scheduledCount > 0 && (
+              <span className="ml-auto rounded-full bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                {scheduledCount}
               </span>
             )}
           </Link>

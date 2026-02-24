@@ -12,6 +12,7 @@ import (
 	"github.com/enzyme/api/internal/message"
 	"github.com/enzyme/api/internal/notification"
 	"github.com/enzyme/api/internal/openapi"
+	"github.com/enzyme/api/internal/scheduled"
 	"github.com/enzyme/api/internal/signing"
 	"github.com/enzyme/api/internal/sse"
 	"github.com/enzyme/api/internal/thread"
@@ -35,6 +36,7 @@ type Handler struct {
 	linkPreviewFetcher  *linkpreview.Fetcher
 	threadRepo          *thread.Repository
 	emojiRepo           *emoji.Repository
+	scheduledRepo       *scheduled.Repository
 	notificationService *notification.Service
 	hub                 *sse.Hub
 	signer              *signing.Signer
@@ -56,6 +58,7 @@ type Dependencies struct {
 	LinkPreviewFetcher  *linkpreview.Fetcher
 	ThreadRepo          *thread.Repository
 	EmojiRepo           *emoji.Repository
+	ScheduledRepo       *scheduled.Repository
 	NotificationService *notification.Service
 	Hub                 *sse.Hub
 	Signer              *signing.Signer
@@ -78,6 +81,7 @@ func New(deps Dependencies) *Handler {
 		linkPreviewFetcher:  deps.LinkPreviewFetcher,
 		threadRepo:          deps.ThreadRepo,
 		emojiRepo:           deps.EmojiRepo,
+		scheduledRepo:       deps.ScheduledRepo,
 		notificationService: deps.NotificationService,
 		hub:                 deps.Hub,
 		signer:              deps.Signer,

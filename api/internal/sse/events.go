@@ -21,6 +21,12 @@ const (
 	EventNotification    = "notification"
 	EventEmojiCreated    = "emoji.created"
 	EventEmojiDeleted    = "emoji.deleted"
+
+	EventScheduledMessageCreated = "scheduled_message.created"
+	EventScheduledMessageUpdated = "scheduled_message.updated"
+	EventScheduledMessageDeleted = "scheduled_message.deleted"
+	EventScheduledMessageSent    = "scheduled_message.sent"
+	EventScheduledMessageFailed  = "scheduled_message.failed"
 )
 
 type Event struct {

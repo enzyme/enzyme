@@ -18,6 +18,9 @@ const AllUnreadsPage = lazy(() =>
 const ThreadsPage = lazy(() =>
   import('./pages/ThreadsPage').then((m) => ({ default: m.ThreadsPage })),
 );
+const ScheduledMessagesPage = lazy(() =>
+  import('./pages/ScheduledMessagesPage').then((m) => ({ default: m.ScheduledMessagesPage })),
+);
 
 function PageSpinner() {
   return (
@@ -75,6 +78,14 @@ function App() {
               element={
                 <Suspense fallback={<PageSpinner />}>
                   <ThreadsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="scheduled"
+              element={
+                <Suspense fallback={<PageSpinner />}>
+                  <ScheduledMessagesPage />
                 </Suspense>
               }
             />

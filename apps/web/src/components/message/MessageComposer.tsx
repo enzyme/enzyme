@@ -17,6 +17,7 @@ import {
   useWorkspaceMembers,
   useChannels,
 } from '../../hooks';
+import { useScheduleMessage } from '../../hooks/useScheduledMessages';
 import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useTypingUsers } from '../../lib/presenceStore';
 import { cn } from '../../lib/utils';
@@ -27,6 +28,8 @@ import {
   type RichTextEditorRef,
 } from '../editor';
 import { AddEmojiModal } from '../editor/AddEmojiModal';
+import { ScheduleMessageModal } from './ScheduleMessageModal';
+import { toast } from '../ui';
 
 export interface MessageComposerRef {
   focus: () => void;
@@ -73,6 +76,7 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
     const [alsoSendToChannel, setAlsoSendToChannel] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [addEmojiOpen, setAddEmojiOpen] = useState(false);
+    const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
     const editorRef = useRef<RichTextEditorRef>(null);
 
     useImperativeHandle(ref, () => ({
@@ -81,6 +85,7 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
     }));
     const sendMessage = useSendMessage(channelId);
     const sendThreadReply = useSendThreadReply(parentMessageId ?? '', channelId);
+    const scheduleMessage = useScheduleMessage(channelId);
     const uploadFile = useUploadFile(channelId);
     const { onTyping, onStopTyping } = useTyping(workspaceId, channelId);
     const { user } = useAuth();
@@ -194,6 +199,36 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
       const content = editorRef.current?.getContent() || '';
       handleSubmit(content);
       editorRef.current?.clear();
+    };
+
+    const handleSchedule = async (scheduledFor: string) => {
+      const content = editorRef.current?.getContent() || '';
+      if (!content.trim()) return;
+
+      try {
+        await scheduleMessage.mutateAsync({
+          content: content.trim(),
+          scheduled_for: scheduledFor,
+          ...(parentMessageId ? { thread_parent_id: parentMessageId } : {}),
+          ...(isThreadVariant && alsoSendToChannel ? { also_send_to_channel: true } : {}),
+          ...(hasAttachments ? { attachment_ids: completedAttachmentIds } : {}),
+        });
+
+        editorRef.current?.clear();
+        pendingAttachments.forEach((a) => {
+          if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
+        });
+        setPendingAttachments([]);
+        setAlsoSendToChannel(false);
+
+        const schedDate = new Date(scheduledFor);
+        toast(
+          `Message scheduled for ${schedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${schedDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`,
+          'success',
+        );
+      } catch {
+        // Error handled by mutation
+      }
     };
 
     // Convert workspace members to the format expected by RichTextEditor
@@ -330,6 +365,8 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
               disabled={activeMutation.isPending}
               isPending={activeMutation.isPending || isUploading}
               onAttachmentClick={handleFilesSelected}
+              onScheduleClick={() => setScheduleModalOpen(true)}
+              onSchedule={handleSchedule}
               belowEditor={
                 isThreadVariant ? (
                   <label className="flex cursor-pointer items-center gap-2 px-4 py-1.5 select-none">
@@ -358,6 +395,11 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
           onClose={() => setAddEmojiOpen(false)}
           workspaceId={workspaceId}
           customEmojis={customEmojis ?? []}
+        />
+        <ScheduleMessageModal
+          isOpen={scheduleModalOpen}
+          onClose={() => setScheduleModalOpen(false)}
+          onSchedule={handleSchedule}
         />
       </div>
     );

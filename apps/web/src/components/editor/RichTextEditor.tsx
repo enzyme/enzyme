@@ -20,8 +20,10 @@ import {
   AtSymbolIcon,
   HashtagIcon,
   PaperAirplaneIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline';
 import { Button as AriaButton, FileTrigger, Popover, DialogTrigger } from 'react-aria-components';
+import { Menu, MenuItem, DisclosureCaret } from '../ui';
 import { Toolbar } from './Toolbar';
 import { LinkModal } from './LinkModal';
 import type { LinkModalData } from './LinkModal';
@@ -44,6 +46,43 @@ import { cn } from '../../lib/utils';
 import { Tooltip } from '../ui';
 import type { EmojiSelectAttrs } from '../ui';
 import type { CustomEmoji } from '@enzyme/api-client';
+
+function getScheduleQuickOptions(): { label: string; date: Date }[] {
+  const now = new Date();
+  const hour = now.getHours();
+  const options: { label: string; date: Date }[] = [];
+
+  // "Later today" - next round hour, if before 5pm
+  if (hour < 17) {
+    const laterHour = Math.min(hour + 1, 17);
+    const laterToday = new Date();
+    laterToday.setHours(laterHour, 0, 0, 0);
+    if (laterToday > now) {
+      const ampm = laterHour >= 12 ? 'PM' : 'AM';
+      const h = laterHour % 12 || 12;
+      options.push({
+        label: `Later today at ${h}:00 ${ampm}`,
+        date: laterToday,
+      });
+    }
+  }
+
+  // "Tomorrow at 9:00 AM"
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(9, 0, 0, 0);
+  options.push({ label: 'Tomorrow at 9:00 AM', date: tomorrow });
+
+  // "Next Monday at 9:00 AM"
+  const nextMonday = new Date();
+  const dayOfWeek = nextMonday.getDay();
+  const daysUntilMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 7 : 8 - dayOfWeek;
+  nextMonday.setDate(nextMonday.getDate() + daysUntilMonday);
+  nextMonday.setHours(9, 0, 0, 0);
+  options.push({ label: 'Next Monday at 9:00 AM', date: nextMonday });
+
+  return options;
+}
 
 const editorStyles = tv({
   slots: {
@@ -171,6 +210,8 @@ export interface RichTextEditorProps {
   belowEditor?: React.ReactNode;
   onEscape?: () => void;
   submitLabel?: string;
+  onScheduleClick?: () => void;
+  onSchedule?: (scheduledFor: string) => void;
 }
 
 export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
@@ -193,6 +234,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       belowEditor,
       onEscape,
       submitLabel,
+      onScheduleClick,
+      onSchedule,
     },
     ref,
   ) => {
@@ -687,7 +730,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     }, [editor, disabled]);
 
     const isOverLimit = contentLength > MAX_MESSAGE_LENGTH;
+    const hasContent = !(editor?.isEmpty ?? true);
     const canSend = !disabled && !isPending && !isOverLimit;
+    const canSchedule = canSend && hasContent;
 
     return (
       <div className={s.container()}>
@@ -800,8 +845,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
                     className={cn(
                       'rounded px-2 py-1 text-xs font-medium transition-colors',
                       canSend
-                        ? 'cursor-pointer bg-green-600 text-white hover:bg-green-700 dark:bg-green-800 dark:hover:bg-green-700'
-                        : 'cursor-not-allowed bg-green-600/50 text-white/70',
+                        ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600'
+                        : 'cursor-not-allowed bg-blue-600/50 text-white/70',
                     )}
                     onPress={handleSubmit}
                   >
@@ -809,20 +854,55 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
                   </AriaButton>
                 </div>
               ) : (
-                <Tooltip content="Send message">
-                  <AriaButton
-                    isDisabled={!canSend}
-                    className={cn(
-                      s.sendButton(),
-                      canSend
-                        ? 'cursor-pointer bg-green-600 text-white hover:bg-green-700 dark:bg-green-800 dark:hover:bg-green-700'
-                        : 'cursor-not-allowed bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500',
-                    )}
-                    onPress={handleSubmit}
-                  >
-                    <PaperAirplaneIcon className="h-4 w-4" />
-                  </AriaButton>
-                </Tooltip>
+                <div className="flex items-center">
+                  <Tooltip content="Send message">
+                    <AriaButton
+                      isDisabled={!canSchedule}
+                      className={cn(
+                        s.sendButton(),
+                        onScheduleClick ? 'rounded-r-none' : '',
+                        canSchedule
+                          ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600'
+                          : 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500',
+                      )}
+                      onPress={handleSubmit}
+                    >
+                      <PaperAirplaneIcon className="h-4 w-4" />
+                    </AriaButton>
+                  </Tooltip>
+                  {onScheduleClick && (
+                    <Menu
+                      trigger={
+                        <AriaButton
+                          isDisabled={!canSchedule}
+                          className={cn(
+                            'rounded-r px-1.5 py-2 transition-colors',
+                            canSchedule
+                              ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600'
+                              : 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500',
+                          )}
+                          aria-label="Schedule message"
+                        >
+                          <DisclosureCaret isExpanded className="h-3 w-3" />
+                        </AriaButton>
+                      }
+                      align="end"
+                    >
+                      {getScheduleQuickOptions().map((option) => (
+                        <MenuItem
+                          key={option.label}
+                          icon={<ClockIcon className="h-4 w-4" />}
+                          onAction={() => onSchedule?.(option.date.toISOString())}
+                        >
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                      <MenuItem icon={<ClockIcon className="h-4 w-4" />} onAction={onScheduleClick}>
+                        Custom time
+                      </MenuItem>
+                    </Menu>
+                  )}
+                </div>
               )}
             </div>
           </div>

@@ -66,5 +66,10 @@ export type ThreadListResult = components['schemas']['ThreadListResult'];
 // Custom emoji types
 export type CustomEmoji = components['schemas']['CustomEmoji'];
 
+// Scheduled message types
+export type ScheduledMessage = components['schemas']['ScheduledMessage'];
+export type ScheduleMessageInput = components['schemas']['ScheduleMessageInput'];
+export type UpdateScheduledMessageInput = components['schemas']['UpdateScheduledMessageInput'];
+
 // File signing types
 export type SignedUrl = components['schemas']['SignedUrl'];

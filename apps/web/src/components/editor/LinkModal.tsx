@@ -103,7 +103,7 @@ function LinkForm({
         <AriaButton
           onPress={handleSave}
           isDisabled={!url.trim()}
-          className="cursor-pointer rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="cursor-pointer rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Save
         </AriaButton>

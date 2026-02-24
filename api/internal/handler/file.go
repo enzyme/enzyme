@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/enzyme/api/internal/file"
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/signing"
+	"github.com/enzyme/api/internal/sse"
 	"github.com/enzyme/api/internal/workspace"
 	"github.com/oklog/ulid/v2"
 )
@@ -216,6 +218,25 @@ func (h *Handler) DeleteFile(ctx context.Context, request openapi.DeleteFileRequ
 	// Delete from database
 	if err := h.fileRepo.Delete(ctx, request.Id); err != nil {
 		return nil, err
+	}
+
+	// Remove attachment reference from any scheduled messages and notify affected users
+	if h.scheduledRepo != nil {
+		affected, err := h.scheduledRepo.RemoveAttachmentID(ctx, request.Id)
+		if err != nil {
+			slog.Error("failed to remove attachment from scheduled messages", "error", err)
+		}
+		for _, smsg := range affected {
+			if h.hub != nil {
+				if sch, err := h.channelRepo.GetByID(ctx, smsg.ChannelID); err == nil {
+					apiMsg := scheduledMessageToAPI(&smsg)
+					h.hub.BroadcastToUser(sch.WorkspaceID, smsg.UserID, sse.Event{
+						Type: sse.EventScheduledMessageUpdated,
+						Data: apiMsg,
+					})
+				}
+			}
+		}
 	}
 
 	return openapi.DeleteFile200JSONResponse{

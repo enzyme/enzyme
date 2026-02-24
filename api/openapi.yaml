@@ -1674,6 +1674,206 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # Scheduled message endpoints
+  /channels/{id}/messages/schedule:
+    post:
+      tags: [messages]
+      summary: Schedule a message for future delivery
+      operationId: scheduleMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Channel ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleMessageInput'
+      responses:
+        '200':
+          description: Message scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scheduled_message:
+                    $ref: '#/components/schemas/ScheduledMessage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /workspaces/{wid}/scheduled-messages:
+    post:
+      tags: [messages]
+      summary: List user's scheduled messages in a workspace
+      operationId: listScheduledMessages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: wid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Workspace ID
+      responses:
+        '200':
+          description: Scheduled messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scheduled_messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScheduledMessage'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /scheduled-messages/{id}:
+    post:
+      tags: [messages]
+      summary: Get a scheduled message
+      operationId: getScheduledMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Scheduled message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scheduled_message:
+                    $ref: '#/components/schemas/ScheduledMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /scheduled-messages/{id}/update:
+    post:
+      tags: [messages]
+      summary: Update a scheduled message
+      operationId: updateScheduledMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScheduledMessageInput'
+      responses:
+        '200':
+          description: Updated scheduled message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scheduled_message:
+                    $ref: '#/components/schemas/ScheduledMessage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /scheduled-messages/{id}/delete:
+    post:
+      tags: [messages]
+      summary: Delete a scheduled message
+      operationId: deleteScheduledMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Scheduled message deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /scheduled-messages/{id}/send-now:
+    post:
+      tags: [messages]
+      summary: Send a scheduled message immediately
+      operationId: sendScheduledMessageNow
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: '#/components/schemas/MessageWithUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   # User endpoints
   /users/{id}:
     get:
@@ -1952,6 +2152,12 @@ components:
             $ref: '#/components/schemas/ApiErrorResponse'
     Forbidden:
       description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    Conflict:
+      description: Conflict with current resource state
       content:
         application/json:
           schema:
@@ -2656,6 +2862,11 @@ components:
         - notification
         - emoji.created
         - emoji.deleted
+        - scheduled_message.created
+        - scheduled_message.updated
+        - scheduled_message.deleted
+        - scheduled_message.sent
+        - scheduled_message.failed
 
     SSEEvent:
       oneOf:
@@ -2679,6 +2890,10 @@ components:
         - $ref: '#/components/schemas/SSEEventNotification'
         - $ref: '#/components/schemas/SSEEventEmojiCreated'
         - $ref: '#/components/schemas/SSEEventEmojiDeleted'
+        - $ref: '#/components/schemas/SSEEventScheduledMessageCreated'
+        - $ref: '#/components/schemas/SSEEventScheduledMessageUpdated'
+        - $ref: '#/components/schemas/SSEEventScheduledMessageDeleted'
+        - $ref: '#/components/schemas/SSEEventScheduledMessageSent'
       discriminator:
         propertyName: type
         mapping:
@@ -2702,6 +2917,10 @@ components:
           notification: '#/components/schemas/SSEEventNotification'
           emoji.created: '#/components/schemas/SSEEventEmojiCreated'
           emoji.deleted: '#/components/schemas/SSEEventEmojiDeleted'
+          scheduled_message.created: '#/components/schemas/SSEEventScheduledMessageCreated'
+          scheduled_message.updated: '#/components/schemas/SSEEventScheduledMessageUpdated'
+          scheduled_message.deleted: '#/components/schemas/SSEEventScheduledMessageDeleted'
+          scheduled_message.sent: '#/components/schemas/SSEEventScheduledMessageSent'
 
     SSEEventConnected:
       type: object
@@ -2977,6 +3196,66 @@ components:
             name:
               type: string
 
+    SSEEventScheduledMessageCreated:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [scheduled_message.created]
+        data:
+          $ref: '#/components/schemas/ScheduledMessage'
+
+    SSEEventScheduledMessageUpdated:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [scheduled_message.updated]
+        data:
+          $ref: '#/components/schemas/ScheduledMessage'
+
+    SSEEventScheduledMessageDeleted:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [scheduled_message.deleted]
+        data:
+          type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+
+    SSEEventScheduledMessageSent:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [scheduled_message.sent]
+        data:
+          type: object
+          required: [id, channel_id, message_id]
+          properties:
+            id:
+              type: string
+            channel_id:
+              type: string
+            message_id:
+              type: string
+
     NotificationData:
       type: object
       required: [type, channel_id, message_id]
@@ -3168,3 +3447,75 @@ components:
           items:
             type: string
           description: Ordered list of workspace IDs representing the new order
+
+    ScheduledMessage:
+      type: object
+      required: [id, channel_id, user_id, content, scheduled_for, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        channel_id:
+          type: string
+        channel_name:
+          type: string
+        workspace_id:
+          type: string
+        user_id:
+          type: string
+        content:
+          type: string
+        thread_parent_id:
+          type: string
+        also_send_to_channel:
+          type: boolean
+        attachment_ids:
+          type: array
+          items:
+            type: string
+        scheduled_for:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, sending, failed]
+        last_error:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ScheduleMessageInput:
+      type: object
+      required: [content, scheduled_for]
+      properties:
+        content:
+          type: string
+          maxLength: 40000
+        scheduled_for:
+          type: string
+          format: date-time
+        thread_parent_id:
+          type: string
+        also_send_to_channel:
+          type: boolean
+        attachment_ids:
+          type: array
+          items:
+            type: string
+
+    UpdateScheduledMessageInput:
+      type: object
+      properties:
+        content:
+          type: string
+          maxLength: 40000
+        scheduled_for:
+          type: string
+          format: date-time
+        attachment_ids:
+          type: array
+          items:
+            type: string

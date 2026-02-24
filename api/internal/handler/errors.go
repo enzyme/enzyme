@@ -51,3 +51,7 @@ func badRequestResponse(code, msg string) openapi.BadRequestJSONResponse {
 func notAMemberResponse(msg string) openapi.ForbiddenJSONResponse {
 	return openapi.ForbiddenJSONResponse(newErrorResponse(ErrCodeNotAMember, msg))
 }
+
+func conflictResponse(msg string) openapi.ConflictJSONResponse {
+	return openapi.ConflictJSONResponse(newErrorResponse(ErrCodeConflict, msg))
+}

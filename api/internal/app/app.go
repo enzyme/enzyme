@@ -25,6 +25,7 @@ import (
 	"github.com/enzyme/api/internal/notification"
 	"github.com/enzyme/api/internal/presence"
 	"github.com/enzyme/api/internal/ratelimit"
+	"github.com/enzyme/api/internal/scheduled"
 	"github.com/enzyme/api/internal/server"
 	"github.com/enzyme/api/internal/signing"
 	"github.com/enzyme/api/internal/sse"
@@ -46,6 +47,7 @@ type App struct {
 	RateLimiter         *ratelimit.Limiter
 	SessionStore        *auth.SessionStore
 	LinkPreviewRepo     *linkpreview.Repository
+	ScheduledWorker     *scheduled.Worker
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -90,6 +92,7 @@ func New(cfg *config.Config) (*App, error) {
 	linkPreviewFetcher := linkpreview.NewFetcher(linkPreviewRepo)
 	emojiRepo := emoji.NewRepository(db.DB)
 	threadRepo := thread.NewRepository(db.DB)
+	scheduledRepo := scheduled.NewRepository(db.DB)
 
 	// Initialize services
 	authService := auth.NewService(userRepo, passwordResetRepo, cfg.Auth.BcryptCost)
@@ -151,6 +154,7 @@ func New(cfg *config.Config) (*App, error) {
 		LinkPreviewFetcher:  linkPreviewFetcher,
 		ThreadRepo:          threadRepo,
 		EmojiRepo:           emojiRepo,
+		ScheduledRepo:       scheduledRepo,
 		NotificationService: notificationService,
 		Hub:                 hub,
 		Signer:              signer,
@@ -158,6 +162,9 @@ func New(cfg *config.Config) (*App, error) {
 		MaxUploadSize:       cfg.Files.MaxUploadSize,
 		PublicURL:           cfg.Server.PublicURL,
 	})
+
+	// Initialize scheduled message worker
+	scheduledWorker := scheduled.NewWorker(scheduledRepo, h)
 
 	// Build rate limiter (nil if disabled)
 	var limiter *ratelimit.Limiter
@@ -215,6 +222,7 @@ func New(cfg *config.Config) (*App, error) {
 		RateLimiter:         limiter,
 		SessionStore:        sessionStore,
 		LinkPreviewRepo:     linkPreviewRepo,
+		ScheduledWorker:     scheduledWorker,
 	}, nil
 }
 
@@ -227,6 +235,9 @@ func (a *App) Start(ctx context.Context) error {
 
 	// Start email worker
 	go a.EmailWorker.Start(ctx)
+
+	// Start scheduled message worker
+	go a.ScheduledWorker.Start(ctx)
 
 	// Start rate limiter cleanup
 	if a.RateLimiter != nil {

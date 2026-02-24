@@ -63,6 +63,13 @@ const (
 	NotifyLevelNone     NotifyLevel = "none"
 )
 
+// Defines values for ScheduledMessageStatus.
+const (
+	Failed  ScheduledMessageStatus = "failed"
+	Pending ScheduledMessageStatus = "pending"
+	Sending ScheduledMessageStatus = "sending"
+)
+
 // Defines values for SystemEventType.
 const (
 	ChannelDescriptionUpdated SystemEventType = "channel_description_updated"
@@ -368,6 +375,36 @@ type ReorderWorkspacesInput struct {
 	WorkspaceIds []string `json:"workspace_ids"`
 }
 
+// ScheduleMessageInput defines model for ScheduleMessageInput.
+type ScheduleMessageInput struct {
+	AlsoSendToChannel *bool     `json:"also_send_to_channel,omitempty"`
+	AttachmentIds     *[]string `json:"attachment_ids,omitempty"`
+	Content           string    `json:"content"`
+	ScheduledFor      time.Time `json:"scheduled_for"`
+	ThreadParentId    *string   `json:"thread_parent_id,omitempty"`
+}
+
+// ScheduledMessage defines model for ScheduledMessage.
+type ScheduledMessage struct {
+	AlsoSendToChannel *bool                   `json:"also_send_to_channel,omitempty"`
+	AttachmentIds     *[]string               `json:"attachment_ids,omitempty"`
+	ChannelId         string                  `json:"channel_id"`
+	ChannelName       *string                 `json:"channel_name,omitempty"`
+	Content           string                  `json:"content"`
+	CreatedAt         time.Time               `json:"created_at"`
+	Id                string                  `json:"id"`
+	LastError         *string                 `json:"last_error,omitempty"`
+	ScheduledFor      time.Time               `json:"scheduled_for"`
+	Status            *ScheduledMessageStatus `json:"status,omitempty"`
+	ThreadParentId    *string                 `json:"thread_parent_id,omitempty"`
+	UpdatedAt         time.Time               `json:"updated_at"`
+	UserId            string                  `json:"user_id"`
+	WorkspaceId       *string                 `json:"workspace_id,omitempty"`
+}
+
+// ScheduledMessageStatus defines model for ScheduledMessage.Status.
+type ScheduledMessageStatus string
+
 // SearchMessage defines model for SearchMessage.
 type SearchMessage struct {
 	AlsoSendToChannel  *bool                `json:"also_send_to_channel,omitempty"`
@@ -563,6 +600,13 @@ type UpdateProfileInput struct {
 	DisplayName *string `json:"display_name,omitempty"`
 }
 
+// UpdateScheduledMessageInput defines model for UpdateScheduledMessageInput.
+type UpdateScheduledMessageInput struct {
+	AttachmentIds *[]string  `json:"attachment_ids,omitempty"`
+	Content       *string    `json:"content,omitempty"`
+	ScheduledFor  *time.Time `json:"scheduled_for,omitempty"`
+}
+
 // UpdateWorkspaceInput defines model for UpdateWorkspaceInput.
 type UpdateWorkspaceInput struct {
 	Name     *string            `json:"name,omitempty"`
@@ -674,6 +718,9 @@ type WorkspaceId = string
 
 // BadRequest defines model for BadRequest.
 type BadRequest = ApiErrorResponse
+
+// Conflict defines model for Conflict.
+type Conflict = ApiErrorResponse
 
 // Forbidden defines model for Forbidden.
 type Forbidden = ApiErrorResponse
@@ -831,6 +878,9 @@ type AddChannelMemberJSONRequestBody AddChannelMemberJSONBody
 // ListMessagesJSONRequestBody defines body for ListMessages for application/json ContentType.
 type ListMessagesJSONRequestBody = ListMessagesInput
 
+// ScheduleMessageJSONRequestBody defines body for ScheduleMessage for application/json ContentType.
+type ScheduleMessageJSONRequestBody = ScheduleMessageInput
+
 // SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
 type SendMessageJSONRequestBody = SendMessageInput
 
@@ -857,6 +907,9 @@ type MarkThreadReadJSONRequestBody MarkThreadReadJSONBody
 
 // UpdateMessageJSONRequestBody defines body for UpdateMessage for application/json ContentType.
 type UpdateMessageJSONRequestBody UpdateMessageJSONBody
+
+// UpdateScheduledMessageJSONRequestBody defines body for UpdateScheduledMessage for application/json ContentType.
+type UpdateScheduledMessageJSONRequestBody = UpdateScheduledMessageInput
 
 // UploadAvatarMultipartRequestBody defines body for UploadAvatar for multipart/form-data ContentType.
 type UploadAvatarMultipartRequestBody UploadAvatarMultipartBody
@@ -950,6 +1003,9 @@ type ServerInterface interface {
 	// List messages in channel
 	// (POST /channels/{id}/messages/list)
 	ListMessages(w http.ResponseWriter, r *http.Request, id ChannelId)
+	// Schedule a message for future delivery
+	// (POST /channels/{id}/messages/schedule)
+	ScheduleMessage(w http.ResponseWriter, r *http.Request, id string)
 	// Send a message
 	// (POST /channels/{id}/messages/send)
 	SendMessage(w http.ResponseWriter, r *http.Request, id ChannelId)
@@ -1022,6 +1078,18 @@ type ServerInterface interface {
 	// Update a message
 	// (POST /messages/{id}/update)
 	UpdateMessage(w http.ResponseWriter, r *http.Request, id MessageId)
+	// Get a scheduled message
+	// (POST /scheduled-messages/{id})
+	GetScheduledMessage(w http.ResponseWriter, r *http.Request, id string)
+	// Delete a scheduled message
+	// (POST /scheduled-messages/{id}/delete)
+	DeleteScheduledMessage(w http.ResponseWriter, r *http.Request, id string)
+	// Send a scheduled message immediately
+	// (POST /scheduled-messages/{id}/send-now)
+	SendScheduledMessageNow(w http.ResponseWriter, r *http.Request, id string)
+	// Update a scheduled message
+	// (POST /scheduled-messages/{id}/update)
+	UpdateScheduledMessage(w http.ResponseWriter, r *http.Request, id string)
 	// Get server information
 	// (GET /server-info)
 	GetServerInfo(w http.ResponseWriter, r *http.Request)
@@ -1088,6 +1156,9 @@ type ServerInterface interface {
 	// Search messages in workspace
 	// (POST /workspaces/{wid}/messages/search)
 	SearchMessages(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// List user's scheduled messages in a workspace
+	// (POST /workspaces/{wid}/scheduled-messages)
+	ListScheduledMessages(w http.ResponseWriter, r *http.Request, wid string)
 	// List threads user is subscribed to
 	// (POST /workspaces/{wid}/threads)
 	ListUserThreads(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
@@ -1190,6 +1261,12 @@ func (_ Unimplemented) ListChannelMembers(w http.ResponseWriter, r *http.Request
 // List messages in channel
 // (POST /channels/{id}/messages/list)
 func (_ Unimplemented) ListMessages(w http.ResponseWriter, r *http.Request, id ChannelId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Schedule a message for future delivery
+// (POST /channels/{id}/messages/schedule)
+func (_ Unimplemented) ScheduleMessage(w http.ResponseWriter, r *http.Request, id string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1337,6 +1414,30 @@ func (_ Unimplemented) UpdateMessage(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Get a scheduled message
+// (POST /scheduled-messages/{id})
+func (_ Unimplemented) GetScheduledMessage(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a scheduled message
+// (POST /scheduled-messages/{id}/delete)
+func (_ Unimplemented) DeleteScheduledMessage(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Send a scheduled message immediately
+// (POST /scheduled-messages/{id}/send-now)
+func (_ Unimplemented) SendScheduledMessageNow(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update a scheduled message
+// (POST /scheduled-messages/{id}/update)
+func (_ Unimplemented) UpdateScheduledMessage(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Get server information
 // (GET /server-info)
 func (_ Unimplemented) GetServerInfo(w http.ResponseWriter, r *http.Request) {
@@ -1466,6 +1567,12 @@ func (_ Unimplemented) UpdateWorkspaceMemberRole(w http.ResponseWriter, r *http.
 // Search messages in workspace
 // (POST /workspaces/{wid}/messages/search)
 func (_ Unimplemented) SearchMessages(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List user's scheduled messages in a workspace
+// (POST /workspaces/{wid}/scheduled-messages)
+func (_ Unimplemented) ListScheduledMessages(w http.ResponseWriter, r *http.Request, wid string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1850,6 +1957,37 @@ func (siw *ServerInterfaceWrapper) ListMessages(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListMessages(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ScheduleMessage operation middleware
+func (siw *ServerInterfaceWrapper) ScheduleMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ScheduleMessage(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2613,6 +2751,130 @@ func (siw *ServerInterfaceWrapper) UpdateMessage(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetScheduledMessage operation middleware
+func (siw *ServerInterfaceWrapper) GetScheduledMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetScheduledMessage(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteScheduledMessage operation middleware
+func (siw *ServerInterfaceWrapper) DeleteScheduledMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteScheduledMessage(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SendScheduledMessageNow operation middleware
+func (siw *ServerInterfaceWrapper) SendScheduledMessageNow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendScheduledMessageNow(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateScheduledMessage operation middleware
+func (siw *ServerInterfaceWrapper) UpdateScheduledMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateScheduledMessage(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetServerInfo operation middleware
 func (siw *ServerInterfaceWrapper) GetServerInfo(w http.ResponseWriter, r *http.Request) {
 
@@ -3212,6 +3474,37 @@ func (siw *ServerInterfaceWrapper) SearchMessages(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListScheduledMessages operation middleware
+func (siw *ServerInterfaceWrapper) ListScheduledMessages(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListScheduledMessages(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListUserThreads operation middleware
 func (siw *ServerInterfaceWrapper) ListUserThreads(w http.ResponseWriter, r *http.Request) {
 
@@ -3464,6 +3757,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/channels/{id}/messages/list", wrapper.ListMessages)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channels/{id}/messages/schedule", wrapper.ScheduleMessage)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channels/{id}/messages/send", wrapper.SendMessage)
 	})
 	r.Group(func(r chi.Router) {
@@ -3536,6 +3832,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/messages/{id}/update", wrapper.UpdateMessage)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/scheduled-messages/{id}", wrapper.GetScheduledMessage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/scheduled-messages/{id}/delete", wrapper.DeleteScheduledMessage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/scheduled-messages/{id}/send-now", wrapper.SendScheduledMessageNow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/scheduled-messages/{id}/update", wrapper.UpdateScheduledMessage)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/server-info", wrapper.GetServerInfo)
 	})
 	r.Group(func(r chi.Router) {
@@ -3602,6 +3910,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/workspaces/{wid}/messages/search", wrapper.SearchMessages)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/scheduled-messages", wrapper.ListScheduledMessages)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/{wid}/threads", wrapper.ListUserThreads)
 	})
 	r.Group(func(r chi.Router) {
@@ -3615,6 +3926,8 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 }
 
 type BadRequestJSONResponse ApiErrorResponse
+
+type ConflictJSONResponse ApiErrorResponse
 
 type ForbiddenJSONResponse ApiErrorResponse
 
@@ -4178,6 +4491,53 @@ type ListMessages404JSONResponse struct{ NotFoundJSONResponse }
 func (response ListMessages404JSONResponse) VisitListMessagesResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ScheduleMessageRequestObject struct {
+	Id   string `json:"id"`
+	Body *ScheduleMessageJSONRequestBody
+}
+
+type ScheduleMessageResponseObject interface {
+	VisitScheduleMessageResponse(w http.ResponseWriter) error
+}
+
+type ScheduleMessage200JSONResponse struct {
+	ScheduledMessage *ScheduledMessage `json:"scheduled_message,omitempty"`
+}
+
+func (response ScheduleMessage200JSONResponse) VisitScheduleMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ScheduleMessage400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ScheduleMessage400JSONResponse) VisitScheduleMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ScheduleMessage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ScheduleMessage401JSONResponse) VisitScheduleMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ScheduleMessage403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ScheduleMessage403JSONResponse) VisitScheduleMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -5209,6 +5569,225 @@ func (response UpdateMessage404JSONResponse) VisitUpdateMessageResponse(w http.R
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetScheduledMessageRequestObject struct {
+	Id string `json:"id"`
+}
+
+type GetScheduledMessageResponseObject interface {
+	VisitGetScheduledMessageResponse(w http.ResponseWriter) error
+}
+
+type GetScheduledMessage200JSONResponse struct {
+	ScheduledMessage *ScheduledMessage `json:"scheduled_message,omitempty"`
+}
+
+func (response GetScheduledMessage200JSONResponse) VisitGetScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetScheduledMessage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetScheduledMessage401JSONResponse) VisitGetScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetScheduledMessage404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetScheduledMessage404JSONResponse) VisitGetScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteScheduledMessageRequestObject struct {
+	Id string `json:"id"`
+}
+
+type DeleteScheduledMessageResponseObject interface {
+	VisitDeleteScheduledMessageResponse(w http.ResponseWriter) error
+}
+
+type DeleteScheduledMessage200JSONResponse SuccessResponse
+
+func (response DeleteScheduledMessage200JSONResponse) VisitDeleteScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteScheduledMessage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteScheduledMessage401JSONResponse) VisitDeleteScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteScheduledMessage403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteScheduledMessage403JSONResponse) VisitDeleteScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteScheduledMessage404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteScheduledMessage404JSONResponse) VisitDeleteScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteScheduledMessage409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteScheduledMessage409JSONResponse) VisitDeleteScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SendScheduledMessageNowRequestObject struct {
+	Id string `json:"id"`
+}
+
+type SendScheduledMessageNowResponseObject interface {
+	VisitSendScheduledMessageNowResponse(w http.ResponseWriter) error
+}
+
+type SendScheduledMessageNow200JSONResponse struct {
+	Message *MessageWithUser `json:"message,omitempty"`
+}
+
+func (response SendScheduledMessageNow200JSONResponse) VisitSendScheduledMessageNowResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SendScheduledMessageNow400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SendScheduledMessageNow400JSONResponse) VisitSendScheduledMessageNowResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SendScheduledMessageNow401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SendScheduledMessageNow401JSONResponse) VisitSendScheduledMessageNowResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SendScheduledMessageNow403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SendScheduledMessageNow403JSONResponse) VisitSendScheduledMessageNowResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SendScheduledMessageNow404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SendScheduledMessageNow404JSONResponse) VisitSendScheduledMessageNowResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SendScheduledMessageNow409JSONResponse struct{ ConflictJSONResponse }
+
+func (response SendScheduledMessageNow409JSONResponse) VisitSendScheduledMessageNowResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateScheduledMessageRequestObject struct {
+	Id   string `json:"id"`
+	Body *UpdateScheduledMessageJSONRequestBody
+}
+
+type UpdateScheduledMessageResponseObject interface {
+	VisitUpdateScheduledMessageResponse(w http.ResponseWriter) error
+}
+
+type UpdateScheduledMessage200JSONResponse struct {
+	ScheduledMessage *ScheduledMessage `json:"scheduled_message,omitempty"`
+}
+
+func (response UpdateScheduledMessage200JSONResponse) VisitUpdateScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateScheduledMessage400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateScheduledMessage400JSONResponse) VisitUpdateScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateScheduledMessage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateScheduledMessage401JSONResponse) VisitUpdateScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateScheduledMessage403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateScheduledMessage403JSONResponse) VisitUpdateScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateScheduledMessage404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateScheduledMessage404JSONResponse) VisitUpdateScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateScheduledMessage409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpdateScheduledMessage409JSONResponse) VisitUpdateScheduledMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetServerInfoRequestObject struct {
 }
 
@@ -6017,6 +6596,35 @@ func (response SearchMessages403JSONResponse) VisitSearchMessagesResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListScheduledMessagesRequestObject struct {
+	Wid string `json:"wid"`
+}
+
+type ListScheduledMessagesResponseObject interface {
+	VisitListScheduledMessagesResponse(w http.ResponseWriter) error
+}
+
+type ListScheduledMessages200JSONResponse struct {
+	Count             *int                `json:"count,omitempty"`
+	ScheduledMessages *[]ScheduledMessage `json:"scheduled_messages,omitempty"`
+}
+
+func (response ListScheduledMessages200JSONResponse) VisitListScheduledMessagesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListScheduledMessages401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListScheduledMessages401JSONResponse) VisitListScheduledMessagesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListUserThreadsRequestObject struct {
 	Wid  WorkspaceId `json:"wid"`
 	Body *ListUserThreadsJSONRequestBody
@@ -6174,6 +6782,9 @@ type StrictServerInterface interface {
 	// List messages in channel
 	// (POST /channels/{id}/messages/list)
 	ListMessages(ctx context.Context, request ListMessagesRequestObject) (ListMessagesResponseObject, error)
+	// Schedule a message for future delivery
+	// (POST /channels/{id}/messages/schedule)
+	ScheduleMessage(ctx context.Context, request ScheduleMessageRequestObject) (ScheduleMessageResponseObject, error)
 	// Send a message
 	// (POST /channels/{id}/messages/send)
 	SendMessage(ctx context.Context, request SendMessageRequestObject) (SendMessageResponseObject, error)
@@ -6246,6 +6857,18 @@ type StrictServerInterface interface {
 	// Update a message
 	// (POST /messages/{id}/update)
 	UpdateMessage(ctx context.Context, request UpdateMessageRequestObject) (UpdateMessageResponseObject, error)
+	// Get a scheduled message
+	// (POST /scheduled-messages/{id})
+	GetScheduledMessage(ctx context.Context, request GetScheduledMessageRequestObject) (GetScheduledMessageResponseObject, error)
+	// Delete a scheduled message
+	// (POST /scheduled-messages/{id}/delete)
+	DeleteScheduledMessage(ctx context.Context, request DeleteScheduledMessageRequestObject) (DeleteScheduledMessageResponseObject, error)
+	// Send a scheduled message immediately
+	// (POST /scheduled-messages/{id}/send-now)
+	SendScheduledMessageNow(ctx context.Context, request SendScheduledMessageNowRequestObject) (SendScheduledMessageNowResponseObject, error)
+	// Update a scheduled message
+	// (POST /scheduled-messages/{id}/update)
+	UpdateScheduledMessage(ctx context.Context, request UpdateScheduledMessageRequestObject) (UpdateScheduledMessageResponseObject, error)
 	// Get server information
 	// (GET /server-info)
 	GetServerInfo(ctx context.Context, request GetServerInfoRequestObject) (GetServerInfoResponseObject, error)
@@ -6312,6 +6935,9 @@ type StrictServerInterface interface {
 	// Search messages in workspace
 	// (POST /workspaces/{wid}/messages/search)
 	SearchMessages(ctx context.Context, request SearchMessagesRequestObject) (SearchMessagesResponseObject, error)
+	// List user's scheduled messages in a workspace
+	// (POST /workspaces/{wid}/scheduled-messages)
+	ListScheduledMessages(ctx context.Context, request ListScheduledMessagesRequestObject) (ListScheduledMessagesResponseObject, error)
 	// List threads user is subscribed to
 	// (POST /workspaces/{wid}/threads)
 	ListUserThreads(ctx context.Context, request ListUserThreadsRequestObject) (ListUserThreadsResponseObject, error)
@@ -6786,6 +7412,39 @@ func (sh *strictHandler) ListMessages(w http.ResponseWriter, r *http.Request, id
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListMessagesResponseObject); ok {
 		if err := validResponse.VisitListMessagesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ScheduleMessage operation middleware
+func (sh *strictHandler) ScheduleMessage(w http.ResponseWriter, r *http.Request, id string) {
+	var request ScheduleMessageRequestObject
+
+	request.Id = id
+
+	var body ScheduleMessageJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ScheduleMessage(ctx, request.(ScheduleMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ScheduleMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ScheduleMessageResponseObject); ok {
+		if err := validResponse.VisitScheduleMessageResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -7479,6 +8138,117 @@ func (sh *strictHandler) UpdateMessage(w http.ResponseWriter, r *http.Request, i
 	}
 }
 
+// GetScheduledMessage operation middleware
+func (sh *strictHandler) GetScheduledMessage(w http.ResponseWriter, r *http.Request, id string) {
+	var request GetScheduledMessageRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetScheduledMessage(ctx, request.(GetScheduledMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetScheduledMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetScheduledMessageResponseObject); ok {
+		if err := validResponse.VisitGetScheduledMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteScheduledMessage operation middleware
+func (sh *strictHandler) DeleteScheduledMessage(w http.ResponseWriter, r *http.Request, id string) {
+	var request DeleteScheduledMessageRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteScheduledMessage(ctx, request.(DeleteScheduledMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteScheduledMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteScheduledMessageResponseObject); ok {
+		if err := validResponse.VisitDeleteScheduledMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SendScheduledMessageNow operation middleware
+func (sh *strictHandler) SendScheduledMessageNow(w http.ResponseWriter, r *http.Request, id string) {
+	var request SendScheduledMessageNowRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SendScheduledMessageNow(ctx, request.(SendScheduledMessageNowRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SendScheduledMessageNow")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SendScheduledMessageNowResponseObject); ok {
+		if err := validResponse.VisitSendScheduledMessageNowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateScheduledMessage operation middleware
+func (sh *strictHandler) UpdateScheduledMessage(w http.ResponseWriter, r *http.Request, id string) {
+	var request UpdateScheduledMessageRequestObject
+
+	request.Id = id
+
+	var body UpdateScheduledMessageJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateScheduledMessage(ctx, request.(UpdateScheduledMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateScheduledMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateScheduledMessageResponseObject); ok {
+		if err := validResponse.VisitUpdateScheduledMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetServerInfo operation middleware
 func (sh *strictHandler) GetServerInfo(w http.ResponseWriter, r *http.Request) {
 	var request GetServerInfoRequestObject
@@ -8114,6 +8884,32 @@ func (sh *strictHandler) SearchMessages(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchMessagesResponseObject); ok {
 		if err := validResponse.VisitSearchMessagesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListScheduledMessages operation middleware
+func (sh *strictHandler) ListScheduledMessages(w http.ResponseWriter, r *http.Request, wid string) {
+	var request ListScheduledMessagesRequestObject
+
+	request.Wid = wid
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListScheduledMessages(ctx, request.(ListScheduledMessagesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListScheduledMessages")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListScheduledMessagesResponseObject); ok {
+		if err := validResponse.VisitListScheduledMessagesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

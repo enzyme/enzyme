@@ -10,6 +10,7 @@ import {
   unlockAudio,
   requestNotificationPermission,
 } from '../lib/notificationSound';
+import { toast } from '../components/ui';
 import type {
   MessageListResult,
   MessageWithUser,
@@ -462,6 +463,28 @@ export function useSSE(workspaceId: string | undefined) {
           return { ...old, emojis: old.emojis.filter((e) => e.id !== id) };
         },
       );
+    });
+
+    // Handle scheduled message events
+    connection.on('scheduled_message.created', () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduled-messages', workspaceId] });
+    });
+    connection.on('scheduled_message.updated', () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduled-messages', workspaceId] });
+    });
+    connection.on('scheduled_message.deleted', () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduled-messages', workspaceId] });
+    });
+    connection.on('scheduled_message.sent', (event) => {
+      queryClient.invalidateQueries({ queryKey: ['scheduled-messages', workspaceId] });
+      // Also invalidate the relevant channel messages
+      if (event.data?.channel_id) {
+        queryClient.invalidateQueries({ queryKey: ['messages', event.data.channel_id] });
+      }
+    });
+    connection.on('scheduled_message.failed', () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduled-messages', workspaceId] });
+      toast('A scheduled message failed to send', 'error');
     });
 
     // Handle typing events
