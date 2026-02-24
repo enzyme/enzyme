@@ -89,20 +89,30 @@ interface ChannelSidebarProps {
   workspaceId: string | undefined;
   onSearchClick?: () => void;
   onOpenWorkspaceSettings?: (workspaceId: string, tab?: WorkspaceSettingsTab) => void;
+  onCreateChannel: () => void;
+  onNewDM: () => void;
+  isCreateModalOpen: boolean;
+  onCloseCreateModal: () => void;
+  isNewDMModalOpen: boolean;
+  onCloseNewDMModal: () => void;
 }
 
 export function ChannelSidebar({
   workspaceId,
   onSearchClick,
   onOpenWorkspaceSettings,
+  onCreateChannel,
+  onNewDM,
+  isCreateModalOpen,
+  onCloseCreateModal,
+  isNewDMModalOpen,
+  onCloseNewDMModal,
 }: ChannelSidebarProps) {
   const { channelId } = useParams<{ channelId: string }>();
   const location = useLocation();
   const { data: workspaceData } = useWorkspace(workspaceId);
   const { data, isLoading } = useChannels(workspaceId);
   const { workspaces } = useAuth();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isNewDMModalOpen, setIsNewDMModalOpen] = useState(false);
   const starChannel = useStarChannel(workspaceId || '');
   const unstarChannel = useUnstarChannel(workspaceId || '');
   const markAllAsRead = useMarkAllChannelsAsRead(workspaceId || '');
@@ -294,7 +304,7 @@ export function ChannelSidebar({
             <button
               onClick={onSearchClick}
               className="cursor-pointer rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-              title="Search messages (Cmd+K)"
+              title="Quick switch (Cmd+K)"
             >
               <MagnifyingGlassIcon className="h-4 w-4" />
             </button>
@@ -389,7 +399,7 @@ export function ChannelSidebar({
               channels={groupedChannels.channels}
               workspaceId={workspaceId}
               activeChannelId={channelId}
-              onAddClick={() => setIsCreateModalOpen(true)}
+              onAddClick={onCreateChannel}
               canDrop={activeChannel !== null && activeChannel.is_starred && !isDraggingDM}
             />
 
@@ -398,7 +408,7 @@ export function ChannelSidebar({
               channels={groupedChannels.dm}
               workspaceId={workspaceId}
               activeChannelId={channelId}
-              onAddClick={() => setIsNewDMModalOpen(true)}
+              onAddClick={onNewDM}
               canDrop={activeChannel !== null && activeChannel.is_starred && isDraggingDM}
             />
 
@@ -417,13 +427,13 @@ export function ChannelSidebar({
         <>
           <ChannelBrowserModal
             isOpen={isCreateModalOpen}
-            onClose={() => setIsCreateModalOpen(false)}
+            onClose={onCloseCreateModal}
             workspaceId={workspaceId}
             channels={channels}
           />
           <NewDMModal
             isOpen={isNewDMModalOpen}
-            onClose={() => setIsNewDMModalOpen(false)}
+            onClose={onCloseNewDMModal}
             workspaceId={workspaceId}
           />
         </>

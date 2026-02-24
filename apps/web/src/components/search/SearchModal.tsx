@@ -41,9 +41,10 @@ interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialChannelId?: string;
+  initialQuery?: string;
 }
 
-export function SearchModal({ isOpen, onClose, initialChannelId }: SearchModalProps) {
+export function SearchModal({ isOpen, onClose, initialChannelId, initialQuery }: SearchModalProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -81,8 +82,8 @@ export function SearchModal({ isOpen, onClose, initialChannelId }: SearchModalPr
   // Reset state when modal opens (React-recommended sync pattern)
   const [prevIsOpen, setPrevIsOpen] = useState(false);
   if (isOpen && !prevIsOpen) {
-    setInputValue('');
-    setDebouncedQuery('');
+    setInputValue(initialQuery || '');
+    setDebouncedQuery(initialQuery || '');
     setChannelFilter(initialChannelId || '');
     setUserFilter('');
     setAfterFilter(null);

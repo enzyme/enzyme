@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Outlet, useParams } from 'react-router-dom';
 import { WorkspaceSwitcher } from '../workspace/WorkspaceSwitcher';
 import { ChannelSidebar } from '../channel/ChannelSidebar';
 import { ThreadPanel } from '../thread/ThreadPanel';
 import { ProfilePane } from '../profile/ProfilePane';
 import { SearchModal } from '../search/SearchModal';
+import { CommandPalette } from '../command-palette/CommandPalette';
 import {
   WorkspaceSettingsModal,
   type WorkspaceSettingsTab,
@@ -13,6 +14,7 @@ import { useSSE } from '../../hooks';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { useSidebar } from '../../hooks/useSidebar';
 import { cn } from '../../lib/utils';
+import { recordChannelVisit } from '../../lib/recentChannels';
 
 export function AppLayout() {
   const { workspaceId, channelId } = useParams<{ workspaceId: string; channelId: string }>();
@@ -21,10 +23,16 @@ export function AppLayout() {
   const { profileUserId } = useProfilePanel();
   const { collapsed: sidebarCollapsed } = useSidebar();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchInitialQuery, setSearchInitialQuery] = useState('');
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isNewDMModalOpen, setIsNewDMModalOpen] = useState(false);
   const [isWorkspaceSettingsOpen, setIsWorkspaceSettingsOpen] = useState(false);
   const [workspaceSettingsTab, setWorkspaceSettingsTab] = useState<WorkspaceSettingsTab>('general');
   const [settingsWorkspaceId, setSettingsWorkspaceId] = useState<string>('');
-  const handleOpenSearch = useCallback(() => {
+
+  const handleOpenSearch = useCallback((initialQuery?: string) => {
+    setSearchInitialQuery(initialQuery ?? '');
     setIsSearchOpen(true);
   }, []);
 
@@ -34,17 +42,40 @@ export function AppLayout() {
     setIsWorkspaceSettingsOpen(true);
   }, []);
 
-  // Global Cmd+K / Ctrl+K keyboard shortcut
+  const handleCreateChannel = useCallback(() => {
+    setIsCreateModalOpen(true);
+  }, []);
+
+  const handleNewDM = useCallback(() => {
+    setIsNewDMModalOpen(true);
+  }, []);
+
+  // Record channel visits for recent channels
+  const prevChannelRef = useRef<string>();
+  useEffect(() => {
+    if (workspaceId && channelId && channelId !== prevChannelRef.current) {
+      prevChannelRef.current = channelId;
+      recordChannelVisit(workspaceId, channelId);
+    }
+  }, [workspaceId, channelId]);
+
+  // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      // Cmd+K / Ctrl+K — toggle command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k' && !e.shiftKey) {
         e.preventDefault();
-        setIsSearchOpen(true);
+        setIsCommandPaletteOpen((prev) => !prev);
+      }
+      // Cmd+Shift+F / Ctrl+Shift+F — open search
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyF') {
+        e.preventDefault();
+        handleOpenSearch();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleOpenSearch]);
 
   return (
     <div className="flex h-screen flex-col bg-white dark:bg-gray-900">
@@ -68,8 +99,14 @@ export function AppLayout() {
         >
           <ChannelSidebar
             workspaceId={workspaceId}
-            onSearchClick={handleOpenSearch}
+            onSearchClick={() => setIsCommandPaletteOpen(true)}
             onOpenWorkspaceSettings={handleOpenWorkspaceSettings}
+            onCreateChannel={handleCreateChannel}
+            onNewDM={handleNewDM}
+            isCreateModalOpen={isCreateModalOpen}
+            onCloseCreateModal={() => setIsCreateModalOpen(false)}
+            isNewDMModalOpen={isNewDMModalOpen}
+            onCloseNewDMModal={() => setIsNewDMModalOpen(false)}
           />
         </div>
 
@@ -85,11 +122,22 @@ export function AppLayout() {
         {profileUserId && <ProfilePane userId={profileUserId} />}
       </div>
 
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onOpenSearch={handleOpenSearch}
+        onCreateChannel={handleCreateChannel}
+        onNewDM={handleNewDM}
+        onOpenWorkspaceSettings={handleOpenWorkspaceSettings}
+      />
+
       {/* Search Modal */}
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         initialChannelId={channelId}
+        initialQuery={searchInitialQuery}
       />
 
       {/* Workspace Settings Modal */}
