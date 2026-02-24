@@ -13,6 +13,8 @@ Every workspace member has exactly one role. Roles are ordered by privilege:
 | **Member** | 2    | Standard participant                      |
 | **Guest**  | 1    | Limited access, cannot create channels    |
 
+See [Workspace Administration](administration.md) for the operational guide on managing members, invites, and settings.
+
 ### Permission Matrix
 
 | Action                              | Owner | Admin | Member | Guest |
