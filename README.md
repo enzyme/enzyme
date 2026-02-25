@@ -1,112 +1,80 @@
-# Enzyme
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/readme-banner-dark.png" />
+    <source media="(prefers-color-scheme: light)" srcset=".github/readme-banner-light.png" />
+    <img src=".github/readme-banner-light.png" alt="Enzyme - Open-source team chat" width="800" />
+  </picture>
+</p>
 
-A self-hostable Slack alternative built with Go and React.
+<p align="center">
+  <a href="https://enzyme.chat">Website</a> ·
+  <a href="#documentation">Documentation</a> ·
+  <a href="docs/self-hosting.md">Self-Hosting</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
+
+---
 
 ## Features
 
-- **Workspaces** - Create teams with role-based permissions (owner, admin, member, guest)
-- **Channels** - Public, private, DM, and group DM conversations
-- **Messages** - Rich messaging with flat threading (Slack-style) and emoji reactions
-- **Real-time** - Server-Sent Events (SSE) with automatic reconnection
-- **Presence** - Online/away/offline status with typing indicators
-- **File Uploads** - Multipart uploads with configurable storage
+- **Channels** — Public, private, and group conversations to organize your team
+- **Threads** — Keep discussions focused with threaded replies
+- **Direct messages** — Private 1:1 and group conversations
+- **Reactions** — Emoji reactions on any message
+- **Presence** — See who's online with real-time status and typing indicators
+- **File uploads** — Share files and images directly in conversations
+- **Roles & permissions** — Owner, admin, member, and guest roles per workspace
+- **Real-time** — Instant updates powered by Server-Sent Events
+- **Dark mode** — Full dark mode support
+- **Desktop app** — Native Electron app for macOS, Windows, and Linux
+- **Single binary** — Deploy a single binary with the web client embedded
 
 ## Quick Start
 
-```bash
-# Install dependencies
-make install
-
-# Start development servers
-make dev
-```
-
-This starts:
-
-- **API** at http://localhost:8080
-- **Web** at http://localhost:3000
-
-## Project Structure
-
-```
-enzyme/
-├── api/                    # Go backend server
-├── apps/
-│   ├── desktop/            # Electron desktop client
-│   ├── web/                # React frontend
-│   └── website/            # Marketing site (Eleventy)
-├── packages/api-client/    # Shared TypeScript types
-└── Makefile                # Build orchestration
-```
-
-## Commands
-
-| Command               | Description                   |
-| --------------------- | ----------------------------- |
-| `make dev`            | Start API and web dev servers |
-| `make dev DESKTOP=1`  | Also start Electron           |
-| `make build`          | Build all packages            |
-| `make test`           | Run all tests                 |
-| `make generate-types` | Regenerate types from OpenAPI |
-| `make lint`           | Lint all code                 |
-
-## Type Sharing
-
-Types are generated from `api/openapi.yaml` and shared via the `@enzyme/api-client` package:
+Download the latest release and run it — that's it.
 
 ```bash
-# Regenerate after API changes
-make generate-types
+curl -LO https://github.com/enzyme/enzyme/releases/latest/download/enzyme-linux-amd64
+chmod +x enzyme-linux-amd64
+./enzyme-linux-amd64
 ```
 
-## CI/CD
+The server starts on `http://localhost:8080` and serves both the API and web client. See the [self-hosting guide](docs/self-hosting.md) for production deployment with TLS and systemd.
 
-### Continuous Integration
+## Configuration
 
-CI runs automatically on every push to `main` and on pull requests:
-
-- Linting (Go vet, ESLint)
-- Tests (Go tests)
-- Type checking (TypeScript)
-- Build verification
-
-### Releases
-
-Releases are triggered by pushing a version tag:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-This builds binaries for 6 platforms (each with the web client embedded) and creates a GitHub Release:
-
-- `enzyme-linux-amd64`, `enzyme-linux-arm64`
-- `enzyme-darwin-amd64`, `enzyme-darwin-arm64`
-- `enzyme-windows-amd64.exe`, `enzyme-windows-arm64.exe`
+Enzyme is configured via config file, environment variables, or CLI flags. See the [configuration guide](docs/configuration.md) for all available options.
 
 ## Documentation
 
-| Document      | Path                                           |
-| ------------- | ---------------------------------------------- |
-| API (Go)      | [api/README.md](api/README.md)                 |
-| Web (React)   | [apps/web/README.md](apps/web/README.md)       |
-| Self-Hosting  | [docs/self-hosting.md](docs/self-hosting.md)   |
-| Configuration | [docs/configuration.md](docs/configuration.md) |
-| Permissions   | [docs/permissions.md](docs/permissions.md)     |
-| Scaling       | [docs/scaling.md](docs/scaling.md)             |
+| Guide            | Description                             |
+| ---------------- | --------------------------------------- |
+| [Self-Hosting]   | Deploy Enzyme on your own server        |
+| [Configuration]  | All configuration options               |
+| [Permissions]    | Roles, permissions, and access control  |
+| [Administration] | Workspace administration                |
+| [Scaling]        | Performance tuning and scaling          |
+| [Security]       | Security model and best practices       |
+| [Notifications]  | Notification preferences and behavior   |
+| [Messages]       | Message formatting and features         |
+| [API]            | Go backend architecture and development |
+| [Web]            | React frontend architecture             |
 
-## Tech Stack
+[Self-Hosting]: docs/self-hosting.md
+[Configuration]: docs/configuration.md
+[Permissions]: docs/permissions.md
+[Administration]: docs/administration.md
+[Scaling]: docs/scaling.md
+[Security]: docs/security.md
+[Notifications]: docs/notifications.md
+[Messages]: docs/messages.md
+[API]: api/README.md
+[Web]: apps/web/README.md
 
-| Component     | Technology                                                 |
-| ------------- | ---------------------------------------------------------- |
-| Backend       | Go, Chi, SQLite                                            |
-| Frontend      | React, TypeScript, Vite, TanStack Query, Zustand, Tailwind |
-| UI Components | React Aria Components, tailwind-variants                   |
-| Desktop       | Electron, electron-forge                                   |
-| Real-time     | Server-Sent Events                                         |
-| Types         | OpenAPI 3.0, oapi-codegen, openapi-typescript              |
+## Contributing
+
+Contributions are welcome! Whether it's bug reports, feature requests, or pull requests — all help is appreciated. See the [contributing guide](CONTRIBUTING.md) for development setup and workflow.
 
 ## License
 
-MIT - see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE) for details.
