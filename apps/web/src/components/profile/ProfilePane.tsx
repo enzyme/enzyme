@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { Button as AriaButton } from 'react-aria-components';
 import { XMarkIcon, PhotoIcon, TrashIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
 import {
   useUserProfile,
@@ -10,7 +11,8 @@ import {
 } from '../../hooks';
 import { useProfilePanel } from '../../hooks/usePanel';
 import { useBlocks, useBlockUser, useUnblockUser } from '../../hooks/useModeration';
-import { Button, IconButton, Input, Spinner, toast } from '../ui';
+import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
+import { Button, IconButton, Input, Modal, Spinner, Tooltip, toast } from '../ui';
 import { cn, getInitials, getAvatarColor } from '../../lib/utils';
 import { useUserPresence } from '../../lib/presenceStore';
 
@@ -85,9 +87,13 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
   const [gravatarFailed, setGravatarFailed] = useState(false);
   const presence = useUserPresence(profile.id);
   const { data: blocksData } = useBlocks(workspaceId);
+  const { data: membersData } = useWorkspaceMembers(workspaceId || '');
   const blockUserMutation = useBlockUser(workspaceId);
   const unblockUserMutation = useUnblockUser(workspaceId);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const isBlocked = blocksData?.blocks?.some((b) => b.blocked_id === profile.id) ?? false;
+  const targetRole = membersData?.members?.find((m) => m.user_id === profile.id)?.role;
+  const canBlock = targetRole !== 'owner' && targetRole !== 'admin';
 
   const handleToggleBlock = async () => {
     try {
@@ -167,17 +173,68 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
       )}
 
       {/* Block button (only for other profiles) */}
-      {!isOwnProfile && (
-        <Button
-          variant={isBlocked ? 'secondary' : 'danger'}
-          className="w-full"
-          onPress={handleToggleBlock}
-          isLoading={blockUserMutation.isPending || unblockUserMutation.isPending}
-        >
-          <NoSymbolIcon className="mr-1 h-4 w-4" />
-          {isBlocked ? 'Unblock User' : 'Block User'}
-        </Button>
-      )}
+      {!isOwnProfile && !canBlock && !isBlocked ? (
+        <Tooltip content="Cannot block users with admin or owner role">
+          <AriaButton className="flex w-full cursor-default items-center justify-center gap-1 rounded-lg border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500">
+            <NoSymbolIcon className="mr-1 h-4 w-4" />
+            Block User
+          </AriaButton>
+        </Tooltip>
+      ) : !isOwnProfile ? (
+        isBlocked ? (
+          <Button
+            variant="secondary"
+            className="w-full"
+            onPress={handleToggleBlock}
+            isLoading={unblockUserMutation.isPending}
+          >
+            <NoSymbolIcon className="mr-1 h-4 w-4" />
+            Unblock User
+          </Button>
+        ) : (
+          <Button
+            variant="danger"
+            className="w-full"
+            onPress={() => setShowBlockConfirm(true)}
+            isLoading={blockUserMutation.isPending}
+          >
+            <NoSymbolIcon className="mr-1 h-4 w-4" />
+            Block User
+          </Button>
+        )
+      ) : null}
+
+      <Modal
+        isOpen={showBlockConfirm}
+        onClose={() => setShowBlockConfirm(false)}
+        title={`Block ${profile.display_name}?`}
+        size="sm"
+      >
+        <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+          Blocking this user will:
+        </p>
+        <ul className="mb-5 list-disc space-y-1 pl-5 text-sm text-gray-600 dark:text-gray-300">
+          <li>Hide your messages from each other in channels</li>
+          <li>Prevent either of you from sending DMs to the other</li>
+          <li>Prevent you from mentioning each other</li>
+          <li>Prevent you from being placed in the same group DMs</li>
+        </ul>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onPress={() => setShowBlockConfirm(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onPress={async () => {
+              await handleToggleBlock();
+              setShowBlockConfirm(false);
+            }}
+            isLoading={blockUserMutation.isPending}
+          >
+            Block
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
