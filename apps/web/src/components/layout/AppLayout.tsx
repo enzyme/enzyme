@@ -51,7 +51,7 @@ export function AppLayout() {
   }, []);
 
   // Record channel visits for recent channels
-  const prevChannelRef = useRef<string>();
+  const prevChannelRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (workspaceId && channelId && channelId !== prevChannelRef.current) {
       prevChannelRef.current = channelId;
