@@ -104,6 +104,58 @@ These are defined in `api/internal/channel/model.go`:
 | **Upload custom emoji** | Any workspace member                    |
 | **Delete custom emoji** | Emoji uploader OR workspace owner/admin |
 
+## Moderation
+
+### Banning
+
+Workspace owners and admins can ban members from a workspace. Banning removes the user's membership and prevents them from rejoining via invite links.
+
+| Action         | Owner | Admin | Member | Guest |
+| -------------- | :---: | :---: | :----: | :---: |
+| Ban a user     |   ✓   |   ✓   |        |       |
+| Unban a user   |   ✓   |   ✓   |        |       |
+| View bans list |   ✓   |   ✓   |        |       |
+
+**Restrictions**:
+
+- Cannot ban yourself
+- Cannot ban users with an equal or higher role (admins cannot ban other admins or the owner)
+- Bans can be permanent or temporary (with expiry)
+- Optional: hide the banned user's messages from other members
+
+### Message Pinning
+
+| Action          | Owner | Admin | Member | Guest |
+| --------------- | :---: | :---: | :----: | :---: |
+| Pin a message   |   ✓   |   ✓   |        |       |
+| Unpin a message |   ✓   |   ✓   |        |       |
+| View pinned     |   ✓   |   ✓   |   ✓    |   ✓   |
+
+### Personal Blocking
+
+Any user can block another user. Blocks are cross-workspace and invisible to the blocked user.
+
+| Action       | Any authenticated user |
+| ------------ | :--------------------: |
+| Block user   |           ✓            |
+| Unblock user |           ✓            |
+| List blocks  |           ✓            |
+
+**Restrictions**:
+
+- Cannot block yourself
+- Blocks are one-directional (A blocking B does not prevent B from seeing A's messages)
+
+### Audit Log
+
+All moderation actions are recorded in a workspace audit log.
+
+| Action         | Owner | Admin | Member | Guest |
+| -------------- | :---: | :---: | :----: | :---: |
+| View audit log |   ✓   |   ✓   |        |       |
+
+**Logged actions**: `user.banned`, `user.unbanned`, `member.removed`, `member.role_changed`, `message.deleted` (admin delete), `channel.archived`
+
 ## Server Level
 
 There are no server-level roles. The `GET /api/server/info` endpoint returns only the server version and is unauthenticated. All administrative actions are scoped to individual workspaces.
