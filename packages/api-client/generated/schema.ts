@@ -2140,11 +2140,14 @@ export interface components {
             action: string;
             target_type: string;
             target_id: string;
-            metadata?: string;
+            metadata?: {
+                [key: string]: unknown;
+            };
             /** Format: date-time */
             created_at: string;
             actor_display_name?: string;
             actor_avatar_url?: string;
+            target_display_name?: string;
         };
     };
     responses: {

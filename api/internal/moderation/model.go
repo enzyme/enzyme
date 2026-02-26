@@ -53,11 +53,12 @@ type AuditLogEntry struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
-// AuditLogEntryWithActor includes actor display info
+// AuditLogEntryWithActor includes actor and target display info
 type AuditLogEntryWithActor struct {
 	AuditLogEntry
-	ActorDisplayName string  `json:"actor_display_name"`
-	ActorAvatarURL   *string `json:"actor_avatar_url,omitempty"`
+	ActorDisplayName  string  `json:"actor_display_name"`
+	ActorAvatarURL    *string `json:"actor_avatar_url,omitempty"`
+	TargetDisplayName *string `json:"target_display_name,omitempty"`
 }
 
 // Moderation action constants

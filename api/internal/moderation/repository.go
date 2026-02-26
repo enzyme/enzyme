@@ -368,9 +368,11 @@ func (r *Repository) ListAuditLog(ctx context.Context, workspaceID string, curso
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT ml.id, ml.workspace_id, ml.actor_id, ml.action,
 			   ml.target_type, ml.target_id, ml.metadata, ml.created_at,
-			   u.display_name, u.avatar_url
+			   u.display_name, u.avatar_url,
+			   tu.display_name
 		FROM moderation_log ml
 		JOIN users u ON u.id = ml.actor_id
+		LEFT JOIN users tu ON tu.id = ml.target_id AND ml.target_type = 'user'
 		WHERE ml.workspace_id = ?
 		`+cursorClause+`
 		ORDER BY ml.id DESC
@@ -389,6 +391,7 @@ func (r *Repository) ListAuditLog(ctx context.Context, workspaceID string, curso
 			&e.ID, &e.WorkspaceID, &e.ActorID, &e.Action,
 			&e.TargetType, &e.TargetID, &e.Metadata, &createdAt,
 			&e.ActorDisplayName, &e.ActorAvatarURL,
+			&e.TargetDisplayName,
 		)
 		if err != nil {
 			return nil, false, "", err

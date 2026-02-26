@@ -400,16 +400,17 @@ type MessageWithUser struct {
 
 // ModerationLogEntryWithActor defines model for ModerationLogEntryWithActor.
 type ModerationLogEntryWithActor struct {
-	Action           string    `json:"action"`
-	ActorAvatarUrl   *string   `json:"actor_avatar_url,omitempty"`
-	ActorDisplayName *string   `json:"actor_display_name,omitempty"`
-	ActorId          string    `json:"actor_id"`
-	CreatedAt        time.Time `json:"created_at"`
-	Id               string    `json:"id"`
-	Metadata         *string   `json:"metadata,omitempty"`
-	TargetId         string    `json:"target_id"`
-	TargetType       string    `json:"target_type"`
-	WorkspaceId      string    `json:"workspace_id"`
+	Action            string                  `json:"action"`
+	ActorAvatarUrl    *string                 `json:"actor_avatar_url,omitempty"`
+	ActorDisplayName  *string                 `json:"actor_display_name,omitempty"`
+	ActorId           string                  `json:"actor_id"`
+	CreatedAt         time.Time               `json:"created_at"`
+	Id                string                  `json:"id"`
+	Metadata          *map[string]interface{} `json:"metadata,omitempty"`
+	TargetDisplayName *string                 `json:"target_display_name,omitempty"`
+	TargetId          string                  `json:"target_id"`
+	TargetType        string                  `json:"target_type"`
+	WorkspaceId       string                  `json:"workspace_id"`
 }
 
 // NotificationPreferences defines model for NotificationPreferences.

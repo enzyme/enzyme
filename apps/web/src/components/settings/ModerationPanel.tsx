@@ -295,19 +295,19 @@ function AuditLog({ workspaceId }: { workspaceId: string }) {
               <span className="font-medium">{entry.actor_display_name || 'System'}</span>
               {' '}
               {formatAction(entry.action)}
-              {' '}
-              {entry.target_id && (
-                <span className="text-gray-500 dark:text-gray-400">
-                  ({entry.target_type}: {entry.target_id.slice(0, 8)}...)
-                </span>
+              {entry.target_display_name && (
+                <>
+                  {' '}
+                  <span className="font-medium">{entry.target_display_name}</span>
+                </>
               )}
             </span>
           </div>
-          {entry.metadata && Object.keys(entry.metadata).length > 0 && (
+          {entry.metadata && typeof entry.metadata === 'object' && Object.keys(entry.metadata).length > 0 && (
             <div className="mt-1 ml-6 text-xs text-gray-500 dark:text-gray-400">
               {Object.entries(entry.metadata).map(([key, value]) => (
                 <span key={key} className="mr-3">
-                  {key}: {String(value)}
+                  {formatMetadataKey(key)}: {String(value)}
                 </span>
               ))}
             </div>
@@ -332,6 +332,10 @@ function AuditLog({ workspaceId }: { workspaceId: string }) {
       )}
     </div>
   );
+}
+
+function formatMetadataKey(key: string): string {
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function formatAction(action: string): string {

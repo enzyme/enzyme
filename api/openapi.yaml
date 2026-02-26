@@ -4038,11 +4038,14 @@ components:
         target_id:
           type: string
         metadata:
-          type: string
+          type: object
+          additionalProperties: true
         created_at:
           type: string
           format: date-time
         actor_display_name:
           type: string
         actor_avatar_url:
+          type: string
+        target_display_name:
           type: string

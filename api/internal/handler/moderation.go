@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"time"
@@ -373,17 +374,25 @@ func (h *Handler) ListModerationLog(ctx context.Context, request openapi.ListMod
 
 	apiEntries := make([]openapi.ModerationLogEntryWithActor, len(entries))
 	for i, e := range entries {
+		var metadata *map[string]interface{}
+		if e.Metadata != nil {
+			var m map[string]interface{}
+			if err := json.Unmarshal([]byte(*e.Metadata), &m); err == nil {
+				metadata = &m
+			}
+		}
 		apiEntries[i] = openapi.ModerationLogEntryWithActor{
-			Id:               e.ID,
-			WorkspaceId:      e.WorkspaceID,
-			ActorId:          e.ActorID,
-			Action:           e.Action,
-			TargetType:       e.TargetType,
-			TargetId:         e.TargetID,
-			Metadata:         e.Metadata,
-			CreatedAt:        e.CreatedAt,
-			ActorDisplayName: &e.ActorDisplayName,
-			ActorAvatarUrl:   e.ActorAvatarURL,
+			Id:                e.ID,
+			WorkspaceId:       e.WorkspaceID,
+			ActorId:           e.ActorID,
+			Action:            e.Action,
+			TargetType:        e.TargetType,
+			TargetId:          e.TargetID,
+			Metadata:          metadata,
+			CreatedAt:         e.CreatedAt,
+			ActorDisplayName:  &e.ActorDisplayName,
+			ActorAvatarUrl:    e.ActorAvatarURL,
+			TargetDisplayName: e.TargetDisplayName,
 		}
 	}
 
