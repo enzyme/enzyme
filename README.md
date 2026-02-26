@@ -13,11 +13,9 @@
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
----
-
 ## Features
 
-- **Channels** — Public, private, and group conversations to organize your team
+- **Channels** — Public, private, and group conversations to keep things organized
 - **Threads** — Keep discussions focused with threaded replies
 - **Direct messages** — Private 1:1 and group conversations
 - **Reactions** — Emoji reactions on any message
@@ -28,6 +26,12 @@
 - **Dark mode** — Full dark mode support
 - **Desktop app** — Native Electron app for macOS, Windows, and Linux
 - **Single binary** — Deploy a single binary with the web client embedded
+
+## Why Enzyme?
+
+Enzyme is fully open-source (not just open-core), self-hostable, and designed to feel familiar to anyone who's used Slack. You own your data, you own your instance, and the license guarantees that won't change.
+
+For a detailed comparison with other options, see [Alternatives](docs/alternatives.md).
 
 ## Quick Start
 
