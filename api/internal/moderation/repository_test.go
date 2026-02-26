@@ -300,23 +300,24 @@ func TestListActiveBans_ExcludesExpired(t *testing.T) {
 	}
 }
 
-// --- Block Tests ---
+// --- Block Tests (workspace-scoped) ---
 
 func TestCreateBlock(t *testing.T) {
 	db := testutil.TestDB(t)
 	repo := NewRepository(db)
 	ctx := context.Background()
 
-	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User One")
-	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User Two")
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
+	user := testutil.CreateTestUser(t, db, "user@example.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
-	err := repo.CreateBlock(ctx, user1.ID, user2.ID)
+	err := repo.CreateBlock(ctx, ws.ID, owner.ID, user.ID)
 	if err != nil {
 		t.Fatalf("CreateBlock() error = %v", err)
 	}
 
 	// Verify block exists
-	blocked, err := repo.IsBlocked(ctx, user1.ID, user2.ID)
+	blocked, err := repo.IsBlocked(ctx, ws.ID, owner.ID, user.ID)
 	if err != nil {
 		t.Fatalf("IsBlocked() error = %v", err)
 	}
@@ -330,15 +331,42 @@ func TestCreateBlock_Idempotent(t *testing.T) {
 	repo := NewRepository(db)
 	ctx := context.Background()
 
-	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User One")
-	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User Two")
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
+	user := testutil.CreateTestUser(t, db, "user@example.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
-	repo.CreateBlock(ctx, user1.ID, user2.ID)
+	repo.CreateBlock(ctx, ws.ID, owner.ID, user.ID)
 
 	// Second block should succeed (idempotent)
-	err := repo.CreateBlock(ctx, user1.ID, user2.ID)
+	err := repo.CreateBlock(ctx, ws.ID, owner.ID, user.ID)
 	if err != nil {
 		t.Errorf("CreateBlock() duplicate error = %v, want nil (idempotent)", err)
+	}
+}
+
+func TestCreateBlock_WorkspaceScoped(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
+	user := testutil.CreateTestUser(t, db, "user@example.com", "User")
+	ws1 := testutil.CreateTestWorkspace(t, db, owner.ID, "Workspace 1")
+	ws2 := testutil.CreateTestWorkspace(t, db, owner.ID, "Workspace 2")
+
+	// Block in workspace 1
+	repo.CreateBlock(ctx, ws1.ID, owner.ID, user.ID)
+
+	// Block should exist in workspace 1
+	blocked, _ := repo.IsBlocked(ctx, ws1.ID, owner.ID, user.ID)
+	if !blocked {
+		t.Error("expected block in workspace 1")
+	}
+
+	// Block should NOT exist in workspace 2
+	blocked, _ = repo.IsBlocked(ctx, ws2.ID, owner.ID, user.ID)
+	if blocked {
+		t.Error("expected no block in workspace 2")
 	}
 }
 
@@ -347,18 +375,19 @@ func TestDeleteBlock(t *testing.T) {
 	repo := NewRepository(db)
 	ctx := context.Background()
 
-	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User One")
-	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User Two")
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
+	user := testutil.CreateTestUser(t, db, "user@example.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
-	repo.CreateBlock(ctx, user1.ID, user2.ID)
+	repo.CreateBlock(ctx, ws.ID, owner.ID, user.ID)
 
-	err := repo.DeleteBlock(ctx, user1.ID, user2.ID)
+	err := repo.DeleteBlock(ctx, ws.ID, owner.ID, user.ID)
 	if err != nil {
 		t.Fatalf("DeleteBlock() error = %v", err)
 	}
 
 	// Verify block is gone
-	blocked, _ := repo.IsBlocked(ctx, user1.ID, user2.ID)
+	blocked, _ := repo.IsBlocked(ctx, ws.ID, owner.ID, user.ID)
 	if blocked {
 		t.Error("expected IsBlocked = false after deletion")
 	}
@@ -369,8 +398,11 @@ func TestDeleteBlock_Idempotent(t *testing.T) {
 	repo := NewRepository(db)
 	ctx := context.Background()
 
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
+
 	// Deleting a non-existent block should not error
-	err := repo.DeleteBlock(ctx, "user-a", "user-b")
+	err := repo.DeleteBlock(ctx, ws.ID, "user-a", "user-b")
 	if err != nil {
 		t.Errorf("DeleteBlock() non-existent error = %v, want nil", err)
 	}
@@ -381,14 +413,15 @@ func TestListBlocks(t *testing.T) {
 	repo := NewRepository(db)
 	ctx := context.Background()
 
-	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User One")
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User Two")
 	user3 := testutil.CreateTestUser(t, db, "user3@example.com", "User Three")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
-	repo.CreateBlock(ctx, user1.ID, user2.ID)
-	repo.CreateBlock(ctx, user1.ID, user3.ID)
+	repo.CreateBlock(ctx, ws.ID, owner.ID, user2.ID)
+	repo.CreateBlock(ctx, ws.ID, owner.ID, user3.ID)
 
-	blocks, err := repo.ListBlocks(ctx, user1.ID)
+	blocks, err := repo.ListBlocks(ctx, ws.ID, owner.ID)
 	if err != nil {
 		t.Fatalf("ListBlocks() error = %v", err)
 	}
@@ -401,6 +434,32 @@ func TestListBlocks(t *testing.T) {
 		if b.DisplayName == "" {
 			t.Error("expected non-empty DisplayName")
 		}
+		if b.WorkspaceID != ws.ID {
+			t.Errorf("WorkspaceID = %q, want %q", b.WorkspaceID, ws.ID)
+		}
+	}
+}
+
+func TestListBlocks_ScopedToWorkspace(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
+	user := testutil.CreateTestUser(t, db, "user@example.com", "User")
+	ws1 := testutil.CreateTestWorkspace(t, db, owner.ID, "Workspace 1")
+	ws2 := testutil.CreateTestWorkspace(t, db, owner.ID, "Workspace 2")
+
+	repo.CreateBlock(ctx, ws1.ID, owner.ID, user.ID)
+	repo.CreateBlock(ctx, ws2.ID, owner.ID, user.ID)
+
+	// List blocks in workspace 1 only
+	blocks, err := repo.ListBlocks(ctx, ws1.ID, owner.ID)
+	if err != nil {
+		t.Fatalf("ListBlocks() error = %v", err)
+	}
+	if len(blocks) != 1 {
+		t.Fatalf("len(blocks) = %d, want 1 (workspace-scoped)", len(blocks))
 	}
 }
 
@@ -409,9 +468,10 @@ func TestListBlocks_Empty(t *testing.T) {
 	repo := NewRepository(db)
 	ctx := context.Background()
 
-	user := testutil.CreateTestUser(t, db, "user@example.com", "User")
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
-	blocks, err := repo.ListBlocks(ctx, user.ID)
+	blocks, err := repo.ListBlocks(ctx, ws.ID, owner.ID)
 	if err != nil {
 		t.Fatalf("ListBlocks() error = %v", err)
 	}
@@ -425,14 +485,15 @@ func TestGetBlockedUserIDs(t *testing.T) {
 	repo := NewRepository(db)
 	ctx := context.Background()
 
-	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User One")
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User Two")
 	user3 := testutil.CreateTestUser(t, db, "user3@example.com", "User Three")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
-	repo.CreateBlock(ctx, user1.ID, user2.ID)
-	repo.CreateBlock(ctx, user1.ID, user3.ID)
+	repo.CreateBlock(ctx, ws.ID, owner.ID, user2.ID)
+	repo.CreateBlock(ctx, ws.ID, owner.ID, user3.ID)
 
-	blocked, err := repo.GetBlockedUserIDs(ctx, user1.ID)
+	blocked, err := repo.GetBlockedUserIDs(ctx, ws.ID, owner.ID)
 	if err != nil {
 		t.Fatalf("GetBlockedUserIDs() error = %v", err)
 	}
@@ -452,21 +513,22 @@ func TestIsBlocked_DirectionMatters(t *testing.T) {
 	repo := NewRepository(db)
 	ctx := context.Background()
 
-	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User One")
-	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User Two")
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
+	user := testutil.CreateTestUser(t, db, "user@example.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
-	repo.CreateBlock(ctx, user1.ID, user2.ID)
+	repo.CreateBlock(ctx, ws.ID, owner.ID, user.ID)
 
-	// user1 blocked user2
-	blocked, _ := repo.IsBlocked(ctx, user1.ID, user2.ID)
+	// owner blocked user
+	blocked, _ := repo.IsBlocked(ctx, ws.ID, owner.ID, user.ID)
 	if !blocked {
-		t.Error("expected user1->user2 blocked = true")
+		t.Error("expected owner->user blocked = true")
 	}
 
-	// user2 did NOT block user1
-	blocked, _ = repo.IsBlocked(ctx, user2.ID, user1.ID)
+	// user did NOT block owner
+	blocked, _ = repo.IsBlocked(ctx, ws.ID, user.ID, owner.ID)
 	if blocked {
-		t.Error("expected user2->user1 blocked = false")
+		t.Error("expected user->owner blocked = false")
 	}
 }
 
@@ -475,27 +537,54 @@ func TestIsBlockedEitherDirection(t *testing.T) {
 	repo := NewRepository(db)
 	ctx := context.Background()
 
-	user1 := testutil.CreateTestUser(t, db, "user1@example.com", "User One")
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
 	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User Two")
 	user3 := testutil.CreateTestUser(t, db, "user3@example.com", "User Three")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
-	// user1 blocks user2
-	repo.CreateBlock(ctx, user1.ID, user2.ID)
+	// owner blocks user2
+	repo.CreateBlock(ctx, ws.ID, owner.ID, user2.ID)
 
 	// Either direction should return true
-	blocked, _ := repo.IsBlockedEitherDirection(ctx, user1.ID, user2.ID)
+	blocked, _ := repo.IsBlockedEitherDirection(ctx, ws.ID, owner.ID, user2.ID)
 	if !blocked {
-		t.Error("expected blocked in user1->user2 direction")
+		t.Error("expected blocked in owner->user2 direction")
 	}
-	blocked, _ = repo.IsBlockedEitherDirection(ctx, user2.ID, user1.ID)
+	blocked, _ = repo.IsBlockedEitherDirection(ctx, ws.ID, user2.ID, owner.ID)
 	if !blocked {
-		t.Error("expected blocked in user2->user1 direction")
+		t.Error("expected blocked in user2->owner direction")
 	}
 
-	// No block between user1 and user3
-	blocked, _ = repo.IsBlockedEitherDirection(ctx, user1.ID, user3.ID)
+	// No block between owner and user3
+	blocked, _ = repo.IsBlockedEitherDirection(ctx, ws.ID, owner.ID, user3.ID)
 	if blocked {
-		t.Error("expected no block between user1 and user3")
+		t.Error("expected no block between owner and user3")
+	}
+}
+
+func TestIsBlockedEitherDirection_WorkspaceScoped(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
+	user := testutil.CreateTestUser(t, db, "user@example.com", "User")
+	ws1 := testutil.CreateTestWorkspace(t, db, owner.ID, "Workspace 1")
+	ws2 := testutil.CreateTestWorkspace(t, db, owner.ID, "Workspace 2")
+
+	// Block in workspace 1 only
+	repo.CreateBlock(ctx, ws1.ID, owner.ID, user.ID)
+
+	// Should be blocked in workspace 1
+	blocked, _ := repo.IsBlockedEitherDirection(ctx, ws1.ID, owner.ID, user.ID)
+	if !blocked {
+		t.Error("expected blocked in workspace 1")
+	}
+
+	// Should NOT be blocked in workspace 2
+	blocked, _ = repo.IsBlockedEitherDirection(ctx, ws2.ID, owner.ID, user.ID)
+	if blocked {
+		t.Error("expected no block in workspace 2")
 	}
 }
 

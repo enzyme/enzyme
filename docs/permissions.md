@@ -133,18 +133,22 @@ Workspace owners and admins can ban members from a workspace. Banning removes th
 
 ### Personal Blocking
 
-Any user can block another user. Blocks are cross-workspace and invisible to the blocked user.
+Any workspace member can block another member within that workspace. Blocks are workspace-scoped and invisible to the blocked user.
 
-| Action       | Any authenticated user |
-| ------------ | :--------------------: |
-| Block user   |           ✓            |
-| Unblock user |           ✓            |
-| List blocks  |           ✓            |
+| Action       | Owner | Admin | Member | Guest |
+| ------------ | :---: | :---: | :----: | :---: |
+| Block user   |   ✓   |   ✓   |   ✓    |   ✓   |
+| Unblock user |   ✓   |   ✓   |   ✓    |   ✓   |
+| List blocks  |   ✓   |   ✓   |   ✓    |   ✓   |
 
 **Restrictions**:
 
 - Cannot block yourself
+- Cannot block users with `admin` or `owner` role in the workspace
+- Blocks are workspace-scoped (blocking in workspace A does not affect workspace B)
 - Blocks are one-directional (A blocking B does not prevent B from seeing A's messages)
+- Unblocking has no role restriction — you can always undo your own block
+- If a blocked user is later promoted to admin/owner, the existing block persists (role check applies at creation time only)
 
 ### Audit Log
 

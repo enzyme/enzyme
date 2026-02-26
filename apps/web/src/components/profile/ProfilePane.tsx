@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { XMarkIcon, PhotoIcon, TrashIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
 import {
   useUserProfile,
@@ -80,11 +81,12 @@ interface ViewProfileProps {
 }
 
 function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
   const [gravatarFailed, setGravatarFailed] = useState(false);
   const presence = useUserPresence(profile.id);
-  const { data: blocksData } = useBlocks();
-  const blockUserMutation = useBlockUser();
-  const unblockUserMutation = useUnblockUser();
+  const { data: blocksData } = useBlocks(workspaceId);
+  const blockUserMutation = useBlockUser(workspaceId);
+  const unblockUserMutation = useUnblockUser(workspaceId);
   const isBlocked = blocksData?.blocks?.some((b) => b.blocked_id === profile.id) ?? false;
 
   const handleToggleBlock = async () => {

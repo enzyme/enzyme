@@ -36,13 +36,15 @@ export const moderationApi = {
       input || {},
     ),
 
-  // Blocking
-  blockUser: (userId: string) => post<{ success: boolean }>('/users/blocks/create', { user_id: userId }),
+  // Blocking (workspace-scoped)
+  blockUser: (workspaceId: string, userId: string) =>
+    post<{ success: boolean }>(`/workspaces/${workspaceId}/blocks/create`, { user_id: userId }),
 
-  unblockUser: (userId: string) =>
-    post<{ success: boolean }>('/users/blocks/remove', { user_id: userId }),
+  unblockUser: (workspaceId: string, userId: string) =>
+    post<{ success: boolean }>(`/workspaces/${workspaceId}/blocks/remove`, { user_id: userId }),
 
-  listBlocks: () => get<{ blocks: BlockWithUser[] }>('/users/blocks/list'),
+  listBlocks: (workspaceId: string) =>
+    get<{ blocks: BlockWithUser[] }>(`/workspaces/${workspaceId}/blocks`),
 
   // Moderation log
   listModerationLog: (workspaceId: string, input?: { cursor?: string; limit?: number }) =>

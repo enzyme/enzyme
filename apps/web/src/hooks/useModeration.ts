@@ -111,33 +111,34 @@ export function useUnbanUser(workspaceId: string) {
   });
 }
 
-// --- Blocking ---
+// --- Blocking (workspace-scoped) ---
 
-export function useBlocks() {
+export function useBlocks(workspaceId: string | undefined) {
   return useQuery({
-    queryKey: ['user-blocks'],
-    queryFn: () => moderationApi.listBlocks(),
+    queryKey: ['user-blocks', workspaceId],
+    queryFn: () => moderationApi.listBlocks(workspaceId!),
+    enabled: !!workspaceId,
   });
 }
 
-export function useBlockUser() {
+export function useBlockUser(workspaceId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userId: string) => moderationApi.blockUser(userId),
+    mutationFn: (userId: string) => moderationApi.blockUser(workspaceId!, userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-blocks'] });
+      queryClient.invalidateQueries({ queryKey: ['user-blocks', workspaceId] });
     },
   });
 }
 
-export function useUnblockUser() {
+export function useUnblockUser(workspaceId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userId: string) => moderationApi.unblockUser(userId),
+    mutationFn: (userId: string) => moderationApi.unblockUser(workspaceId!, userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-blocks'] });
+      queryClient.invalidateQueries({ queryKey: ['user-blocks', workspaceId] });
     },
   });
 }
