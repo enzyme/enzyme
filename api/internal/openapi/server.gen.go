@@ -741,10 +741,13 @@ type WorkspaceMemberWithUser struct {
 	Email               openapi_types.Email `json:"email"`
 	GravatarUrl         *string             `json:"gravatar_url,omitempty"`
 	Id                  string              `json:"id"`
-	Role                WorkspaceRole       `json:"role"`
-	UpdatedAt           time.Time           `json:"updated_at"`
-	UserId              string              `json:"user_id"`
-	WorkspaceId         string              `json:"workspace_id"`
+
+	// IsBanned Whether the user is currently banned from the workspace
+	IsBanned    *bool         `json:"is_banned,omitempty"`
+	Role        WorkspaceRole `json:"role"`
+	UpdatedAt   time.Time     `json:"updated_at"`
+	UserId      string        `json:"user_id"`
+	WorkspaceId string        `json:"workspace_id"`
 }
 
 // WorkspaceMembership defines model for WorkspaceMembership.
@@ -776,6 +779,11 @@ type WorkspaceSettings struct {
 
 // WorkspaceSummary defines model for WorkspaceSummary.
 type WorkspaceSummary struct {
+	// Ban Present when the user is banned from this workspace
+	Ban *struct {
+		ExpiresAt *time.Time `json:"expires_at,omitempty"`
+		Reason    *string    `json:"reason,omitempty"`
+	} `json:"ban,omitempty"`
 	IconUrl *string       `json:"icon_url,omitempty"`
 	Id      string        `json:"id"`
 	Name    string        `json:"name"`

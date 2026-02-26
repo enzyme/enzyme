@@ -448,6 +448,7 @@ func memberWithUserToAPI(m workspace.MemberWithUser) openapi.WorkspaceMemberWith
 		Email:               openapi_types.Email(m.Email),
 		DisplayName:         m.DisplayName,
 		AvatarUrl:           m.AvatarURL,
+		IsBanned:            &m.IsBanned,
 	}
 	if g := gravatar.URL(m.Email); g != "" {
 		member.GravatarUrl = &g

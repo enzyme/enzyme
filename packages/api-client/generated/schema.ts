@@ -1414,6 +1414,12 @@ export interface components {
             role: components["schemas"]["WorkspaceRole"];
             /** @description User's custom sort order for this workspace */
             sort_order?: number;
+            /** @description Present when the user is banned from this workspace */
+            ban?: {
+                reason?: string;
+                /** Format: date-time */
+                expires_at?: string;
+            };
         };
         WorkspaceNotificationSummary: {
             workspace_id: string;
@@ -1437,6 +1443,8 @@ export interface components {
             display_name: string;
             avatar_url?: string;
             gravatar_url?: string;
+            /** @description Whether the user is currently banned from the workspace */
+            is_banned?: boolean;
         };
         /** @enum {string} */
         WorkspaceRole: "owner" | "admin" | "member" | "guest";
@@ -1959,6 +1967,11 @@ export interface components {
             data: {
                 user_id: string;
                 workspace_id: string;
+                banned_by?: string;
+                reason?: string;
+                /** Format: date-time */
+                expires_at?: string;
+                workspace_name?: string;
             };
         };
         SSEEventMemberUnbanned: {

@@ -65,6 +65,7 @@ type MemberWithUser struct {
 	Email       string  `json:"email"`
 	DisplayName string  `json:"display_name"`
 	AvatarURL   *string `json:"avatar_url,omitempty"`
+	IsBanned    bool    `json:"is_banned"`
 }
 
 type Invite struct {

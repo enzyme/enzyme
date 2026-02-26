@@ -10,7 +10,8 @@ import {
   WorkspaceSettingsModal,
   type WorkspaceSettingsTab,
 } from '../settings/WorkspaceSettingsModal';
-import { useSSE } from '../../hooks';
+import { BanModal } from '../moderation/BanModal';
+import { useSSE, useAuth } from '../../hooks';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { useSidebar } from '../../hooks/useSidebar';
 import { cn } from '../../lib/utils';
@@ -19,6 +20,8 @@ import { recordChannelVisit } from '../../lib/recentChannels';
 export function AppLayout() {
   const { workspaceId, channelId } = useParams<{ workspaceId: string; channelId: string }>();
   const { isReconnecting } = useSSE(workspaceId);
+  const { workspaces } = useAuth();
+  const currentWorkspace = workspaces?.find((ws) => ws.id === workspaceId);
   const { threadId } = useThreadPanel();
   const { profileUserId } = useProfilePanel();
   const { collapsed: sidebarCollapsed } = useSidebar();
@@ -149,6 +152,9 @@ export function AppLayout() {
           defaultTab={workspaceSettingsTab}
         />
       )}
+
+      {/* Ban Modal — dismissable overlay when user is banned */}
+      {currentWorkspace?.ban && <BanModal workspace={currentWorkspace} />}
     </div>
   );
 }

@@ -86,14 +86,19 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const [gravatarFailed, setGravatarFailed] = useState(false);
   const presence = useUserPresence(profile.id);
+  const { workspaces } = useAuth();
   const { data: blocksData } = useBlocks(workspaceId);
   const { data: membersData } = useWorkspaceMembers(workspaceId || '');
   const blockUserMutation = useBlockUser(workspaceId);
   const unblockUserMutation = useUnblockUser(workspaceId);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const isBlocked = blocksData?.blocks?.some((b) => b.blocked_id === profile.id) ?? false;
-  const targetRole = membersData?.members?.find((m) => m.user_id === profile.id)?.role;
+  const targetMember = membersData?.members?.find((m) => m.user_id === profile.id);
+  const targetRole = targetMember?.role;
+  const targetIsBanned = targetMember?.is_banned ?? false;
   const canBlock = targetRole !== 'owner' && targetRole !== 'admin';
+  const viewerRole = workspaces?.find((w) => w.id === workspaceId)?.role;
+  const viewerIsAdmin = viewerRole === 'owner' || viewerRole === 'admin';
 
   const handleToggleBlock = async () => {
     try {
@@ -149,10 +154,24 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
         <h4 className="text-xl font-semibold text-gray-900 dark:text-white">
           {profile.display_name}
         </h4>
-        <span className={cn('mt-1 inline-flex items-center gap-1.5 text-sm', status.color)}>
-          <span className={cn('h-2 w-2 rounded-full', status.dot)} />
-          {status.label}
-        </span>
+        {targetIsBanned ? (
+          viewerIsAdmin ? (
+            <span className="mt-1 inline-flex items-center gap-1.5 text-sm text-red-600 dark:text-red-400">
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+              Banned
+            </span>
+          ) : (
+            <span className="mt-1 inline-flex items-center gap-1.5 text-sm text-gray-500">
+              <span className="h-2 w-2 rounded-full bg-gray-400" />
+              Deactivated
+            </span>
+          )
+        ) : (
+          <span className={cn('mt-1 inline-flex items-center gap-1.5 text-sm', status.color)}>
+            <span className={cn('h-2 w-2 rounded-full', status.dot)} />
+            {status.label}
+          </span>
+        )}
       </div>
 
       {/* Details */}
@@ -172,8 +191,8 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
         </Button>
       )}
 
-      {/* Block button (only for other profiles) */}
-      {!isOwnProfile && !canBlock && !isBlocked ? (
+      {/* Block button (only for other profiles, hidden for banned users) */}
+      {!isOwnProfile && targetIsBanned ? null : !isOwnProfile && !canBlock && !isBlocked ? (
         <Tooltip content="Cannot block users with admin or owner role">
           <AriaButton className="flex w-full cursor-default items-center justify-center gap-1 rounded-lg border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500">
             <NoSymbolIcon className="mr-1 h-4 w-4" />
@@ -210,9 +229,7 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
         title={`Block ${profile.display_name}?`}
         size="sm"
       >
-        <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
-          Blocking this user will:
-        </p>
+        <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">Blocking this user will:</p>
         <ul className="mb-5 list-disc space-y-1 pl-5 text-sm text-gray-600 dark:text-gray-300">
           <li>Hide your messages from each other in channels</li>
           <li>Prevent either of you from sending DMs to the other</li>

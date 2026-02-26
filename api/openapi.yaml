@@ -2624,6 +2624,15 @@ components:
         sort_order:
           type: integer
           description: User's custom sort order for this workspace
+        ban:
+          type: object
+          description: Present when the user is banned from this workspace
+          properties:
+            reason:
+              type: string
+            expires_at:
+              type: string
+              format: date-time
 
     WorkspaceNotificationSummary:
       type: object
@@ -2672,6 +2681,9 @@ components:
               type: string
             gravatar_url:
               type: string
+            is_banned:
+              type: boolean
+              description: Whether the user is currently banned from the workspace
 
     WorkspaceRole:
       type: string
@@ -3664,6 +3676,15 @@ components:
             user_id:
               type: string
             workspace_id:
+              type: string
+            banned_by:
+              type: string
+            reason:
+              type: string
+            expires_at:
+              type: string
+              format: date-time
+            workspace_name:
               type: string
 
     SSEEventMemberUnbanned:

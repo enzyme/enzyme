@@ -203,6 +203,7 @@ export function ChannelPage() {
     }
   };
 
+  const isBanned = !!workspaceMembership?.ban;
   const canJoin = channel && channel.type === 'public' && !isMember;
   const canArchive =
     channel && channel.type !== 'dm' && channel.type !== 'group_dm' && !channel.is_default;
@@ -471,7 +472,14 @@ export function ChannelPage() {
         onAtBottomChange={handleAtBottomChange}
       />
 
-      {canJoin ? (
+      {isBanned ? (
+        /* Ban notice bar */
+        <div className="flex-shrink-0 border-t border-red-200 bg-red-50 px-4 py-3 dark:border-red-800 dark:bg-red-900/20">
+          <p className="text-center text-sm text-red-600 dark:text-red-400">
+            You are banned from this workspace and cannot send messages.
+          </p>
+        </div>
+      ) : canJoin ? (
         /* Join banner for non-member channels */
         <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
           <div className="flex items-center justify-between">

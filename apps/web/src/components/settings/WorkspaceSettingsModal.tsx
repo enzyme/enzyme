@@ -22,14 +22,7 @@ import {
   useCreateInvite,
 } from '../../hooks/useWorkspaces';
 import { useAuth } from '../../hooks';
-import {
-  Modal,
-  Avatar,
-  Button,
-  IconButton,
-  Spinner,
-  toast,
-} from '../ui';
+import { Modal, Avatar, Button, IconButton, Spinner, toast } from '../ui';
 import { useBlocks, useBlockUser, useUnblockUser } from '../../hooks/useModeration';
 import { CustomEmojiManager } from './CustomEmojiManager';
 import { ModerationPanel } from './ModerationPanel';
@@ -236,7 +229,12 @@ export function WorkspaceSettingsModal({
   const visibleNavItems = navItems.filter((item) => !item.adminOnly || canManage);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={workspace?.workspace.name || 'Workspace Settings'} size="settings">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={workspace?.workspace.name || 'Workspace Settings'}
+      size="settings"
+    >
       {isLoading ? (
         <div className="flex h-full items-center justify-center">
           <Spinner size="lg" />
@@ -280,7 +278,9 @@ export function WorkspaceSettingsModal({
                     <div
                       className={cn(
                         'flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl',
-                        !previewUrl && !workspace?.workspace.icon_url && getAvatarColor(workspaceId),
+                        !previewUrl &&
+                          !workspace?.workspace.icon_url &&
+                          getAvatarColor(workspaceId),
                       )}
                     >
                       {previewUrl || workspace?.workspace.icon_url ? (
@@ -449,76 +449,89 @@ export function WorkspaceSettingsModal({
                     </div>
 
                     <div className="flex items-center gap-3">
-                      {canManage ? (
-                        member.role === 'owner' ? (
-                          <span className="rounded bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 capitalize dark:bg-yellow-900/30 dark:text-yellow-400">
-                            Owner
+                      {member.is_banned ? (
+                        canManage ? (
+                          <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                            Banned
                           </span>
                         ) : (
-                          <select
-                            value={member.role}
-                            onChange={(e) =>
-                              handleRoleChange(member.user_id, e.target.value as WorkspaceRole)
-                            }
-                            disabled={member.user_id === user?.id}
-                            className="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          >
-                            <option value="admin">Admin</option>
-                            <option value="member">Member</option>
-                          </select>
+                          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                            Deactivated
+                          </span>
                         )
                       ) : (
-                        <span
-                          className={cn(
-                            'rounded px-2 py-0.5 text-xs font-medium capitalize',
-                            member.role === 'owner'
-                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                              : member.role === 'admin'
-                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
-                          )}
-                        >
-                          {member.role}
-                        </span>
-                      )}
-
-                      {canManage && member.user_id !== user?.id && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onPress={() => handleRemoveMember(member.user_id)}
-                        >
-                          Remove
-                        </Button>
-                      )}
-
-                      {member.user_id !== user?.id && (
-                        isBlockedUser(member.user_id) ? (
-                          <>
-                            <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                              Blocked
+                        <>
+                          {canManage ? (
+                            member.role === 'owner' ? (
+                              <span className="rounded bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 capitalize dark:bg-yellow-900/30 dark:text-yellow-400">
+                                Owner
+                              </span>
+                            ) : (
+                              <select
+                                value={member.role}
+                                onChange={(e) =>
+                                  handleRoleChange(member.user_id, e.target.value as WorkspaceRole)
+                                }
+                                disabled={member.user_id === user?.id}
+                                className="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                              >
+                                <option value="admin">Admin</option>
+                                <option value="member">Member</option>
+                              </select>
+                            )
+                          ) : (
+                            <span
+                              className={cn(
+                                'rounded px-2 py-0.5 text-xs font-medium capitalize',
+                                member.role === 'owner'
+                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                  : member.role === 'admin'
+                                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+                              )}
+                            >
+                              {member.role}
                             </span>
+                          )}
+
+                          {canManage && member.user_id !== user?.id && (
                             <Button
                               variant="secondary"
                               size="sm"
-                              onPress={() => unblockUser.mutate(member.user_id)}
+                              onPress={() => handleRemoveMember(member.user_id)}
                             >
-                              Unblock
+                              Remove
                             </Button>
-                          </>
-                        ) : (
-                          member.role !== 'owner' &&
-                          member.role !== 'admin' && (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onPress={() => blockUser.mutate(member.user_id)}
-                            >
-                              <NoSymbolIcon className="mr-1 h-4 w-4" />
-                              Block
-                            </Button>
-                          )
-                        )
+                          )}
+
+                          {member.user_id !== user?.id &&
+                            (isBlockedUser(member.user_id) ? (
+                              <>
+                                <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                  Blocked
+                                </span>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onPress={() => unblockUser.mutate(member.user_id)}
+                                >
+                                  Unblock
+                                </Button>
+                              </>
+                            ) : (
+                              member.role !== 'owner' &&
+                              member.role !== 'admin' && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onPress={() => blockUser.mutate(member.user_id)}
+                                >
+                                  <NoSymbolIcon className="mr-1 h-4 w-4" />
+                                  Block
+                                </Button>
+                              )
+                            ))}
+                        </>
                       )}
                     </div>
                   </div>
@@ -526,9 +539,7 @@ export function WorkspaceSettingsModal({
               </div>
             )}
 
-            {selectedTab === 'emoji' && (
-              <CustomEmojiManager workspaceId={workspaceId} />
-            )}
+            {selectedTab === 'emoji' && <CustomEmojiManager workspaceId={workspaceId} />}
 
             {selectedTab === 'invite' && canManage && (
               <div className="space-y-6 rounded-lg bg-gray-50 p-6 dark:bg-gray-800">
