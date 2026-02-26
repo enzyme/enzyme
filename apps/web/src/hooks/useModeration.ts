@@ -115,7 +115,7 @@ export function useUnbanUser(workspaceId: string) {
 
 export function useBlocks(workspaceId: string | undefined) {
   return useQuery({
-    queryKey: ['user-blocks', workspaceId],
+    queryKey: ['workspace', workspaceId, 'blocks'],
     queryFn: () => moderationApi.listBlocks(workspaceId!),
     enabled: !!workspaceId,
   });
@@ -127,7 +127,7 @@ export function useBlockUser(workspaceId: string | undefined) {
   return useMutation({
     mutationFn: (userId: string) => moderationApi.blockUser(workspaceId!, userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-blocks', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'blocks'] });
     },
   });
 }
@@ -138,7 +138,7 @@ export function useUnblockUser(workspaceId: string | undefined) {
   return useMutation({
     mutationFn: (userId: string) => moderationApi.unblockUser(workspaceId!, userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-blocks', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'blocks'] });
     },
   });
 }

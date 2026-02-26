@@ -127,14 +127,21 @@ func (h *Handler) CreateDM(ctx context.Context, request openapi.CreateDMRequestO
 		return openapi.CreateDM400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "DM requires at least 2 participants")}, nil
 	}
 
-	// Check for blocks between participants (workspace-scoped)
+	// Check for blocks between participants (workspace-scoped, batch lookup)
 	if h.moderationRepo != nil {
+		blockedByMe, err := h.moderationRepo.GetBlockedUserIDs(ctx, string(request.Wid), userID)
+		if err != nil {
+			return nil, err
+		}
+		blockingMe, err := h.moderationRepo.GetUsersWhoBlocked(ctx, string(request.Wid), userID)
+		if err != nil {
+			return nil, err
+		}
 		for _, otherID := range deduped {
 			if otherID == userID {
 				continue
 			}
-			blocked, _ := h.moderationRepo.IsBlockedEitherDirection(ctx, string(request.Wid), userID, otherID)
-			if blocked {
+			if blockedByMe[otherID] || blockingMe[otherID] {
 				return openapi.CreateDM400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Cannot create DM with a blocked user")}, nil
 			}
 		}
@@ -353,22 +360,29 @@ func (h *Handler) AddChannelMember(ctx context.Context, request openapi.AddChann
 
 	// DM-specific handling
 	if ch.Type == channel.TypeDM || ch.Type == channel.TypeGroupDM {
+		currentMemberIDs, err := h.channelRepo.GetMemberUserIDs(ctx, string(request.Id))
+		if err != nil {
+			return nil, err
+		}
+
 		// Check for blocks between new member and existing members
 		if h.moderationRepo != nil {
-			currentMembers, _ := h.channelRepo.GetMemberUserIDs(ctx, string(request.Id))
-			for _, existingID := range currentMembers {
-				blocked, _ := h.moderationRepo.IsBlockedEitherDirection(ctx, ch.WorkspaceID, existingID, request.Body.UserId)
-				if blocked {
+			blockedByNew, err := h.moderationRepo.GetBlockedUserIDs(ctx, ch.WorkspaceID, request.Body.UserId)
+			if err != nil {
+				return nil, err
+			}
+			blockingNew, err := h.moderationRepo.GetUsersWhoBlocked(ctx, ch.WorkspaceID, request.Body.UserId)
+			if err != nil {
+				return nil, err
+			}
+			for _, existingID := range currentMemberIDs {
+				if blockedByNew[existingID] || blockingNew[existingID] {
 					return openapi.AddChannelMember403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Cannot add user due to a block relationship")}, nil
 				}
 			}
 		}
 
 		// Enforce soft participant limit
-		currentMemberIDs, err := h.channelRepo.GetMemberUserIDs(ctx, string(request.Id))
-		if err != nil {
-			return nil, err
-		}
 		if len(currentMemberIDs) >= 8 {
 			return openapi.AddChannelMember400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Group DMs are limited to 8 participants. Consider creating a channel instead.")}, nil
 		}

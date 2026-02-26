@@ -120,7 +120,7 @@ func (r *Repository) GetActiveBan(ctx context.Context, workspaceID, userID strin
 
 // ListActiveBans returns active bans for a workspace with user display info
 func (r *Repository) ListActiveBans(ctx context.Context, workspaceID string, cursor string, limit int) ([]BanWithUser, bool, string, error) {
-	if limit <= 0 {
+	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
 
@@ -268,6 +268,27 @@ func (r *Repository) GetBlockedUserIDs(ctx context.Context, workspaceID, blocker
 	return blocked, nil
 }
 
+// GetUsersWhoBlocked returns the set of user IDs who have blocked the given user in a workspace
+func (r *Repository) GetUsersWhoBlocked(ctx context.Context, workspaceID, blockedID string) (map[string]bool, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT blocker_id FROM user_blocks WHERE workspace_id = ? AND blocked_id = ?
+	`, workspaceID, blockedID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	blockers := make(map[string]bool)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		blockers[id] = true
+	}
+	return blockers, nil
+}
+
 // IsBlocked checks if blockerID has blocked blockedID in a workspace
 func (r *Repository) IsBlocked(ctx context.Context, workspaceID, blockerID, blockedID string) (bool, error) {
 	var count int
@@ -332,7 +353,7 @@ func (r *Repository) CreateAuditLogEntryWithMetadata(ctx context.Context, worksp
 
 // ListAuditLog returns audit log entries for a workspace with cursor-based pagination
 func (r *Repository) ListAuditLog(ctx context.Context, workspaceID string, cursor string, limit int) ([]AuditLogEntryWithActor, bool, string, error) {
-	if limit <= 0 {
+	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
 

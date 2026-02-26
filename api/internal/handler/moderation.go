@@ -93,15 +93,11 @@ func (h *Handler) BanUser(ctx context.Context, request openapi.BanUserRequestObj
 		return nil, err
 	}
 
-	// Update SSE hub: remove from all channel member caches
+	// Update SSE hub: remove from all channel member caches and disconnect
 	if h.hub != nil {
 		for _, chID := range channelIDs {
 			h.hub.RemoveChannelMember(chID, targetUserID)
 		}
-	}
-
-	// Disconnect user's SSE clients
-	if h.hub != nil {
 		h.hub.DisconnectUserClients(string(request.Wid), targetUserID)
 	}
 
@@ -295,7 +291,7 @@ func (h *Handler) UnblockUser(ctx context.Context, request openapi.UnblockUserRe
 	// Verify blocker is a workspace member
 	_, err := h.workspaceRepo.GetMembership(ctx, userID, workspaceID)
 	if err != nil {
-		return openapi.UnblockUser401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+		return openapi.UnblockUser403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Not a workspace member")}, nil
 	}
 
 	if err := h.moderationRepo.DeleteBlock(ctx, workspaceID, userID, request.Body.UserId); err != nil {
@@ -317,7 +313,7 @@ func (h *Handler) ListBlocks(ctx context.Context, request openapi.ListBlocksRequ
 	// Verify user is a workspace member
 	_, err := h.workspaceRepo.GetMembership(ctx, userID, workspaceID)
 	if err != nil {
-		return openapi.ListBlocks401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+		return openapi.ListBlocks403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Not a workspace member")}, nil
 	}
 
 	blocks, err := h.moderationRepo.ListBlocks(ctx, workspaceID, userID)

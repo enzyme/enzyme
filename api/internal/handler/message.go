@@ -36,6 +36,14 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 		return nil, err
 	}
 
+	// Check if user is banned from this workspace
+	if h.moderationRepo != nil {
+		ban, _ := h.moderationRepo.GetActiveBan(ctx, ch.WorkspaceID, userID)
+		if ban != nil {
+			return openapi.SendMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("You are banned from this workspace")}, nil
+		}
+	}
+
 	// Check channel is not archived
 	if ch.ArchivedAt != nil {
 		return openapi.SendMessage400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Cannot post to archived channel")}, nil
@@ -137,14 +145,24 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 
 		// Strip mentions of blocked users in either direction (workspace-scoped)
 		if h.moderationRepo != nil && len(mentions) > 0 {
+			// Batch-fetch block relationships to avoid N+1 queries
+			blockedByMe, err := h.moderationRepo.GetBlockedUserIDs(ctx, ch.WorkspaceID, userID)
+			if err != nil {
+				slog.Error("failed to get blocked user IDs for mention filtering", "error", err)
+				blockedByMe = nil
+			}
+			blockingMe, err := h.moderationRepo.GetUsersWhoBlocked(ctx, ch.WorkspaceID, userID)
+			if err != nil {
+				slog.Error("failed to get users who blocked sender for mention filtering", "error", err)
+				blockingMe = nil
+			}
 			var filtered []string
 			for _, mentionID := range mentions {
 				if notification.IsSpecialMention(mentionID) {
 					filtered = append(filtered, mentionID)
 					continue
 				}
-				blocked, _ := h.moderationRepo.IsBlockedEitherDirection(ctx, ch.WorkspaceID, userID, mentionID)
-				if !blocked {
+				if !blockedByMe[mentionID] && !blockingMe[mentionID] {
 					filtered = append(filtered, mentionID)
 				}
 			}
@@ -229,24 +247,21 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 	// Broadcast message via SSE (use API type to include attachment URLs)
 	if h.hub != nil {
 		if (ch.Type == channel.TypeDM || ch.Type == channel.TypeGroupDM) && h.moderationRepo != nil {
-			// For DM channels, skip delivery to users who have blocked the sender
+			// For DM channels, skip delivery to users who have blocked the sender (batch lookup)
 			memberIDs, _ := h.channelRepo.GetMemberUserIDs(ctx, string(request.Id))
+			usersWhoBlockedSender, err := h.moderationRepo.GetUsersWhoBlocked(ctx, ch.WorkspaceID, userID)
+			if err != nil {
+				slog.Error("failed to get block list for SSE filtering", "error", err)
+				usersWhoBlockedSender = nil
+			}
 			for _, memberID := range memberIDs {
-				if memberID == userID {
-					// Always deliver to sender
-					h.hub.BroadcastToUser(ch.WorkspaceID, memberID, sse.Event{
-						Type: sse.EventMessageNew,
-						Data: apiMsg,
-					})
+				if memberID != userID && usersWhoBlockedSender[memberID] {
 					continue
 				}
-				blocked, _ := h.moderationRepo.IsBlocked(ctx, ch.WorkspaceID, memberID, userID)
-				if !blocked {
-					h.hub.BroadcastToUser(ch.WorkspaceID, memberID, sse.Event{
-						Type: sse.EventMessageNew,
-						Data: apiMsg,
-					})
-				}
+				h.hub.BroadcastToUser(ch.WorkspaceID, memberID, sse.Event{
+					Type: sse.EventMessageNew,
+					Data: apiMsg,
+				})
 			}
 		} else {
 			h.hub.BroadcastToChannel(ch.WorkspaceID, string(request.Id), sse.Event{
@@ -357,6 +372,17 @@ func (h *Handler) UpdateMessage(ctx context.Context, request openapi.UpdateMessa
 	msg, err := h.messageRepo.GetByID(ctx, string(request.Id))
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if user is banned from the workspace
+	if h.moderationRepo != nil {
+		ch, err := h.channelRepo.GetByID(ctx, msg.ChannelID)
+		if err == nil {
+			ban, _ := h.moderationRepo.GetActiveBan(ctx, ch.WorkspaceID, userID)
+			if ban != nil {
+				return openapi.UpdateMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("You are banned from this workspace")}, nil
+			}
+		}
 	}
 
 	// Can't edit system messages
@@ -578,6 +604,14 @@ func (h *Handler) AddReaction(ctx context.Context, request openapi.AddReactionRe
 	ch, err := h.channelRepo.GetByID(ctx, msg.ChannelID)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if user is banned from the workspace
+	if h.moderationRepo != nil {
+		ban, _ := h.moderationRepo.GetActiveBan(ctx, ch.WorkspaceID, userID)
+		if ban != nil {
+			return openapi.AddReaction403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("You are banned from this workspace")}, nil
+		}
 	}
 
 	_, err = h.channelRepo.GetMembership(ctx, userID, msg.ChannelID)

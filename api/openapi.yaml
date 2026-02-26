@@ -2308,6 +2308,8 @@ paths:
                 $ref: '#/components/schemas/SuccessResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /workspaces/{wid}/blocks/list:
     get:
@@ -2332,6 +2334,8 @@ paths:
                       $ref: '#/components/schemas/BlockWithUser'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /workspaces/{wid}/moderation-log/list:
     post:

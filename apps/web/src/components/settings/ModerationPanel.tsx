@@ -40,13 +40,17 @@ function BansList({ workspaceId }: { workspaceId: string }) {
   const { data, isLoading } = useBans(workspaceId);
   const unbanUser = useUnbanUser(workspaceId);
   const [showBanModal, setShowBanModal] = useState(false);
+  const [unbanningUserId, setUnbanningUserId] = useState<string | null>(null);
 
   const handleUnban = async (userId: string) => {
+    setUnbanningUserId(userId);
     try {
       await unbanUser.mutateAsync(userId);
       toast('User unbanned', 'success');
     } catch {
       toast('Failed to unban user', 'error');
+    } finally {
+      setUnbanningUserId(null);
     }
   };
 
@@ -103,7 +107,7 @@ function BansList({ workspaceId }: { workspaceId: string }) {
                 variant="secondary"
                 size="sm"
                 onPress={() => handleUnban(ban.user_id)}
-                isLoading={unbanUser.isPending}
+                isLoading={unbanningUserId === ban.user_id}
               >
                 Unban
               </Button>
@@ -137,6 +141,18 @@ function BanUserModal({
   const [duration, setDuration] = useState('');
   const [hideMessages, setHideMessages] = useState(false);
 
+  const resetForm = () => {
+    setSelectedUserId('');
+    setReason('');
+    setDuration('');
+    setHideMessages(false);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   const handleBan = async () => {
     if (!selectedUserId) {
       toast('Select a user to ban', 'error');
@@ -151,11 +167,7 @@ function BanUserModal({
         hide_messages: hideMessages,
       });
       toast('User banned', 'success');
-      onClose();
-      setSelectedUserId('');
-      setReason('');
-      setDuration('');
-      setHideMessages(false);
+      handleClose();
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Failed to ban user', 'error');
     }
@@ -166,13 +178,14 @@ function BanUserModal({
   ) ?? [];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Ban User" size="sm">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Ban User" size="sm">
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="ban-user-select" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
             User
           </label>
           <select
+            id="ban-user-select"
             value={selectedUserId}
             onChange={(e) => setSelectedUserId(e.target.value)}
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
@@ -187,10 +200,11 @@ function BanUserModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="ban-reason" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Reason (optional)
           </label>
           <input
+            id="ban-reason"
             type="text"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -200,10 +214,11 @@ function BanUserModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="ban-duration" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Duration
           </label>
           <select
+            id="ban-duration"
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
@@ -216,8 +231,9 @@ function BanUserModal({
           </select>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <label htmlFor="ban-hide-messages" className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
           <input
+            id="ban-hide-messages"
             type="checkbox"
             checked={hideMessages}
             onChange={(e) => setHideMessages(e.target.checked)}
@@ -227,7 +243,7 @@ function BanUserModal({
         </label>
 
         <div className="flex justify-end gap-3 pt-2">
-          <Button variant="secondary" onPress={onClose}>
+          <Button variant="secondary" onPress={handleClose}>
             Cancel
           </Button>
           <Button

@@ -7026,6 +7026,15 @@ func (response ListBlocks401JSONResponse) VisitListBlocksResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListBlocks403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListBlocks403JSONResponse) VisitListBlocksResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type UnblockUserRequestObject struct {
 	Wid  WorkspaceId `json:"wid"`
 	Body *UnblockUserJSONRequestBody
@@ -7049,6 +7058,15 @@ type UnblockUser401JSONResponse struct{ UnauthorizedJSONResponse }
 func (response UnblockUser401JSONResponse) VisitUnblockUserResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnblockUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UnblockUser403JSONResponse) VisitUnblockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
