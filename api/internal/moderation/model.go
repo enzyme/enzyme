@@ -43,14 +43,14 @@ type BlockWithUser struct {
 
 // AuditLogEntry represents a moderation action in the audit log
 type AuditLogEntry struct {
-	ID         string    `json:"id"`
-	WorkspaceID string   `json:"workspace_id"`
-	ActorID    string    `json:"actor_id"`
-	Action     string    `json:"action"`
-	TargetType string    `json:"target_type"`
-	TargetID   string    `json:"target_id"`
-	Metadata   *string   `json:"metadata,omitempty"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspace_id"`
+	ActorID     string    `json:"actor_id"`
+	Action      string    `json:"action"`
+	TargetType  string    `json:"target_type"`
+	TargetID    string    `json:"target_id"`
+	Metadata    *string   `json:"metadata,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 // AuditLogEntryWithActor includes actor and target display info
@@ -63,12 +63,12 @@ type AuditLogEntryWithActor struct {
 
 // Moderation action constants
 const (
-	ActionUserBanned      = "user.banned"
-	ActionUserUnbanned    = "user.unbanned"
-	ActionMessageDeleted  = "message.deleted"
-	ActionMemberRemoved   = "member.removed"
+	ActionUserBanned        = "user.banned"
+	ActionUserUnbanned      = "user.unbanned"
+	ActionMessageDeleted    = "message.deleted"
+	ActionMemberRemoved     = "member.removed"
 	ActionMemberRoleChanged = "member.role_changed"
-	ActionChannelArchived = "channel.archived"
+	ActionChannelArchived   = "channel.archived"
 )
 
 // Target type constants
