@@ -207,7 +207,7 @@ func TestRepository_List(t *testing.T) {
 	testutil.CreateTestMessage(t, db, ch.ID, owner.ID, "Message 2")
 	testutil.CreateTestMessage(t, db, ch.ID, owner.ID, "Message 3")
 
-	result, err := repo.List(ctx, ch.ID, ListOptions{Limit: 10})
+	result, err := repo.List(ctx, ch.ID, ListOptions{Limit: 10}, nil)
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
@@ -237,7 +237,7 @@ func TestRepository_List_Pagination(t *testing.T) {
 	}
 
 	// Get first page
-	result1, err := repo.List(ctx, ch.ID, ListOptions{Limit: 2})
+	result1, err := repo.List(ctx, ch.ID, ListOptions{Limit: 2}, nil)
 	if err != nil {
 		t.Fatalf("List() page 1 error = %v", err)
 	}
@@ -253,7 +253,7 @@ func TestRepository_List_Pagination(t *testing.T) {
 	result2, err := repo.List(ctx, ch.ID, ListOptions{
 		Limit:  2,
 		Cursor: result1.NextCursor,
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("List() page 2 error = %v", err)
 	}
@@ -290,7 +290,7 @@ func TestRepository_List_ExcludesThreadReplies(t *testing.T) {
 	repo.Create(ctx, reply)
 
 	// List should only return the parent
-	result, _ := repo.List(ctx, ch.ID, ListOptions{Limit: 10})
+	result, _ := repo.List(ctx, ch.ID, ListOptions{Limit: 10}, nil)
 	if len(result.Messages) != 1 {
 		t.Fatalf("len(Messages) = %d, want 1", len(result.Messages))
 	}
@@ -322,7 +322,7 @@ func TestRepository_ListThread(t *testing.T) {
 		repo.Create(ctx, reply)
 	}
 
-	result, err := repo.ListThread(ctx, parent.ID, ListOptions{Limit: 10})
+	result, err := repo.ListThread(ctx, parent.ID, ListOptions{Limit: 10}, nil)
 	if err != nil {
 		t.Fatalf("ListThread() error = %v", err)
 	}
@@ -420,7 +420,7 @@ func TestRepository_List_IncludesReactions(t *testing.T) {
 	repo.AddReaction(ctx, msg.ID, owner.ID, "👍")
 	repo.AddReaction(ctx, msg.ID, owner.ID, "❤️")
 
-	result, _ := repo.List(ctx, ch.ID, ListOptions{Limit: 10})
+	result, _ := repo.List(ctx, ch.ID, ListOptions{Limit: 10}, nil)
 	if len(result.Messages) != 1 {
 		t.Fatalf("len(Messages) = %d, want 1", len(result.Messages))
 	}
@@ -501,7 +501,7 @@ func TestRepository_List_IncludesBroadcastReplies(t *testing.T) {
 	repo.Create(ctx, broadcastReply)
 
 	// List should return parent + broadcast reply, but NOT normal reply
-	result, err := repo.List(ctx, ch.ID, ListOptions{Limit: 10})
+	result, err := repo.List(ctx, ch.ID, ListOptions{Limit: 10}, nil)
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}

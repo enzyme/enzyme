@@ -293,7 +293,8 @@ func (h *Handler) ListMessages(ctx context.Context, request openapi.ListMessages
 		}
 	}
 
-	result, err := h.messageRepo.List(ctx, string(request.Id), opts)
+	filter := &message.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
+	result, err := h.messageRepo.List(ctx, string(request.Id), opts, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -655,7 +656,8 @@ func (h *Handler) ListThread(ctx context.Context, request openapi.ListThreadRequ
 		}
 	}
 
-	result, err := h.messageRepo.ListThread(ctx, string(request.Id), opts)
+	filter := &message.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
+	result, err := h.messageRepo.ListThread(ctx, string(request.Id), opts, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -708,7 +710,8 @@ func (h *Handler) SearchMessages(ctx context.Context, request openapi.SearchMess
 		opts.Offset = *request.Body.Offset
 	}
 
-	result, err := h.messageRepo.Search(ctx, string(request.Wid), userID, opts)
+	filter := &message.FilterOptions{WorkspaceID: string(request.Wid), RequestingUserID: userID}
+	result, err := h.messageRepo.Search(ctx, string(request.Wid), userID, opts, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -1302,7 +1305,8 @@ func (h *Handler) GetMessage(ctx context.Context, request openapi.GetMessageRequ
 	}
 
 	// Load reactions for the message
-	reactions, err := h.messageRepo.GetReactionsForMessage(ctx, msgWithUser.ID)
+	filter := &message.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
+	reactions, err := h.messageRepo.GetReactionsForMessage(ctx, msgWithUser.ID, filter)
 	if err == nil {
 		msgWithUser.Reactions = reactions
 	}
@@ -1321,7 +1325,7 @@ func (h *Handler) GetMessage(ctx context.Context, request openapi.GetMessageRequ
 
 	// Load thread participants if this is a parent message with replies
 	if msgWithUser.ReplyCount > 0 {
-		participants, err := h.messageRepo.GetThreadParticipants(ctx, msgWithUser.ID)
+		participants, err := h.messageRepo.GetThreadParticipants(ctx, msgWithUser.ID, filter)
 		if err == nil {
 			msgWithUser.ThreadParticipants = participants
 		}
@@ -1599,7 +1603,8 @@ func (h *Handler) ListPinnedMessages(ctx context.Context, request openapi.ListPi
 		}
 	}
 
-	messages, hasMore, nextCursor, err := h.messageRepo.ListPinnedMessages(ctx, string(request.Id), cursor, limit)
+	filter := &message.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
+	messages, hasMore, nextCursor, err := h.messageRepo.ListPinnedMessages(ctx, string(request.Id), cursor, limit, filter)
 	if err != nil {
 		return nil, err
 	}

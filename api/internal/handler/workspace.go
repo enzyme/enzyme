@@ -706,7 +706,8 @@ func (h *Handler) ListAllUnreads(ctx context.Context, request openapi.ListAllUnr
 		}
 	}
 
-	result, err := h.messageRepo.ListAllUnreads(ctx, string(request.Wid), userID, opts)
+	filter := &message.FilterOptions{WorkspaceID: string(request.Wid), RequestingUserID: userID}
+	result, err := h.messageRepo.ListAllUnreads(ctx, string(request.Wid), userID, opts, filter)
 	if err != nil {
 		return nil, err
 	}

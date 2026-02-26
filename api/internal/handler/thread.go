@@ -253,7 +253,8 @@ func (h *Handler) ListUserThreads(ctx context.Context, request openapi.ListUserT
 		}
 	}
 
-	result, err := h.messageRepo.ListUserThreads(ctx, string(request.Wid), userID, opts)
+	filter := &message.FilterOptions{WorkspaceID: string(request.Wid), RequestingUserID: userID}
+	result, err := h.messageRepo.ListUserThreads(ctx, string(request.Wid), userID, opts, filter)
 	if err != nil {
 		return nil, err
 	}
