@@ -487,6 +487,65 @@ export function useSSE(workspaceId: string | undefined) {
       toast('A scheduled message failed to send', 'error');
     });
 
+    // Handle message pinned
+    connection.on('message.pinned', (event) => {
+      const message = event.data;
+      queryClient.setQueriesData(
+        { queryKey: ['messages'] },
+        (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
+          if (!old) return old;
+          let changed = false;
+          const pages = old.pages.map((page) => {
+            if (!page.messages.some((m) => m.id === message.id)) return page;
+            changed = true;
+            return {
+              ...page,
+              messages: page.messages.map((m) =>
+                m.id === message.id ? { ...m, pinned_at: message.pinned_at, pinned_by: message.pinned_by } : m,
+              ),
+            };
+          });
+          return changed ? { ...old, pages } : old;
+        },
+      );
+      queryClient.invalidateQueries({ queryKey: ['pinned-messages'] });
+    });
+
+    // Handle message unpinned
+    connection.on('message.unpinned', (event) => {
+      const message = event.data;
+      queryClient.setQueriesData(
+        { queryKey: ['messages'] },
+        (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
+          if (!old) return old;
+          let changed = false;
+          const pages = old.pages.map((page) => {
+            if (!page.messages.some((m) => m.id === message.id)) return page;
+            changed = true;
+            return {
+              ...page,
+              messages: page.messages.map((m) =>
+                m.id === message.id ? { ...m, pinned_at: undefined, pinned_by: undefined } : m,
+              ),
+            };
+          });
+          return changed ? { ...old, pages } : old;
+        },
+      );
+      queryClient.invalidateQueries({ queryKey: ['pinned-messages'] });
+    });
+
+    // Handle member banned
+    connection.on('member.banned', () => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'bans'] });
+    });
+
+    // Handle member unbanned
+    connection.on('member.unbanned', () => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'bans'] });
+    });
+
     // Handle typing events
     connection.on('typing.start', (event) => {
       addTypingUser(event.data.channel_id, event.data);

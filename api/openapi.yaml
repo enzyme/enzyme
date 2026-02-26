@@ -3242,6 +3242,10 @@ components:
         - $ref: '#/components/schemas/SSEEventScheduledMessageUpdated'
         - $ref: '#/components/schemas/SSEEventScheduledMessageDeleted'
         - $ref: '#/components/schemas/SSEEventScheduledMessageSent'
+        - $ref: '#/components/schemas/SSEEventMessagePinned'
+        - $ref: '#/components/schemas/SSEEventMessageUnpinned'
+        - $ref: '#/components/schemas/SSEEventMemberBanned'
+        - $ref: '#/components/schemas/SSEEventMemberUnbanned'
       discriminator:
         propertyName: type
         mapping:
@@ -3269,6 +3273,10 @@ components:
           scheduled_message.updated: '#/components/schemas/SSEEventScheduledMessageUpdated'
           scheduled_message.deleted: '#/components/schemas/SSEEventScheduledMessageDeleted'
           scheduled_message.sent: '#/components/schemas/SSEEventScheduledMessageSent'
+          message.pinned: '#/components/schemas/SSEEventMessagePinned'
+          message.unpinned: '#/components/schemas/SSEEventMessageUnpinned'
+          member.banned: '#/components/schemas/SSEEventMemberBanned'
+          member.unbanned: '#/components/schemas/SSEEventMemberUnbanned'
 
     SSEEventConnected:
       type: object
@@ -3602,6 +3610,66 @@ components:
             channel_id:
               type: string
             message_id:
+              type: string
+
+    SSEEventMessagePinned:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [message.pinned]
+        data:
+          $ref: '#/components/schemas/MessageWithUser'
+
+    SSEEventMessageUnpinned:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [message.unpinned]
+        data:
+          $ref: '#/components/schemas/MessageWithUser'
+
+    SSEEventMemberBanned:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [member.banned]
+        data:
+          type: object
+          required: [user_id, workspace_id]
+          properties:
+            user_id:
+              type: string
+            workspace_id:
+              type: string
+
+    SSEEventMemberUnbanned:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [member.unbanned]
+        data:
+          type: object
+          required: [user_id, workspace_id]
+          properties:
+            user_id:
+              type: string
+            workspace_id:
               type: string
 
     NotificationData:

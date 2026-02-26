@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { XMarkIcon, PhotoIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PhotoIcon, TrashIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
 import {
   useUserProfile,
   useUpdateProfile,
@@ -8,6 +8,7 @@ import {
   useAuth,
 } from '../../hooks';
 import { useProfilePanel } from '../../hooks/usePanel';
+import { useBlocks, useBlockUser, useUnblockUser } from '../../hooks/useModeration';
 import { Button, IconButton, Input, Spinner, toast } from '../ui';
 import { cn, getInitials, getAvatarColor } from '../../lib/utils';
 import { useUserPresence } from '../../lib/presenceStore';
@@ -81,6 +82,24 @@ interface ViewProfileProps {
 function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
   const [gravatarFailed, setGravatarFailed] = useState(false);
   const presence = useUserPresence(profile.id);
+  const { data: blocksData } = useBlocks();
+  const blockUserMutation = useBlockUser();
+  const unblockUserMutation = useUnblockUser();
+  const isBlocked = blocksData?.blocks?.some((b) => b.blocked_id === profile.id) ?? false;
+
+  const handleToggleBlock = async () => {
+    try {
+      if (isBlocked) {
+        await unblockUserMutation.mutateAsync(profile.id);
+        toast('User unblocked', 'success');
+      } else {
+        await blockUserMutation.mutateAsync(profile.id);
+        toast('User blocked', 'success');
+      }
+    } catch {
+      toast(isBlocked ? 'Failed to unblock user' : 'Failed to block user', 'error');
+    }
+  };
   const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -142,6 +161,19 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
       {isOwnProfile && (
         <Button variant="secondary" className="w-full" onPress={onEdit}>
           Edit Profile
+        </Button>
+      )}
+
+      {/* Block button (only for other profiles) */}
+      {!isOwnProfile && (
+        <Button
+          variant={isBlocked ? 'secondary' : 'danger'}
+          className="w-full"
+          onPress={handleToggleBlock}
+          isLoading={blockUserMutation.isPending || unblockUserMutation.isPending}
+        >
+          <NoSymbolIcon className="mr-1 h-4 w-4" />
+          {isBlocked ? 'Unblock User' : 'Block User'}
         </Button>
       )}
     </div>

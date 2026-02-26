@@ -24,10 +24,11 @@ import {
   toast,
 } from '../ui';
 import { CustomEmojiManager } from './CustomEmojiManager';
+import { ModerationPanel } from './ModerationPanel';
 import { cn, getAvatarColor } from '../../lib/utils';
 import type { WorkspaceRole } from '@enzyme/api-client';
 
-export type WorkspaceSettingsTab = 'general' | 'members' | 'emoji' | 'invite';
+export type WorkspaceSettingsTab = 'general' | 'members' | 'emoji' | 'invite' | 'moderation';
 
 interface WorkspaceSettingsModalProps {
   isOpen: boolean;
@@ -220,6 +221,7 @@ export function WorkspaceSettingsModal({
             <Tab id="members">Members ({members.length})</Tab>
             <Tab id="emoji">Emoji</Tab>
             {canManage && <Tab id="invite">Invite</Tab>}
+            {canManage && <Tab id="moderation">Moderation</Tab>}
           </TabList>
 
           <TabPanel id="general" className="max-h-[60vh] overflow-y-auto pt-4">
@@ -516,6 +518,12 @@ export function WorkspaceSettingsModal({
                   </div>
                 )}
               </div>
+            </TabPanel>
+          )}
+
+          {canManage && (
+            <TabPanel id="moderation" className="max-h-[60vh] overflow-y-auto pt-4">
+              <ModerationPanel workspaceId={workspaceId} />
             </TabPanel>
           )}
         </Tabs>

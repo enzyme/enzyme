@@ -7,6 +7,7 @@ import {
   EyeSlashIcon,
   PencilSquareIcon,
   TrashIcon,
+  MapPinIcon,
 } from '@heroicons/react/24/outline';
 import { IconButton, Tooltip, Menu, MenuItem, EmojiGrid } from '../ui';
 import { cn } from '../../lib/utils';
@@ -25,6 +26,9 @@ interface MessageActionBarProps {
   onEdit?: () => void;
   /** If provided, shows delete option in dropdown */
   onDelete?: () => void;
+  /** If provided, shows pin/unpin option in dropdown */
+  onPin?: () => void;
+  isPinned?: boolean;
   customEmojis?: CustomEmoji[];
 }
 
@@ -39,6 +43,8 @@ export function MessageActionBar({
   onDropdownChange,
   onEdit,
   onDelete,
+  onPin,
+  isPinned,
   customEmojis,
 }: MessageActionBarProps) {
   const handleEmojiSelect = (emoji: string) => {
@@ -99,6 +105,11 @@ export function MessageActionBar({
           <MenuItem onAction={onMarkUnread} icon={<EyeSlashIcon className="h-4 w-4" />}>
             Mark unread
           </MenuItem>
+          {onPin && (
+            <MenuItem onAction={onPin} icon={<MapPinIcon className="h-4 w-4" />}>
+              {isPinned ? 'Unpin message' : 'Pin message'}
+            </MenuItem>
+          )}
           {onEdit && (
             <MenuItem onAction={onEdit} icon={<PencilSquareIcon className="h-4 w-4" />}>
               Edit message

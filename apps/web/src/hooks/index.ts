@@ -50,3 +50,15 @@ export {
   useDeleteCustomEmoji,
 } from './useCustomEmojis';
 export { useSearch } from './useSearch';
+export {
+  usePinnedMessages,
+  usePinMessage,
+  useUnpinMessage,
+  useBans,
+  useBanUser,
+  useUnbanUser,
+  useBlocks,
+  useBlockUser,
+  useUnblockUser,
+  useModerationLog,
+} from './useModeration';

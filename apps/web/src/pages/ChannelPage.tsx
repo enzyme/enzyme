@@ -33,6 +33,7 @@ import { ChannelMembersButton } from '../components/channel/ChannelMembersButton
 import { ChannelNotificationButton } from '../components/channel/ChannelNotificationButton';
 import { ChannelDetailsModal } from '../components/channel/ChannelDetailsModal';
 import { ConvertToChannelModal } from '../components/channel/ConvertToChannelModal';
+import { PinnedMessagesPopover } from '../components/channel/PinnedMessagesPopover';
 import {
   Spinner,
   Modal,
@@ -389,6 +390,9 @@ export function ChannelPage() {
           </div>
 
           <div className="flex flex-shrink-0 items-center gap-1">
+            {/* Pinned messages */}
+            <PinnedMessagesPopover channelId={channelId} />
+
             {/* Channel members */}
             <ChannelMembersButton
               channelId={channelId}
