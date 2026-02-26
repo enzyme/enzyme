@@ -141,7 +141,6 @@ func (h *Handler) GetMe(ctx context.Context, request openapi.GetMeRequestObject)
 					ExpiresAt *time.Time `json:"expires_at,omitempty"`
 					Reason    *string    `json:"reason,omitempty"`
 				}{
-					Reason:    ban.Reason,
 					ExpiresAt: ban.ExpiresAt,
 				}
 			}

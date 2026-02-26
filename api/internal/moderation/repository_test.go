@@ -180,6 +180,49 @@ func TestGetActiveBan_Expired(t *testing.T) {
 	}
 }
 
+func TestCreateBan_AfterExpired(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
+	user := testutil.CreateTestUser(t, db, "user@example.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
+
+	// Create an expired ban
+	expired := time.Now().Add(-1 * time.Hour)
+	repo.CreateBan(ctx, nil, &Ban{
+		WorkspaceID: ws.ID,
+		UserID:      user.ID,
+		BannedBy:    owner.ID,
+		ExpiresAt:   &expired,
+	})
+
+	// Should be able to ban again after expiry
+	reason := "second ban"
+	err := repo.CreateBan(ctx, nil, &Ban{
+		WorkspaceID: ws.ID,
+		UserID:      user.ID,
+		BannedBy:    owner.ID,
+		Reason:      &reason,
+	})
+	if err != nil {
+		t.Fatalf("CreateBan() after expired ban should succeed, got error: %v", err)
+	}
+
+	// The new ban should be active
+	got, err := repo.GetActiveBan(ctx, ws.ID, user.ID)
+	if err != nil {
+		t.Fatalf("GetActiveBan() error = %v", err)
+	}
+	if got == nil {
+		t.Fatal("expected active ban after re-ban")
+	}
+	if got.Reason == nil || *got.Reason != "second ban" {
+		t.Errorf("expected reason 'second ban', got %v", got.Reason)
+	}
+}
+
 func TestGetActiveBan_NoBan(t *testing.T) {
 	db := testutil.TestDB(t)
 	repo := NewRepository(db)

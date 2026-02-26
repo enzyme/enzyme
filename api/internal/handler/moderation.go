@@ -101,9 +101,6 @@ func (h *Handler) BanUser(ctx context.Context, request openapi.BanUserRequestObj
 			"workspace_id": string(request.Wid),
 			"banned_by":    userID,
 		}
-		if ban.Reason != nil {
-			eventData["reason"] = *ban.Reason
-		}
 		if ban.ExpiresAt != nil {
 			eventData["expires_at"] = ban.ExpiresAt.Format(time.RFC3339)
 		}
@@ -114,6 +111,9 @@ func (h *Handler) BanUser(ctx context.Context, request openapi.BanUserRequestObj
 			Type: sse.EventMemberBanned,
 			Data: eventData,
 		})
+
+		// Disconnect the banned user's SSE connections so they stop receiving events
+		h.hub.DisconnectUserClients(string(request.Wid), targetUserID)
 	}
 
 	// Convert to API response

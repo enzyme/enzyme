@@ -191,7 +191,7 @@ func New(cfg *config.Config) (*App, error) {
 	}
 
 	// Create router with generated handlers
-	router := server.NewRouter(h, sseHandler, sessionStore, limiter, cfg.Server.AllowedOrigins, spaHandler)
+	router := server.NewRouter(h, sseHandler, sessionStore, moderationRepo, limiter, cfg.Server.AllowedOrigins, spaHandler)
 
 	// Build TLS options
 	tlsOpts := server.TLSOptions{

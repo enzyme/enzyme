@@ -53,6 +53,12 @@ func (r *Repository) CreateBan(ctx context.Context, tx *sql.Tx, ban *Ban) error 
 		execer = r.db
 	}
 
+	// Remove any expired ban for this user so the unique constraint doesn't block re-banning
+	_, _ = execer.ExecContext(ctx, `
+		DELETE FROM workspace_bans WHERE workspace_id = ? AND user_id = ?
+		AND expires_at IS NOT NULL AND expires_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+	`, ban.WorkspaceID, ban.UserID)
+
 	_, err := execer.ExecContext(ctx, `
 		INSERT INTO workspace_bans (id, workspace_id, user_id, banned_by, reason, hide_messages, expires_at, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)

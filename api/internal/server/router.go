@@ -8,6 +8,7 @@ import (
 
 	"github.com/enzyme/api/internal/auth"
 	"github.com/enzyme/api/internal/handler"
+	"github.com/enzyme/api/internal/moderation"
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/ratelimit"
 	"github.com/enzyme/api/internal/sse"
@@ -20,7 +21,7 @@ import (
 // NewRouter creates a new HTTP router with all routes registered.
 // If spaHandler is non-nil, it is mounted as a fallback for unmatched routes
 // to serve the embedded web client.
-func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.SessionStore, limiter *ratelimit.Limiter, allowedOrigins []string, spaHandler http.Handler) http.Handler {
+func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.SessionStore, moderationRepo *moderation.Repository, limiter *ratelimit.Limiter, allowedOrigins []string, spaHandler http.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -56,6 +57,8 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.S
 		}
 	}
 
+	banCheckMw := BanCheckMiddleware(moderationRepo)
+
 	// Create the strict handler with middleware
 	strictHandler := openapi.NewStrictHandlerWithOptions(h, []openapi.StrictMiddlewareFunc{strictMiddleware}, openapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
@@ -79,8 +82,14 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.S
 		},
 	})
 
-	// Mount generated API routes with /api base URL
-	openapi.HandlerFromMuxWithBaseURL(strictHandler, r, "/api")
+	// Mount generated API routes with /api base URL.
+	// Ban check is applied as a per-handler middleware (runs after route matching,
+	// so chi.URLParam is available).
+	openapi.HandlerWithOptions(strictHandler, openapi.ChiServerOptions{
+		BaseURL:     "/api",
+		BaseRouter:  r,
+		Middlewares: []openapi.MiddlewareFunc{banCheckMw},
+	})
 
 	// Mount SSE routes separately (not generated - requires streaming)
 	r.Route("/api", func(r chi.Router) {
@@ -91,6 +100,7 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.S
 
 		r.Group(func(r chi.Router) {
 			r.Use(auth.RequireAuth())
+			r.Use(banCheckMw)
 			r.Get("/workspaces/{wid}/events", sseHandler.Events)
 			r.Post("/workspaces/{wid}/typing/start", sseHandler.StartTyping)
 			r.Post("/workspaces/{wid}/typing/stop", sseHandler.StopTyping)
@@ -103,4 +113,43 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.S
 	}
 
 	return r
+}
+
+// BanCheckMiddleware rejects workspace-scoped requests from banned users with 403.
+func BanCheckMiddleware(moderationRepo *moderation.Repository) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			wid := chi.URLParam(r, "wid")
+			if wid == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			userID := auth.GetUserID(r.Context())
+			if userID == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			ban, err := moderationRepo.GetActiveBan(r.Context(), wid, userID)
+			if err != nil {
+				slog.Error("ban check failed", "error", err, "workspace", wid, "user", userID)
+				next.ServeHTTP(w, r)
+				return
+			}
+			if ban != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusForbidden)
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{
+					"error": map[string]string{
+						"code":    "BANNED",
+						"message": "You are banned from this workspace",
+					},
+				})
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }
