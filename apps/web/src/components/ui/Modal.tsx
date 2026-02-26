@@ -66,7 +66,9 @@ export function Modal({ isOpen, onClose, title, children, size }: ModalProps) {
       className={styles.overlay()}
     >
       <AriaModal className={styles.container()}>
-        <Dialog className={size === 'settings' ? 'flex h-full flex-col outline-none' : 'outline-none'}>
+        <Dialog
+          className={size === 'settings' ? 'flex h-full flex-col outline-none' : 'outline-none'}
+        >
           {({ close }) => (
             <>
               {title && (
@@ -74,12 +76,23 @@ export function Modal({ isOpen, onClose, title, children, size }: ModalProps) {
                   <Heading slot="title" className={styles.title()}>
                     {title}
                   </Heading>
-                  <IconButton onPress={close} aria-label="Close" size="sm" className={size === 'settings' ? 'p-1.5' : undefined}>
+                  <IconButton
+                    onPress={close}
+                    aria-label="Close"
+                    size="sm"
+                    className={size === 'settings' ? 'p-1.5' : undefined}
+                  >
                     <XMarkIcon className={size === 'settings' ? 'h-4 w-4' : 'h-5 w-5'} />
                   </IconButton>
                 </div>
               )}
-              <div className={size === 'settings' ? 'min-h-0 flex-1 overflow-hidden' : styles.content()}>{children}</div>
+              <div
+                className={
+                  size === 'settings' ? 'min-h-0 flex-1 overflow-hidden' : styles.content()
+                }
+              >
+                {children}
+              </div>
             </>
           )}
         </Dialog>

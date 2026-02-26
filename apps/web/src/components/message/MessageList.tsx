@@ -628,7 +628,12 @@ export function MessageList({
                   transform: `translateY(${vRow.start}px)`,
                 }}
               >
-                <VirtualRow item={item} channelId={channelId} channels={channelsData?.channels} isAdmin={isAdmin} />
+                <VirtualRow
+                  item={item}
+                  channelId={channelId}
+                  channels={channelsData?.channels}
+                  isAdmin={isAdmin}
+                />
               </div>
             );
           })}
@@ -701,6 +706,13 @@ const VirtualRow = React.memo(function VirtualRow({
       if (item.message.type === 'system') {
         return <SystemMessage message={item.message} channelId={channelId} />;
       }
-      return <MessageItem message={item.message} channelId={channelId} channels={channels} isAdmin={isAdmin} />;
+      return (
+        <MessageItem
+          message={item.message}
+          channelId={channelId}
+          channels={channels}
+          isAdmin={isAdmin}
+        />
+      );
   }
 });

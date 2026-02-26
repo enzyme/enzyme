@@ -13,7 +13,13 @@ interface TooltipProps {
   isDisabled?: boolean;
 }
 
-export function Tooltip({ children, content, placement = 'top', delay = 300, isDisabled }: TooltipProps) {
+export function Tooltip({
+  children,
+  content,
+  placement = 'top',
+  delay = 300,
+  isDisabled,
+}: TooltipProps) {
   return (
     <TooltipTrigger delay={delay} isDisabled={isDisabled}>
       {children}

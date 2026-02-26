@@ -62,14 +62,14 @@ func (h *Handler) BanUser(ctx context.Context, request openapi.BanUserRequestObj
 		ban.ExpiresAt = &expiresAt
 	}
 
-	// Use a transaction for ban + membership removal
+	// Use a transaction for ban creation
 	tx, err := h.workspaceRepo.BeginTx(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	// Create ban record
+	// Create ban record (membership is preserved — write endpoints check GetActiveBan)
 	if err := h.moderationRepo.CreateBan(ctx, tx, ban); err != nil {
 		if errors.Is(err, moderation.ErrAlreadyBanned) {
 			return openapi.BanUser409JSONResponse(newErrorResponse(ErrCodeConflict, "User is already banned")), nil
@@ -77,29 +77,8 @@ func (h *Handler) BanUser(ctx context.Context, request openapi.BanUserRequestObj
 		return nil, err
 	}
 
-	// Remove workspace membership
-	if err := h.workspaceRepo.RemoveMemberTx(ctx, tx, targetUserID, string(request.Wid)); err != nil {
-		slog.Error("failed to remove workspace membership during ban", "error", err)
-		return nil, err
-	}
-
-	// Remove channel memberships (except DM channels)
-	channelIDs, err := h.channelRepo.RemoveAllNonDMMemberships(ctx, tx, targetUserID, string(request.Wid))
-	if err != nil {
-		slog.Error("failed to remove channel memberships during ban", "error", err)
-		return nil, err
-	}
-
 	if err := tx.Commit(); err != nil {
 		return nil, err
-	}
-
-	// Update SSE hub: remove from all channel member caches and disconnect
-	if h.hub != nil {
-		for _, chID := range channelIDs {
-			h.hub.RemoveChannelMember(chID, targetUserID)
-		}
-		h.hub.DisconnectUserClients(string(request.Wid), targetUserID)
 	}
 
 	// Create audit log entry (non-critical)
@@ -115,15 +94,25 @@ func (h *Handler) BanUser(ctx context.Context, request openapi.BanUserRequestObj
 		slog.Error("failed to create audit log entry for ban", "error", err)
 	}
 
-	// Broadcast SSE event
+	// Broadcast SSE event with enriched data
 	if h.hub != nil {
+		eventData := map[string]interface{}{
+			"user_id":      targetUserID,
+			"workspace_id": string(request.Wid),
+			"banned_by":    userID,
+		}
+		if ban.Reason != nil {
+			eventData["reason"] = *ban.Reason
+		}
+		if ban.ExpiresAt != nil {
+			eventData["expires_at"] = ban.ExpiresAt.Format(time.RFC3339)
+		}
+		if ws, err := h.workspaceRepo.GetByID(ctx, string(request.Wid)); err == nil {
+			eventData["workspace_name"] = ws.Name
+		}
 		h.hub.BroadcastToWorkspace(string(request.Wid), sse.Event{
 			Type: sse.EventMemberBanned,
-			Data: map[string]interface{}{
-				"user_id":      targetUserID,
-				"workspace_id": string(request.Wid),
-				"banned_by":    userID,
-			},
+			Data: eventData,
 		})
 	}
 

@@ -25,7 +25,10 @@ export function PinnedMessagesPopover({ channelId }: PinnedMessagesPopoverProps)
           <MapPinIcon className="h-4 w-4" />
         </IconButton>
       </Tooltip>
-      <Popover placement="bottom end" className="w-96 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+      <Popover
+        placement="bottom end"
+        className="w-96 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
+      >
         <Dialog className="outline-none">
           <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
             <h3 className="font-semibold text-gray-900 dark:text-white">
@@ -44,7 +47,10 @@ export function PinnedMessagesPopover({ channelId }: PinnedMessagesPopoverProps)
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {data!.messages.map((msg) => (
-                  <div key={msg.id} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <div
+                    key={msg.id}
+                    className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  >
                     <div className="flex items-baseline gap-2">
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
                         {msg.user_display_name || 'Unknown'}

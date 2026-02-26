@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import { ShieldExclamationIcon } from '@heroicons/react/24/outline';
 import { Avatar, Button, Modal, Spinner, Tabs, TabList, Tab, TabPanel, toast } from '../ui';
-import {
-  useBans,
-  useBanUser,
-  useUnbanUser,
-  useModerationLog,
-} from '../../hooks/useModeration';
+import { useBans, useBanUser, useUnbanUser, useModerationLog } from '../../hooks/useModeration';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
 
 interface ModerationPanelProps {
@@ -68,7 +63,9 @@ function BansList({ workspaceId }: { workspaceId: string }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          {bans.length === 0 ? 'No banned users.' : `${bans.length} banned user${bans.length !== 1 ? 's' : ''}`}
+          {bans.length === 0
+            ? 'No banned users.'
+            : `${bans.length} banned user${bans.length !== 1 ? 's' : ''}`}
         </p>
         <Button size="sm" onPress={() => setShowBanModal(true)}>
           Ban User
@@ -83,23 +80,18 @@ function BansList({ workspaceId }: { workspaceId: string }) {
               className="flex items-center justify-between rounded-lg bg-gray-50 p-4 dark:bg-gray-800"
             >
               <div className="flex items-center gap-3">
-                <Avatar
-                  name={ban.user_display_name || 'User'}
-                  id={ban.user_id}
-                  size="md"
-                />
+                <Avatar name={ban.user_display_name || 'User'} id={ban.user_id} size="md" />
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {ban.user_display_name || 'Unknown User'}
                   </p>
                   {ban.reason && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Reason: {ban.reason}
-                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Reason: {ban.reason}</p>
                   )}
                   <p className="text-xs text-gray-400 dark:text-gray-500">
                     Banned {new Date(ban.created_at).toLocaleDateString()}
-                    {ban.expires_at && ` · Expires ${new Date(ban.expires_at).toLocaleDateString()}`}
+                    {ban.expires_at &&
+                      ` · Expires ${new Date(ban.expires_at).toLocaleDateString()}`}
                   </p>
                 </div>
               </div>
@@ -173,15 +165,16 @@ function BanUserModal({
     }
   };
 
-  const members = membersData?.members?.filter(
-    (m) => m.role !== 'owner',
-  ) ?? [];
+  const members = membersData?.members?.filter((m) => m.role !== 'owner') ?? [];
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Ban User" size="sm">
       <div className="space-y-4">
         <div>
-          <label htmlFor="ban-user-select" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            htmlFor="ban-user-select"
+            className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             User
           </label>
           <select
@@ -200,7 +193,10 @@ function BanUserModal({
         </div>
 
         <div>
-          <label htmlFor="ban-reason" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            htmlFor="ban-reason"
+            className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Reason (optional)
           </label>
           <input
@@ -214,7 +210,10 @@ function BanUserModal({
         </div>
 
         <div>
-          <label htmlFor="ban-duration" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            htmlFor="ban-duration"
+            className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Duration
           </label>
           <select
@@ -231,7 +230,10 @@ function BanUserModal({
           </select>
         </div>
 
-        <label htmlFor="ban-hide-messages" className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <label
+          htmlFor="ban-hide-messages"
+          className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+        >
           <input
             id="ban-hide-messages"
             type="checkbox"
@@ -285,15 +287,11 @@ function AuditLog({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="space-y-3">
       {entries.map((entry) => (
-        <div
-          key={entry.id}
-          className="rounded-lg bg-gray-50 px-4 py-3 dark:bg-gray-800"
-        >
+        <div key={entry.id} className="rounded-lg bg-gray-50 px-4 py-3 dark:bg-gray-800">
           <div className="flex items-center gap-2">
             <ShieldExclamationIcon className="h-4 w-4 flex-shrink-0 text-gray-400" />
             <span className="text-sm text-gray-900 dark:text-white">
-              <span className="font-medium">{entry.actor_display_name || 'System'}</span>
-              {' '}
+              <span className="font-medium">{entry.actor_display_name || 'System'}</span>{' '}
               {formatAction(entry.action)}
               {entry.target_display_name && (
                 <>
@@ -303,15 +301,17 @@ function AuditLog({ workspaceId }: { workspaceId: string }) {
               )}
             </span>
           </div>
-          {entry.metadata && typeof entry.metadata === 'object' && Object.keys(entry.metadata).length > 0 && (
-            <div className="mt-1 ml-6 text-xs text-gray-500 dark:text-gray-400">
-              {Object.entries(entry.metadata).map(([key, value]) => (
-                <span key={key} className="mr-3">
-                  {formatMetadataKey(key)}: {String(value)}
-                </span>
-              ))}
-            </div>
-          )}
+          {entry.metadata &&
+            typeof entry.metadata === 'object' &&
+            Object.keys(entry.metadata).length > 0 && (
+              <div className="mt-1 ml-6 text-xs text-gray-500 dark:text-gray-400">
+                {Object.entries(entry.metadata).map(([key, value]) => (
+                  <span key={key} className="mr-3">
+                    {formatMetadataKey(key)}: {String(value)}
+                  </span>
+                ))}
+              </div>
+            )}
           <p className="mt-1 ml-6 text-xs text-gray-400 dark:text-gray-500">
             {new Date(entry.created_at).toLocaleString()}
           </p>
