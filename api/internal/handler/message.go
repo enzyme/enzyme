@@ -134,6 +134,23 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 	var originalMentions []string
 	if h.notificationService != nil && content != "" {
 		mentions, _ = notification.ParseMentions(ctx, h.userRepo, ch.WorkspaceID, content)
+
+		// Strip mentions of blocked users in either direction (workspace-scoped)
+		if h.moderationRepo != nil && len(mentions) > 0 {
+			var filtered []string
+			for _, mentionID := range mentions {
+				if notification.IsSpecialMention(mentionID) {
+					filtered = append(filtered, mentionID)
+					continue
+				}
+				blocked, _ := h.moderationRepo.IsBlockedEitherDirection(ctx, ch.WorkspaceID, userID, mentionID)
+				if !blocked {
+					filtered = append(filtered, mentionID)
+				}
+			}
+			mentions = filtered
+		}
+
 		originalMentions = mentions
 
 		// Resolve @here to online user IDs for storage (badge count accuracy)
@@ -211,10 +228,32 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 
 	// Broadcast message via SSE (use API type to include attachment URLs)
 	if h.hub != nil {
-		h.hub.BroadcastToChannel(ch.WorkspaceID, string(request.Id), sse.Event{
-			Type: sse.EventMessageNew,
-			Data: apiMsg,
-		})
+		if (ch.Type == channel.TypeDM || ch.Type == channel.TypeGroupDM) && h.moderationRepo != nil {
+			// For DM channels, skip delivery to users who have blocked the sender
+			memberIDs, _ := h.channelRepo.GetMemberUserIDs(ctx, string(request.Id))
+			for _, memberID := range memberIDs {
+				if memberID == userID {
+					// Always deliver to sender
+					h.hub.BroadcastToUser(ch.WorkspaceID, memberID, sse.Event{
+						Type: sse.EventMessageNew,
+						Data: apiMsg,
+					})
+					continue
+				}
+				blocked, _ := h.moderationRepo.IsBlocked(ctx, ch.WorkspaceID, memberID, userID)
+				if !blocked {
+					h.hub.BroadcastToUser(ch.WorkspaceID, memberID, sse.Event{
+						Type: sse.EventMessageNew,
+						Data: apiMsg,
+					})
+				}
+			}
+		} else {
+			h.hub.BroadcastToChannel(ch.WorkspaceID, string(request.Id), sse.Event{
+				Type: sse.EventMessageNew,
+				Data: apiMsg,
+			})
+		}
 	}
 
 	// Trigger notifications
