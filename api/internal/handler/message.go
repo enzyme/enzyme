@@ -449,8 +449,19 @@ func (h *Handler) DeleteMessage(ctx context.Context, request openapi.DeleteMessa
 		return openapi.DeleteMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Permission denied")}, nil
 	}
 
+	// Capture content before deletion for audit log (only for admin delete)
+	isAdminDelete := msg.UserID == nil || *msg.UserID != userID
+
 	if err := h.messageRepo.Delete(ctx, string(request.Id)); err != nil {
 		return nil, err
+	}
+
+	// Audit log: admin message delete (when actor != author)
+	if isAdminDelete && h.moderationRepo != nil {
+		h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, ch.WorkspaceID, userID, "message.deleted", "message", string(request.Id), map[string]interface{}{
+			"channel_id":       msg.ChannelID,
+			"original_content": msg.Content,
+		})
 	}
 
 	// Broadcast delete via SSE

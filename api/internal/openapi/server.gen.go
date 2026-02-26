@@ -5627,6 +5627,15 @@ func (response AcceptInvite401JSONResponse) VisitAcceptInviteResponse(w http.Res
 	return json.NewEncoder(w).Encode(response)
 }
 
+type AcceptInvite403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AcceptInvite403JSONResponse) VisitAcceptInviteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type AcceptInvite404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response AcceptInvite404JSONResponse) VisitAcceptInviteResponse(w http.ResponseWriter) error {

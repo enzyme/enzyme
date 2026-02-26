@@ -187,6 +187,11 @@ func (h *Handler) RemoveWorkspaceMember(ctx context.Context, request openapi.Rem
 		return nil, err
 	}
 
+	// Audit log: only when an admin removes another user (not self-removal)
+	if request.Body.UserId != userID && h.moderationRepo != nil {
+		h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, string(request.Wid), userID, "member.removed", "user", request.Body.UserId, nil)
+	}
+
 	return openapi.RemoveWorkspaceMember200JSONResponse{
 		Success: true,
 	}, nil
@@ -232,6 +237,14 @@ func (h *Handler) UpdateWorkspaceMemberRole(ctx context.Context, request openapi
 
 	if err := h.workspaceRepo.UpdateMemberRole(ctx, request.Body.UserId, string(request.Wid), newRole); err != nil {
 		return nil, err
+	}
+
+	// Audit log: role change
+	if h.moderationRepo != nil {
+		h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, string(request.Wid), userID, "member.role_changed", "user", request.Body.UserId, map[string]interface{}{
+			"old_role": targetMembership.Role,
+			"new_role": newRole,
+		})
 	}
 
 	return openapi.UpdateWorkspaceMemberRole200JSONResponse{
@@ -321,6 +334,16 @@ func (h *Handler) AcceptInvite(ctx context.Context, request openapi.AcceptInvite
 	userID := h.getUserID(ctx)
 	if userID == "" {
 		return openapi.AcceptInvite401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+	}
+
+	// Look up the invite to get the workspace ID for ban check
+	invite, err := h.workspaceRepo.GetInviteByCode(ctx, request.Code)
+	if err == nil && invite != nil && h.moderationRepo != nil {
+		// Check for active ban before allowing join
+		ban, _ := h.moderationRepo.GetActiveBan(ctx, invite.WorkspaceID, userID)
+		if ban != nil {
+			return openapi.AcceptInvite403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("You are banned from this workspace")}, nil
+		}
 	}
 
 	ws, err := h.workspaceRepo.AcceptInvite(ctx, request.Code, userID)
