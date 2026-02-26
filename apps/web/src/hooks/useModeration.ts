@@ -128,6 +128,7 @@ export function useBlockUser(workspaceId: string | undefined) {
     mutationFn: (userId: string) => moderationApi.blockUser(workspaceId!, userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'blocks'] });
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
   });
 }
@@ -139,6 +140,7 @@ export function useUnblockUser(workspaceId: string | undefined) {
     mutationFn: (userId: string) => moderationApi.unblockUser(workspaceId!, userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'blocks'] });
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
   });
 }

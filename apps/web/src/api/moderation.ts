@@ -44,7 +44,7 @@ export const moderationApi = {
     post<{ success: boolean }>(`/workspaces/${workspaceId}/blocks/remove`, { user_id: userId }),
 
   listBlocks: (workspaceId: string) =>
-    get<{ blocks: BlockWithUser[] }>(`/workspaces/${workspaceId}/blocks`),
+    get<{ blocks: BlockWithUser[] }>(`/workspaces/${workspaceId}/blocks/list`),
 
   // Moderation log
   listModerationLog: (workspaceId: string, input?: { cursor?: string; limit?: number }) =>
