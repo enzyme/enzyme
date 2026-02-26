@@ -28,6 +28,14 @@ On the self-hosting side, Zulip requires PostgreSQL, RabbitMQ, Redis, and memcac
 
 Enzyme and Zulip share a lot of values: both are fully open source, both prioritize the self-hosted experience, and neither is trying to funnel you toward a paid cloud tier. The difference is UX philosophy. Zulip bets that added structure is worth the learning curve. Enzyme bets that most people want something that feels like Slack from day one, with no adoption friction. If Zulip's model clicks for your group, it's an excellent choice — the closest thing to Enzyme in spirit, just with a different UX bet.
 
+## Campfire (37signals)
+
+Campfire is 37signals' MIT-licensed group chat tool. It has the core features — rooms, direct messages, mentions, search, file sharing — and ships as a Docker container you can deploy on your own hardware or any cloud provider. It also works on air-gapped networks, which is a real advantage for organizations with strict security requirements.
+
+The UI is clean and opinionated, but unconventional compared to Slack and Discord. If your group is used to a sidebar with channels, a message list, and a thread panel, Campfire will feel different — it takes a more minimal approach that not everyone will find intuitive. Campfire also doesn't have threads, which is a deliberate design choice but a dealbreaker for some.
+
+Campfire and Enzyme are close in philosophy — both are MIT-licensed, self-hostable, and designed to do chat well without trying to be a platform. The main difference is UX: Enzyme follows a conventional Slack-style layout, while Campfire charts its own path.
+
 ## Element / Matrix
 
 Element is the flagship client for the Matrix protocol, a federated communication standard. Matrix has real, unique strengths: end-to-end encryption is built into the protocol (not bolted on), federation means no single entity controls the network, and the ecosystem supports not just text chat but voice, video, and bridging to other platforms. If your threat model requires E2EE by default, or if you need to communicate across organizational boundaries without depending on a shared third-party service, Matrix is one of the few options that actually delivers on that.
