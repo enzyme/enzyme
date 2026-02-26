@@ -115,6 +115,10 @@ func (r *Repository) CreateSystemMessage(ctx context.Context, channelID string, 
 		}
 	case SystemEventChannelDescriptionUpdated:
 		content = "updated the channel description"
+	case SystemEventMessagePinned:
+		content = "pinned a message to this channel"
+	case SystemEventMessageUnpinned:
+		content = "unpinned a message from this channel"
 	}
 
 	msg := &Message{
@@ -141,7 +145,7 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*Message, error) {
 
 func (r *Repository) GetByIDWithUser(ctx context.Context, id string) (*MessageWithUser, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+		SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 		       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email
 		FROM messages m
 		LEFT JOIN users u ON u.id = m.user_id
@@ -232,7 +236,7 @@ func (r *Repository) List(ctx context.Context, channelID string, opts ListOption
 	// Get top-level messages and thread replies marked as "also send to channel"
 	if opts.Cursor == "" {
 		query = `
-			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email
 			FROM messages m
 			LEFT JOIN users u ON u.id = m.user_id
@@ -243,7 +247,7 @@ func (r *Repository) List(ctx context.Context, channelID string, opts ListOption
 		args = []interface{}{channelID, opts.Limit + 1}
 	} else if opts.Direction == "after" {
 		query = `
-			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email
 			FROM messages m
 			LEFT JOIN users u ON u.id = m.user_id
@@ -254,7 +258,7 @@ func (r *Repository) List(ctx context.Context, channelID string, opts ListOption
 		args = []interface{}{channelID, opts.Cursor, opts.Limit + 1}
 	} else {
 		query = `
-			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email
 			FROM messages m
 			LEFT JOIN users u ON u.id = m.user_id
@@ -317,7 +321,7 @@ func (r *Repository) listAround(ctx context.Context, channelID string, opts List
 
 	// Query messages at or before cursor (DESC order, includes the cursor message)
 	beforeQuery := `
-		SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+		SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 		       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email
 		FROM messages m
 		LEFT JOIN users u ON u.id = m.user_id
@@ -350,7 +354,7 @@ func (r *Repository) listAround(ctx context.Context, channelID string, opts List
 
 	// Query messages after cursor (ASC order)
 	afterQuery := `
-		SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+		SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 		       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email
 		FROM messages m
 		LEFT JOIN users u ON u.id = m.user_id
@@ -458,7 +462,7 @@ func (r *Repository) ListThread(ctx context.Context, parentID string, opts ListO
 
 	if opts.Cursor == "" {
 		query = `
-			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email
 			FROM messages m
 			LEFT JOIN users u ON u.id = m.user_id
@@ -469,7 +473,7 @@ func (r *Repository) ListThread(ctx context.Context, parentID string, opts ListO
 		args = []interface{}{parentID, opts.Limit + 1}
 	} else {
 		query = `
-			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email
 			FROM messages m
 			LEFT JOIN users u ON u.id = m.user_id
@@ -744,10 +748,10 @@ type rowScanner interface {
 
 func (r *Repository) scanMessageWithUser(row rowScanner) (*MessageWithUser, error) {
 	var msg MessageWithUser
-	var userID, threadParentID, lastReplyAt, editedAt, deletedAt, avatarURL, userEmail, systemEventJSON sql.NullString
+	var userID, threadParentID, lastReplyAt, editedAt, deletedAt, pinnedAt, pinnedBy, avatarURL, userEmail, systemEventJSON sql.NullString
 	var createdAt, updatedAt string
 
-	err := row.Scan(&msg.ID, &msg.ChannelID, &userID, &msg.Content, &msg.Type, &systemEventJSON, &threadParentID, &msg.AlsoSendToChannel, &msg.ReplyCount, &lastReplyAt, &editedAt, &deletedAt, &createdAt, &updatedAt,
+	err := row.Scan(&msg.ID, &msg.ChannelID, &userID, &msg.Content, &msg.Type, &systemEventJSON, &threadParentID, &msg.AlsoSendToChannel, &msg.ReplyCount, &lastReplyAt, &editedAt, &deletedAt, &pinnedAt, &pinnedBy, &createdAt, &updatedAt,
 		&msg.UserDisplayName, &avatarURL, &userEmail)
 	if err != nil {
 		return nil, err
@@ -782,6 +786,13 @@ func (r *Repository) scanMessageWithUser(row rowScanner) (*MessageWithUser, erro
 		t, _ := time.Parse(time.RFC3339, deletedAt.String)
 		msg.DeletedAt = &t
 	}
+	if pinnedAt.Valid {
+		t, _ := time.Parse(time.RFC3339, pinnedAt.String)
+		msg.PinnedAt = &t
+	}
+	if pinnedBy.Valid {
+		msg.PinnedBy = &pinnedBy.String
+	}
 	if avatarURL.Valid {
 		msg.UserAvatarURL = &avatarURL.String
 	}
@@ -810,7 +821,7 @@ func (r *Repository) ListAllUnreads(ctx context.Context, workspaceID, userID str
 	// Get messages from channels user is a member of that are newer than last_read_message_id
 	if opts.Cursor == "" {
 		query = `
-			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email,
 			       c.name as channel_name, c.type as channel_type
 			FROM messages m
@@ -827,7 +838,7 @@ func (r *Repository) ListAllUnreads(ctx context.Context, workspaceID, userID str
 		args = []interface{}{userID, workspaceID, opts.Limit + 1}
 	} else {
 		query = `
-			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email,
 			       c.name as channel_name, c.type as channel_type
 			FROM messages m
@@ -906,10 +917,10 @@ func (r *Repository) ListAllUnreads(ctx context.Context, workspaceID, userID str
 
 func (r *Repository) scanUnreadMessage(row rowScanner) (*UnreadMessage, string, string, error) {
 	var msg UnreadMessage
-	var userID, threadParentID, lastReplyAt, editedAt, deletedAt, avatarURL, userEmail, systemEventJSON sql.NullString
+	var userID, threadParentID, lastReplyAt, editedAt, deletedAt, pinnedAt, pinnedBy, avatarURL, userEmail, systemEventJSON sql.NullString
 	var createdAt, updatedAt, channelName, channelType string
 
-	err := row.Scan(&msg.ID, &msg.ChannelID, &userID, &msg.Content, &msg.Type, &systemEventJSON, &threadParentID, &msg.AlsoSendToChannel, &msg.ReplyCount, &lastReplyAt, &editedAt, &deletedAt, &createdAt, &updatedAt,
+	err := row.Scan(&msg.ID, &msg.ChannelID, &userID, &msg.Content, &msg.Type, &systemEventJSON, &threadParentID, &msg.AlsoSendToChannel, &msg.ReplyCount, &lastReplyAt, &editedAt, &deletedAt, &pinnedAt, &pinnedBy, &createdAt, &updatedAt,
 		&msg.UserDisplayName, &avatarURL, &userEmail, &channelName, &channelType)
 	if err != nil {
 		return nil, "", "", err
@@ -943,6 +954,13 @@ func (r *Repository) scanUnreadMessage(row rowScanner) (*UnreadMessage, string, 
 	if deletedAt.Valid {
 		t, _ := time.Parse(time.RFC3339, deletedAt.String)
 		msg.DeletedAt = &t
+	}
+	if pinnedAt.Valid {
+		t, _ := time.Parse(time.RFC3339, pinnedAt.String)
+		msg.PinnedAt = &t
+	}
+	if pinnedBy.Valid {
+		msg.PinnedBy = &pinnedBy.String
 	}
 	if avatarURL.Valid {
 		msg.UserAvatarURL = &avatarURL.String
@@ -1036,7 +1054,7 @@ func (r *Repository) Search(ctx context.Context, workspaceID, currentUserID stri
 
 	// Data query
 	dataQuery := `
-		SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+		SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 		       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email,
 		       c.name as channel_name, c.type as channel_type
 	` + joinSQL + " WHERE " + whereSQL + `
@@ -1092,7 +1110,7 @@ func (r *Repository) ListUserThreads(ctx context.Context, workspaceID, userID st
 	// Base query: get parent messages of threads the user is subscribed to
 	if opts.Cursor == "" {
 		query = `
-			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email,
 			       c.name as channel_name, c.type as channel_type,
 			       CASE WHEN ts.last_read_reply_id IS NULL THEN 1
@@ -1113,7 +1131,7 @@ func (r *Repository) ListUserThreads(ctx context.Context, workspaceID, userID st
 		args = []interface{}{userID, workspaceID, opts.Limit + 1}
 	} else {
 		query = `
-			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.created_at, m.updated_at,
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
 			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email,
 			       c.name as channel_name, c.type as channel_type,
 			       CASE WHEN ts.last_read_reply_id IS NULL THEN 1
@@ -1145,11 +1163,11 @@ func (r *Repository) ListUserThreads(ctx context.Context, workspaceID, userID st
 	var threads []ThreadMessage
 	for rows.Next() {
 		var msg ThreadMessage
-		var msgUserID, threadParentID, lastReplyAt, editedAt, deletedAt, avatarURL, userEmail, systemEventJSON sql.NullString
+		var msgUserID, threadParentID, lastReplyAt, editedAt, deletedAt, pinnedAt, pinnedBy, avatarURL, userEmail, systemEventJSON sql.NullString
 		var createdAt, updatedAt, channelName, channelType string
 		var hasNewReplies int
 
-		err := rows.Scan(&msg.ID, &msg.ChannelID, &msgUserID, &msg.Content, &msg.Type, &systemEventJSON, &threadParentID, &msg.AlsoSendToChannel, &msg.ReplyCount, &lastReplyAt, &editedAt, &deletedAt, &createdAt, &updatedAt,
+		err := rows.Scan(&msg.ID, &msg.ChannelID, &msgUserID, &msg.Content, &msg.Type, &systemEventJSON, &threadParentID, &msg.AlsoSendToChannel, &msg.ReplyCount, &lastReplyAt, &editedAt, &deletedAt, &pinnedAt, &pinnedBy, &createdAt, &updatedAt,
 			&msg.UserDisplayName, &avatarURL, &userEmail, &channelName, &channelType, &hasNewReplies)
 		if err != nil {
 			return nil, err
@@ -1181,6 +1199,13 @@ func (r *Repository) ListUserThreads(ctx context.Context, workspaceID, userID st
 		if deletedAt.Valid {
 			t, _ := time.Parse(time.RFC3339, deletedAt.String)
 			msg.DeletedAt = &t
+		}
+		if pinnedAt.Valid {
+			t, _ := time.Parse(time.RFC3339, pinnedAt.String)
+			msg.PinnedAt = &t
+		}
+		if pinnedBy.Valid {
+			msg.PinnedBy = &pinnedBy.String
 		}
 		if avatarURL.Valid {
 			msg.UserAvatarURL = &avatarURL.String
@@ -1245,4 +1270,114 @@ func (r *Repository) ListUserThreads(ctx context.Context, workspaceID, userID st
 		HasMore:    hasMore,
 		NextCursor: nextCursor,
 	}, nil
+}
+
+// PinMessage sets pinned_at and pinned_by on a message, enforcing a max of 50 pins per channel.
+func (r *Repository) PinMessage(ctx context.Context, messageID, userID string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Get channel_id for pin count check
+	var channelID string
+	err = tx.QueryRowContext(ctx, `SELECT channel_id FROM messages WHERE id = ?`, messageID).Scan(&channelID)
+	if err != nil {
+		return ErrMessageNotFound
+	}
+
+	// Check pin count
+	var count int
+	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM messages WHERE channel_id = ? AND pinned_at IS NOT NULL`, channelID).Scan(&count)
+	if err != nil {
+		return err
+	}
+	if count >= 50 {
+		return errors.New("maximum of 50 pinned messages per channel")
+	}
+
+	// Pin the message
+	_, err = tx.ExecContext(ctx, `UPDATE messages SET pinned_at = ?, pinned_by = ? WHERE id = ?`, now, userID, messageID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// UnpinMessage clears pinned_at and pinned_by on a message.
+func (r *Repository) UnpinMessage(ctx context.Context, messageID string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE messages SET pinned_at = NULL, pinned_by = NULL WHERE id = ?`, messageID)
+	return err
+}
+
+// CountPinnedMessages returns the count of pinned messages in a channel.
+func (r *Repository) CountPinnedMessages(ctx context.Context, channelID string) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM messages WHERE channel_id = ? AND pinned_at IS NOT NULL`, channelID).Scan(&count)
+	return count, err
+}
+
+// ListPinnedMessages returns pinned messages in a channel, ordered by pinned_at DESC.
+func (r *Repository) ListPinnedMessages(ctx context.Context, channelID string, cursor string, limit int) ([]MessageWithUser, bool, string, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+
+	var query string
+	var args []interface{}
+
+	if cursor == "" {
+		query = `
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
+			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email
+			FROM messages m
+			LEFT JOIN users u ON u.id = m.user_id
+			WHERE m.channel_id = ? AND m.pinned_at IS NOT NULL AND m.deleted_at IS NULL
+			ORDER BY m.pinned_at DESC
+			LIMIT ?
+		`
+		args = []interface{}{channelID, limit + 1}
+	} else {
+		query = `
+			SELECT m.id, m.channel_id, m.user_id, m.content, m.type, m.system_event, m.thread_parent_id, m.also_send_to_channel, m.reply_count, m.last_reply_at, m.edited_at, m.deleted_at, m.pinned_at, m.pinned_by, m.created_at, m.updated_at,
+			       COALESCE(u.display_name, '') as user_display_name, u.avatar_url, COALESCE(u.email, '') as user_email
+			FROM messages m
+			LEFT JOIN users u ON u.id = m.user_id
+			WHERE m.channel_id = ? AND m.pinned_at IS NOT NULL AND m.deleted_at IS NULL AND m.id < ?
+			ORDER BY m.pinned_at DESC
+			LIMIT ?
+		`
+		args = []interface{}{channelID, cursor, limit + 1}
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, false, "", err
+	}
+	defer rows.Close()
+
+	var messages []MessageWithUser
+	for rows.Next() {
+		msg, err := r.scanMessageWithUser(rows)
+		if err != nil {
+			return nil, false, "", err
+		}
+		messages = append(messages, *msg)
+	}
+
+	hasMore := len(messages) > limit
+	nextCursor := ""
+	if hasMore {
+		messages = messages[:limit]
+		nextCursor = messages[len(messages)-1].ID
+	}
+
+	// Load reactions and thread participants
+	r.loadReactionsAndParticipants(ctx, messages)
+
+	return messages, hasMore, nextCursor, nil
 }

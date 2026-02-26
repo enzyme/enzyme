@@ -22,6 +22,8 @@ const (
 	SystemEventChannelRenamed            = "channel_renamed"
 	SystemEventChannelVisibilityChanged  = "channel_visibility_changed"
 	SystemEventChannelDescriptionUpdated = "channel_description_updated"
+	SystemEventMessagePinned             = "message_pinned"
+	SystemEventMessageUnpinned           = "message_unpinned"
 )
 
 // SystemEventData contains metadata for system messages
@@ -34,6 +36,7 @@ type SystemEventData struct {
 	ActorDisplayName *string `json:"actor_display_name,omitempty"`
 	OldChannelName   *string `json:"old_channel_name,omitempty"`
 	ChannelType      *string `json:"channel_type,omitempty"`
+	MessageID        *string `json:"message_id,omitempty"`
 }
 
 type Message struct {
@@ -50,6 +53,8 @@ type Message struct {
 	LastReplyAt       *time.Time       `json:"last_reply_at,omitempty"`
 	EditedAt          *time.Time       `json:"edited_at,omitempty"`
 	DeletedAt         *time.Time       `json:"deleted_at,omitempty"`
+	PinnedAt          *time.Time       `json:"pinned_at,omitempty"`
+	PinnedBy          *string          `json:"pinned_by,omitempty"`
 	CreatedAt         time.Time        `json:"created_at"`
 	UpdatedAt         time.Time        `json:"updated_at"`
 }

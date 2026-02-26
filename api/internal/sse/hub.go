@@ -376,3 +376,27 @@ func (h *Hub) IsUserConnected(workspaceID, userID string) bool {
 func (h *Hub) IsUserOnline(workspaceID, userID string) bool {
 	return h.IsUserConnected(workspaceID, userID)
 }
+
+// DisconnectUserClients forcefully disconnects all SSE clients for a user in a workspace.
+// Used when a user is banned to immediately terminate their connections.
+func (h *Hub) DisconnectUserClients(workspaceID, userID string) {
+	h.mu.RLock()
+	var clientsToClose []*Client
+	if workspace, ok := h.workspaces[workspaceID]; ok {
+		if clients, ok := workspace[userID]; ok {
+			clientsToClose = make([]*Client, len(clients))
+			copy(clientsToClose, clients)
+		}
+	}
+	h.mu.RUnlock()
+
+	// Close Done channels outside the lock to trigger disconnect
+	for _, client := range clientsToClose {
+		select {
+		case <-client.Done:
+			// Already closed
+		default:
+			close(client.Done)
+		}
+	}
+}

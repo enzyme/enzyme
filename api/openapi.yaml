@@ -1391,6 +1391,104 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # Message pinning endpoints
+  /messages/{id}/pin:
+    post:
+      tags: [messages]
+      summary: Pin a message
+      operationId: pinMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      responses:
+        '200':
+          description: Message pinned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: '#/components/schemas/MessageWithUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /messages/{id}/unpin:
+    post:
+      tags: [messages]
+      summary: Unpin a message
+      operationId: unpinMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      responses:
+        '200':
+          description: Message unpinned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: '#/components/schemas/MessageWithUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /channels/{id}/pins/list:
+    post:
+      tags: [messages]
+      summary: List pinned messages in channel
+      operationId: listPinnedMessages
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cursor:
+                  type: string
+                limit:
+                  type: integer
+                  default: 50
+      responses:
+        '200':
+          description: List of pinned messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MessageWithUser'
+                  has_more:
+                    type: boolean
+                  next_cursor:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # File endpoints
   /channels/{id}/files/upload:
     post:
@@ -2030,6 +2128,242 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  # Moderation endpoints
+  /workspaces/{wid}/bans/create:
+    post:
+      tags: [workspaces]
+      summary: Ban a user from workspace
+      operationId: banUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BanUserInput'
+      responses:
+        '200':
+          description: User banned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ban:
+                    $ref: '#/components/schemas/Ban'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: User already banned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /workspaces/{wid}/bans/remove:
+    post:
+      tags: [workspaces]
+      summary: Unban a user from workspace
+      operationId: unbanUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: User unbanned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workspaces/{wid}/bans/list:
+    post:
+      tags: [workspaces]
+      summary: List active bans in workspace
+      operationId: listBans
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cursor:
+                  type: string
+                limit:
+                  type: integer
+                  default: 50
+      responses:
+        '200':
+          description: List of active bans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bans:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BanWithUser'
+                  has_more:
+                    type: boolean
+                  next_cursor:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/blocks/create:
+    post:
+      tags: [users]
+      summary: Block a user
+      operationId: blockUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: User blocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/blocks/remove:
+    post:
+      tags: [users]
+      summary: Unblock a user
+      operationId: unblockUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: User unblocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/blocks/list:
+    post:
+      tags: [users]
+      summary: List blocked users
+      operationId: listBlocks
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of blocked users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  blocks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BlockWithUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /workspaces/{wid}/moderation-log/list:
+    post:
+      tags: [workspaces]
+      summary: List moderation audit log
+      operationId: listModerationLog
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cursor:
+                  type: string
+                limit:
+                  type: integer
+                  default: 50
+      responses:
+        '200':
+          description: List of moderation log entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModerationLogEntryWithActor'
+                  has_more:
+                    type: boolean
+                  next_cursor:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   # SSE endpoints
   /workspaces/{wid}/events:
     get:
@@ -2444,7 +2778,7 @@ components:
 
     SystemEventType:
       type: string
-      enum: [user_joined, user_left, user_added, user_converted_channel, channel_renamed, channel_visibility_changed, channel_description_updated]
+      enum: [user_joined, user_left, user_added, user_converted_channel, channel_renamed, channel_visibility_changed, channel_description_updated, message_pinned, message_unpinned]
 
     SystemEventData:
       type: object
@@ -2473,6 +2807,9 @@ components:
         channel_type:
           type: string
           description: New channel type (for visibility change events)
+        message_id:
+          type: string
+          description: Referenced message ID (for pin/unpin events)
 
     Message:
       type: object
@@ -2511,6 +2848,11 @@ components:
           format: date-time
         also_send_to_channel:
           type: boolean
+        pinned_at:
+          type: string
+          format: date-time
+        pinned_by:
+          type: string
 
     MessageWithUser:
       allOf:
@@ -2862,6 +3204,10 @@ components:
         - notification
         - emoji.created
         - emoji.deleted
+        - message.pinned
+        - message.unpinned
+        - member.banned
+        - member.unbanned
         - scheduled_message.created
         - scheduled_message.updated
         - scheduled_message.deleted
@@ -3519,3 +3865,100 @@ components:
           type: array
           items:
             type: string
+
+    # Moderation schemas
+    BanUserInput:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: string
+        reason:
+          type: string
+        hide_messages:
+          type: boolean
+          default: false
+        duration_hours:
+          type: integer
+          description: Hours until ban expires. Omit for permanent.
+
+    Ban:
+      type: object
+      required: [id, workspace_id, user_id, banned_by, hide_messages, created_at]
+      properties:
+        id:
+          type: string
+        workspace_id:
+          type: string
+        user_id:
+          type: string
+        banned_by:
+          type: string
+        reason:
+          type: string
+        hide_messages:
+          type: boolean
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    BanWithUser:
+      allOf:
+        - $ref: '#/components/schemas/Ban'
+        - type: object
+          properties:
+            user_display_name:
+              type: string
+            user_email:
+              type: string
+            user_avatar_url:
+              type: string
+            banned_by_name:
+              type: string
+
+    BlockWithUser:
+      type: object
+      required: [blocker_id, blocked_id, created_at]
+      properties:
+        blocker_id:
+          type: string
+        blocked_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        display_name:
+          type: string
+        email:
+          type: string
+        avatar_url:
+          type: string
+
+    ModerationLogEntryWithActor:
+      type: object
+      required: [id, workspace_id, actor_id, action, target_type, target_id, created_at]
+      properties:
+        id:
+          type: string
+        workspace_id:
+          type: string
+        actor_id:
+          type: string
+        action:
+          type: string
+        target_type:
+          type: string
+        target_id:
+          type: string
+        metadata:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        actor_display_name:
+          type: string
+        actor_avatar_url:
+          type: string

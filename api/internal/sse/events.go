@@ -22,6 +22,11 @@ const (
 	EventEmojiCreated    = "emoji.created"
 	EventEmojiDeleted    = "emoji.deleted"
 
+	EventMessagePinned   = "message.pinned"
+	EventMessageUnpinned = "message.unpinned"
+	EventMemberBanned    = "member.banned"
+	EventMemberUnbanned  = "member.unbanned"
+
 	EventScheduledMessageCreated = "scheduled_message.created"
 	EventScheduledMessageUpdated = "scheduled_message.updated"
 	EventScheduledMessageDeleted = "scheduled_message.deleted"

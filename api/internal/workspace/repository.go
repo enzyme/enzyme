@@ -404,6 +404,20 @@ func isUniqueConstraintError(err error) bool {
 	return err != nil && (contains(err.Error(), "UNIQUE constraint failed") || contains(err.Error(), "duplicate key"))
 }
 
+// BeginTx starts a database transaction
+func (r *Repository) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	return r.db.BeginTx(ctx, nil)
+}
+
+// RemoveMemberTx removes a workspace membership within a transaction, skipping owner check
+// (used during banning where role hierarchy is already enforced)
+func (r *Repository) RemoveMemberTx(ctx context.Context, tx *sql.Tx, userID, workspaceID string) error {
+	_, err := tx.ExecContext(ctx, `
+		DELETE FROM workspace_memberships WHERE user_id = ? AND workspace_id = ?
+	`, userID, workspaceID)
+	return err
+}
+
 func contains(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {
 		if s[i:i+len(substr)] == substr {
