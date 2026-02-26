@@ -10,6 +10,7 @@ import (
 	"github.com/enzyme/api/internal/file"
 	"github.com/enzyme/api/internal/linkpreview"
 	"github.com/enzyme/api/internal/message"
+	"github.com/enzyme/api/internal/moderation"
 	"github.com/enzyme/api/internal/notification"
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/scheduled"
@@ -38,6 +39,7 @@ type Handler struct {
 	emojiRepo           *emoji.Repository
 	scheduledRepo       *scheduled.Repository
 	notificationService *notification.Service
+	moderationRepo      *moderation.Repository
 	hub                 *sse.Hub
 	signer              *signing.Signer
 	storagePath         string
@@ -60,6 +62,7 @@ type Dependencies struct {
 	EmojiRepo           *emoji.Repository
 	ScheduledRepo       *scheduled.Repository
 	NotificationService *notification.Service
+	ModerationRepo      *moderation.Repository
 	Hub                 *sse.Hub
 	Signer              *signing.Signer
 	StoragePath         string
@@ -83,6 +86,7 @@ func New(deps Dependencies) *Handler {
 		emojiRepo:           deps.EmojiRepo,
 		scheduledRepo:       deps.ScheduledRepo,
 		notificationService: deps.NotificationService,
+		moderationRepo:      deps.ModerationRepo,
 		hub:                 deps.Hub,
 		signer:              deps.Signer,
 		storagePath:         deps.StoragePath,

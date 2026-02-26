@@ -22,6 +22,7 @@ import (
 	"github.com/enzyme/api/internal/handler"
 	"github.com/enzyme/api/internal/linkpreview"
 	"github.com/enzyme/api/internal/message"
+	"github.com/enzyme/api/internal/moderation"
 	"github.com/enzyme/api/internal/notification"
 	"github.com/enzyme/api/internal/presence"
 	"github.com/enzyme/api/internal/ratelimit"
@@ -93,6 +94,7 @@ func New(cfg *config.Config) (*App, error) {
 	emojiRepo := emoji.NewRepository(db.DB)
 	threadRepo := thread.NewRepository(db.DB)
 	scheduledRepo := scheduled.NewRepository(db.DB)
+	moderationRepo := moderation.NewRepository(db.DB)
 
 	// Initialize services
 	authService := auth.NewService(userRepo, passwordResetRepo, cfg.Auth.BcryptCost)
@@ -156,6 +158,7 @@ func New(cfg *config.Config) (*App, error) {
 		EmojiRepo:           emojiRepo,
 		ScheduledRepo:       scheduledRepo,
 		NotificationService: notificationService,
+		ModerationRepo:      moderationRepo,
 		Hub:                 hub,
 		Signer:              signer,
 		StoragePath:         cfg.Files.StoragePath,
