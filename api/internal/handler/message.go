@@ -524,7 +524,7 @@ func (h *Handler) DeleteMessage(ctx context.Context, request openapi.DeleteMessa
 
 	// Audit log: admin message delete (when actor != author)
 	if isAdminDelete && h.moderationRepo != nil {
-		h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, ch.WorkspaceID, userID, "message.deleted", "message", string(request.Id), map[string]interface{}{
+		_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, ch.WorkspaceID, userID, "message.deleted", "message", string(request.Id), map[string]interface{}{
 			"channel_id":       msg.ChannelID,
 			"original_content": msg.Content,
 		})
@@ -1533,7 +1533,7 @@ func (h *Handler) PinMessage(ctx context.Context, request openapi.PinMessageRequ
 	}
 
 	// Create system message
-	h.messageRepo.CreateSystemMessage(ctx, msg.ChannelID, &message.SystemEventData{
+	_, _ = h.messageRepo.CreateSystemMessage(ctx, msg.ChannelID, &message.SystemEventData{
 		EventType:       message.SystemEventMessagePinned,
 		UserID:          userID,
 		UserDisplayName: actorName,
@@ -1611,7 +1611,7 @@ func (h *Handler) UnpinMessage(ctx context.Context, request openapi.UnpinMessage
 	}
 
 	// Create system message
-	h.messageRepo.CreateSystemMessage(ctx, msg.ChannelID, &message.SystemEventData{
+	_, _ = h.messageRepo.CreateSystemMessage(ctx, msg.ChannelID, &message.SystemEventData{
 		EventType:       message.SystemEventMessageUnpinned,
 		UserID:          userID,
 		UserDisplayName: actorName,

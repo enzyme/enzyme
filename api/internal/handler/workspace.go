@@ -189,7 +189,7 @@ func (h *Handler) RemoveWorkspaceMember(ctx context.Context, request openapi.Rem
 
 	// Audit log: only when an admin removes another user (not self-removal)
 	if request.Body.UserId != userID && h.moderationRepo != nil {
-		h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, string(request.Wid), userID, "member.removed", "user", request.Body.UserId, nil)
+		_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, string(request.Wid), userID, "member.removed", "user", request.Body.UserId, nil)
 	}
 
 	return openapi.RemoveWorkspaceMember200JSONResponse{
@@ -241,7 +241,7 @@ func (h *Handler) UpdateWorkspaceMemberRole(ctx context.Context, request openapi
 
 	// Audit log: role change
 	if h.moderationRepo != nil {
-		h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, string(request.Wid), userID, "member.role_changed", "user", request.Body.UserId, map[string]interface{}{
+		_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, string(request.Wid), userID, "member.role_changed", "user", request.Body.UserId, map[string]interface{}{
 			"old_role": targetMembership.Role,
 			"new_role": newRole,
 		})

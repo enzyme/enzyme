@@ -317,7 +317,7 @@ func (h *Handler) ArchiveChannel(ctx context.Context, request openapi.ArchiveCha
 
 	// Audit log: channel archived
 	if h.moderationRepo != nil {
-		h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, ch.WorkspaceID, userID, "channel.archived", "channel", string(request.Id), map[string]interface{}{
+		_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, ch.WorkspaceID, userID, "channel.archived", "channel", string(request.Id), map[string]interface{}{
 			"channel_name": ch.Name,
 		})
 	}
