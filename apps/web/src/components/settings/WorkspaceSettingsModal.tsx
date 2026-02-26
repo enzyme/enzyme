@@ -11,7 +11,18 @@ import {
   useCreateInvite,
 } from '../../hooks/useWorkspaces';
 import { useAuth } from '../../hooks';
-import { Modal, Avatar, Button, Spinner, Tabs, TabList, Tab, TabPanel, toast } from '../ui';
+import {
+  Modal,
+  Avatar,
+  Button,
+  IconButton,
+  Spinner,
+  Tabs,
+  TabList,
+  Tab,
+  TabPanel,
+  toast,
+} from '../ui';
 import { CustomEmojiManager } from './CustomEmojiManager';
 import { cn, getAvatarColor } from '../../lib/utils';
 import type { WorkspaceRole } from '@enzyme/api-client';
@@ -341,16 +352,16 @@ export function WorkspaceSettingsModal({
                   <div className="flex items-center gap-2">
                     <p className="text-gray-900 dark:text-white">{workspace?.workspace.name}</p>
                     {canManage && (
-                      <button
-                        type="button"
-                        onClick={() => {
+                      <IconButton
+                        aria-label="Edit workspace name"
+                        size="xs"
+                        onPress={() => {
                           setEditName(workspace?.workspace.name || '');
                           setIsEditingName(true);
                         }}
-                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       >
                         <PencilIcon className="h-4 w-4" />
-                      </button>
+                      </IconButton>
                     )}
                   </div>
                 )}

@@ -3,7 +3,7 @@ import type { Editor } from '@tiptap/react';
 import { useEditorState } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { PencilIcon, TrashIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
-import { Button as AriaButton } from 'react-aria-components';
+import { IconButton } from '../ui';
 import { getLinkRange } from './linkUtils';
 
 interface LinkBubbleMenuProps {
@@ -87,27 +87,15 @@ export function LinkBubbleMenu({ editor, onEditLink }: LinkBubbleMenuProps) {
         {truncatedUrl}
       </span>
       <div className="mx-1 h-4 w-px bg-gray-200 dark:bg-gray-700" />
-      <AriaButton
-        onPress={handleOpenLink}
-        className="cursor-pointer rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-        aria-label="Open link"
-      >
+      <IconButton onPress={handleOpenLink} aria-label="Open link" size="sm">
         <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-      </AriaButton>
-      <AriaButton
-        onPress={onEditLink}
-        className="cursor-pointer rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-        aria-label="Edit link"
-      >
+      </IconButton>
+      <IconButton onPress={onEditLink} aria-label="Edit link" size="sm">
         <PencilIcon className="h-3.5 w-3.5" />
-      </AriaButton>
-      <AriaButton
-        onPress={handleRemoveLink}
-        className="cursor-pointer rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-600 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-red-400"
-        aria-label="Remove link"
-      >
+      </IconButton>
+      <IconButton onPress={handleRemoveLink} aria-label="Remove link" variant="danger" size="sm">
         <TrashIcon className="h-3.5 w-3.5" />
-      </AriaButton>
+      </IconButton>
     </BubbleMenu>
   );
 }

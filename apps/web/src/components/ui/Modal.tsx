@@ -8,6 +8,7 @@ import {
 } from 'react-aria-components';
 import { tv, type VariantProps } from 'tailwind-variants';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { IconButton } from './IconButton';
 
 const modal = tv({
   slots: {
@@ -25,8 +26,6 @@ const modal = tv({
     header:
       'flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700',
     title: 'text-lg font-semibold text-gray-900 dark:text-white',
-    closeButton:
-      'p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer',
     content: 'p-6',
   },
   variants: {
@@ -70,9 +69,9 @@ export function Modal({ isOpen, onClose, title, children, size }: ModalProps) {
                   <Heading slot="title" className={styles.title()}>
                     {title}
                   </Heading>
-                  <button onClick={close} className={styles.closeButton()} aria-label="Close">
+                  <IconButton onPress={close} aria-label="Close" size="sm">
                     <XMarkIcon className="h-5 w-5" />
-                  </button>
+                  </IconButton>
                 </div>
               )}
               <div className={styles.content()}>{children}</div>

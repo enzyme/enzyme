@@ -1,4 +1,4 @@
-import { Button as AriaButton, DialogTrigger, Popover } from 'react-aria-components';
+import { DialogTrigger, Popover } from 'react-aria-components';
 import {
   FaceSmileIcon,
   ChatBubbleBottomCenterTextIcon,
@@ -8,7 +8,7 @@ import {
   PencilSquareIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
-import { Tooltip, Menu, MenuItem, EmojiGrid } from '../ui';
+import { IconButton, Tooltip, Menu, MenuItem, EmojiGrid } from '../ui';
 import { cn } from '../../lib/utils';
 import type { CustomEmoji } from '@enzyme/api-client';
 
@@ -55,9 +55,9 @@ export function MessageActionBar({
     >
       <DialogTrigger isOpen={reactionPickerOpen} onOpenChange={onReactionPickerOpenChange}>
         <Tooltip content="Add reaction">
-          <AriaButton className="group/btn cursor-pointer rounded-l-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700">
-            <FaceSmileIcon className="h-4 w-4 text-gray-500 transition-transform group-hover/btn:scale-110 group-hover/btn:text-gray-700 dark:group-hover/btn:text-gray-300" />
-          </AriaButton>
+          <IconButton aria-label="Add reaction" className="group/btn rounded-l-lg">
+            <FaceSmileIcon className="h-4 w-4 transition-transform group-hover/btn:scale-110" />
+          </IconButton>
         </Tooltip>
         <Popover placement="bottom end">
           <EmojiGrid onSelect={handleEmojiSelect} customEmojis={customEmojis} />
@@ -66,12 +66,13 @@ export function MessageActionBar({
 
       {onReplyClick && (
         <Tooltip content="Reply in thread">
-          <AriaButton
+          <IconButton
             onPress={onReplyClick}
-            className="group/btn cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label="Reply in thread"
+            className="group/btn rounded-none"
           >
-            <ChatBubbleBottomCenterTextIcon className="h-4 w-4 text-gray-500 transition-transform group-hover/btn:scale-110 group-hover/btn:text-gray-700 dark:group-hover/btn:text-gray-300" />
-          </AriaButton>
+            <ChatBubbleBottomCenterTextIcon className="h-4 w-4 transition-transform group-hover/btn:scale-110" />
+          </IconButton>
         </Tooltip>
       )}
 
@@ -81,15 +82,15 @@ export function MessageActionBar({
           onOpenChange={onDropdownChange}
           align="end"
           trigger={
-            <AriaButton
+            <IconButton
+              aria-label="More options"
               className={cn(
-                'group/btn cursor-pointer rounded-r-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700',
+                'group/btn rounded-r-lg',
                 showDropdown && 'bg-gray-100 dark:bg-gray-700',
               )}
-              aria-label="More options"
             >
-              <EllipsisVerticalIcon className="h-4 w-4 text-gray-500 transition-transform group-hover/btn:scale-110 group-hover/btn:text-gray-700 dark:group-hover/btn:text-gray-300" />
-            </AriaButton>
+              <EllipsisVerticalIcon className="h-4 w-4 transition-transform group-hover/btn:scale-110" />
+            </IconButton>
           }
         >
           <MenuItem onAction={onCopyLink} icon={<LinkIcon className="h-4 w-4" />}>

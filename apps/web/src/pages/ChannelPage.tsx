@@ -37,6 +37,7 @@ import {
   Spinner,
   Modal,
   Button,
+  IconButton,
   Menu,
   MenuItem,
   MenuSeparator,
@@ -260,23 +261,25 @@ export function ChannelPage() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             {isMember && (
-              <button
-                onClick={() => {
-                  if (channel.is_starred) {
-                    unstarChannel.mutate(channelId);
-                  } else {
-                    starChannel.mutate(channelId);
-                  }
-                }}
-                className="flex-shrink-0 cursor-pointer rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-yellow-500 dark:hover:bg-gray-800 dark:hover:text-yellow-400"
-                title={channel.is_starred ? 'Unstar channel' : 'Star channel'}
-              >
-                {channel.is_starred ? (
-                  <StarIconSolid className="h-4 w-4 text-yellow-500" />
-                ) : (
-                  <StarIcon className="h-4 w-4" />
-                )}
-              </button>
+              <Tooltip content={channel.is_starred ? 'Unstar channel' : 'Star channel'}>
+                <IconButton
+                  onPress={() => {
+                    if (channel.is_starred) {
+                      unstarChannel.mutate(channelId);
+                    } else {
+                      starChannel.mutate(channelId);
+                    }
+                  }}
+                  aria-label={channel.is_starred ? 'Unstar channel' : 'Star channel'}
+                  className="flex-shrink-0 text-gray-400 hover:text-yellow-500 dark:hover:bg-gray-800 dark:hover:text-yellow-400"
+                >
+                  {channel.is_starred ? (
+                    <StarIconSolid className="h-4 w-4 text-yellow-500" />
+                  ) : (
+                    <StarIcon className="h-4 w-4" />
+                  )}
+                </IconButton>
+              </Tooltip>
             )}
             <Menu
               trigger={

@@ -29,7 +29,7 @@ import {
 } from '../editor';
 import { AddEmojiModal } from '../editor/AddEmojiModal';
 import { ScheduleMessageModal } from './ScheduleMessageModal';
-import { toast } from '../ui';
+import { IconButton, toast } from '../ui';
 
 export interface MessageComposerRef {
   focus: () => void;
@@ -309,14 +309,14 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
                 )}
 
                 {/* Remove button */}
-                <button
-                  type="button"
-                  onClick={() => removeAttachment(attachment.id)}
-                  className="absolute top-0.5 right-0.5 cursor-pointer rounded bg-black/50 p-0.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
-                  title="Remove"
+                <IconButton
+                  onPress={() => removeAttachment(attachment.id)}
+                  aria-label="Remove attachment"
+                  size="xs"
+                  className="absolute top-0.5 right-0.5 rounded bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70 hover:text-white dark:hover:bg-black/70 dark:hover:text-white"
                 >
                   <XMarkIcon className="h-4 w-4" />
-                </button>
+                </IconButton>
 
                 {/* File name tooltip */}
                 <div className="absolute right-0 bottom-0 left-0 truncate bg-black/50 px-1 py-0.5 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">

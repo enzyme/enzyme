@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react';
-import { Button as AriaButton } from 'react-aria-components';
 import { XMarkIcon, PhotoIcon, TrashIcon } from '@heroicons/react/24/outline';
 import {
   useUserProfile,
@@ -9,7 +8,7 @@ import {
   useAuth,
 } from '../../hooks';
 import { useProfilePanel } from '../../hooks/usePanel';
-import { Button, Input, Spinner, toast } from '../ui';
+import { Button, IconButton, Input, Spinner, toast } from '../ui';
 import { cn, getInitials, getAvatarColor } from '../../lib/utils';
 import { useUserPresence } from '../../lib/presenceStore';
 
@@ -31,12 +30,9 @@ export function ProfilePane({ userId }: ProfilePaneProps) {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 p-3 dark:border-gray-700">
         <h3 className="font-semibold text-gray-900 dark:text-white">Profile</h3>
-        <AriaButton
-          onClick={closeProfile}
-          className="cursor-pointer rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-        >
+        <IconButton onPress={closeProfile} aria-label="Close profile">
           <XMarkIcon className="h-4 w-4" />
-        </AriaButton>
+        </IconButton>
       </div>
 
       {/* Content */}

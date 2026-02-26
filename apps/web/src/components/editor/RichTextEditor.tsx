@@ -23,7 +23,7 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline';
 import { Button as AriaButton, FileTrigger, Popover, DialogTrigger } from 'react-aria-components';
-import { Menu, MenuItem, DisclosureCaret } from '../ui';
+import { IconButton, Menu, MenuItem, DisclosureCaret } from '../ui';
 import { Toolbar } from './Toolbar';
 import { LinkModal } from './LinkModal';
 import type { LinkModalData } from './LinkModal';
@@ -154,13 +154,6 @@ const editorStyles = tv({
     actionRow: [
       'flex items-center justify-between p-1.5',
       'bg-white dark:bg-gray-900 rounded-b-lg',
-    ],
-    actionButton: [
-      'p-1.5 rounded transition-colors cursor-pointer',
-      'text-gray-500 dark:text-gray-400',
-      'hover:text-gray-900 dark:hover:text-gray-200',
-      'hover:bg-gray-100 dark:hover:bg-gray-700',
-      'disabled:opacity-50 disabled:cursor-not-allowed',
     ],
     sendButton: ['p-1.5 rounded transition-colors'],
     emojiPopover: [
@@ -751,13 +744,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
                   onSelect={(files) => files && onAttachmentClick(Array.from(files))}
                 >
                   <Tooltip content="Attach files">
-                    <AriaButton
-                      className={s.actionButton()}
-                      aria-label="Attach files"
-                      isDisabled={disabled}
-                    >
+                    <IconButton aria-label="Attach files" isDisabled={disabled}>
                       <PlusIcon className="h-4 w-4" />
-                    </AriaButton>
+                    </IconButton>
                   </Tooltip>
                 </FileTrigger>
               )}
@@ -765,13 +754,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
               {/* Emoji picker button */}
               <DialogTrigger isOpen={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
                 <Tooltip content="Add emoji">
-                  <AriaButton
-                    className={s.actionButton()}
-                    aria-label="Add emoji"
-                    isDisabled={disabled}
-                  >
+                  <IconButton aria-label="Add emoji" isDisabled={disabled}>
                     <FaceSmileIcon className="h-4 w-4" />
-                  </AriaButton>
+                  </IconButton>
                 </Tooltip>
                 <Popover placement="top start" className={s.emojiPopover()}>
                   <EmojiPicker
@@ -791,26 +776,24 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
 
               {/* @ mention button */}
               <Tooltip content="Mention someone">
-                <AriaButton
-                  className={s.actionButton()}
+                <IconButton
                   aria-label="Mention someone"
                   isDisabled={disabled}
                   onPress={insertAtSymbol}
                 >
                   <AtSymbolIcon className="h-4 w-4" />
-                </AriaButton>
+                </IconButton>
               </Tooltip>
 
               {/* # channel mention button */}
               <Tooltip content="Mention channel">
-                <AriaButton
-                  className={s.actionButton()}
+                <IconButton
                   aria-label="Mention channel"
                   isDisabled={disabled}
                   onPress={insertHashSymbol}
                 >
                   <HashtagIcon className="h-4 w-4" />
-                </AriaButton>
+                </IconButton>
               </Tooltip>
             </div>
 

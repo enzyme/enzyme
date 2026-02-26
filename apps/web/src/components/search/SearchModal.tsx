@@ -12,7 +12,7 @@ import { type DateValue } from '@internationalized/date';
 import { useSearch } from '../../hooks/useSearch';
 import { useChannels } from '../../hooks/useChannels';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
-import { DatePicker, Spinner } from '../ui';
+import { DatePicker, IconButton, Spinner } from '../ui';
 import { formatRelativeTime } from '../../lib/utils';
 import type { SearchMessage } from '@enzyme/api-client';
 
@@ -136,15 +136,16 @@ export function SearchModal({ isOpen, onClose, initialChannelId, initialQuery }:
                 autoFocus
               />
               {inputValue && (
-                <button
-                  onClick={() => {
+                <IconButton
+                  onPress={() => {
                     setInputValue('');
                     inputRef.current?.focus();
                   }}
-                  className="cursor-pointer p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  aria-label="Clear search"
+                  size="xs"
                 >
                   <XMarkIcon className="h-4 w-4" />
-                </button>
+                </IconButton>
               )}
               {isFetching && <Spinner size="sm" />}
             </div>

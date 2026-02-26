@@ -36,6 +36,7 @@ import {
   ChannelListSkeleton,
   Modal,
   Button,
+  IconButton,
   Input,
   toast,
   Tabs,
@@ -301,13 +302,9 @@ export function ChannelSidebar({
             </MenuItem>
           </Menu>
           {onSearchClick && (
-            <button
-              onClick={onSearchClick}
-              className="cursor-pointer rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-              title="Quick switch (Cmd+K)"
-            >
+            <IconButton onPress={onSearchClick} aria-label="Quick switch (Cmd+K)">
               <MagnifyingGlassIcon className="h-4 w-4" />
-            </button>
+            </IconButton>
           )}
         </div>
       </div>
@@ -492,12 +489,14 @@ function DroppableChannelSection({
           <span>{title}</span>
         </button>
         {onAddClick && (
-          <button
-            onClick={onAddClick}
-            className="mr-2 cursor-pointer rounded p-0.5 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+          <IconButton
+            onPress={onAddClick}
+            aria-label={`Add ${title.toLowerCase()}`}
+            size="xs"
+            className="mr-2"
           >
             <PlusIcon className="h-4 w-4" />
-          </button>
+          </IconButton>
         )}
       </div>
 
@@ -567,12 +566,14 @@ function DroppableDMSection({
           <span>Direct Messages</span>
         </button>
         {onAddClick && (
-          <button
-            onClick={onAddClick}
-            className="mr-2 cursor-pointer rounded p-0.5 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+          <IconButton
+            onPress={onAddClick}
+            aria-label="New direct message"
+            size="xs"
+            className="mr-2"
           >
             <PlusIcon className="h-4 w-4" />
-          </button>
+          </IconButton>
         )}
       </div>
 

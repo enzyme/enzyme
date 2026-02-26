@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { Button as AriaButton } from 'react-aria-components';
 import {
   XMarkIcon,
   HashtagIcon,
@@ -35,6 +34,7 @@ import { usePrewarmSignedUrls } from '../../hooks/usePrewarmSignedUrls';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import {
   Avatar,
+  IconButton,
   MessageSkeleton,
   Modal,
   Button,
@@ -191,9 +191,9 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
           <Menu
             align="end"
             trigger={
-              <AriaButton className="cursor-pointer rounded p-1.5 text-gray-500 outline-none hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-200">
+              <IconButton aria-label="Thread options">
                 <EllipsisVerticalIcon className="h-4 w-4" />
-              </AriaButton>
+              </IconButton>
             }
           >
             {isSubscribed ? (
@@ -224,12 +224,9 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
               Copy link
             </MenuItem>
           </Menu>
-          <button
-            onClick={closeThread}
-            className="cursor-pointer rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-          >
+          <IconButton onPress={closeThread} aria-label="Close thread">
             <XMarkIcon className="h-4 w-4" />
-          </button>
+          </IconButton>
         </div>
       </div>
 
