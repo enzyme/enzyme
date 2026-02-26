@@ -183,6 +183,7 @@ type BlockWithUser struct {
 	CreatedAt   time.Time `json:"created_at"`
 	DisplayName *string   `json:"display_name,omitempty"`
 	Email       *string   `json:"email,omitempty"`
+	WorkspaceId string    `json:"workspace_id"`
 }
 
 // Channel defines model for Channel.
@@ -889,16 +890,6 @@ type UpdateMessageJSONBody struct {
 	Content string `json:"content"`
 }
 
-// BlockUserJSONBody defines parameters for BlockUser.
-type BlockUserJSONBody struct {
-	UserId string `json:"user_id"`
-}
-
-// UnblockUserJSONBody defines parameters for UnblockUser.
-type UnblockUserJSONBody struct {
-	UserId string `json:"user_id"`
-}
-
 // UploadAvatarMultipartBody defines parameters for UploadAvatar.
 type UploadAvatarMultipartBody struct {
 	File openapi_types.File `json:"file"`
@@ -912,6 +903,16 @@ type ListBansJSONBody struct {
 
 // UnbanUserJSONBody defines parameters for UnbanUser.
 type UnbanUserJSONBody struct {
+	UserId string `json:"user_id"`
+}
+
+// BlockUserJSONBody defines parameters for BlockUser.
+type BlockUserJSONBody struct {
+	UserId string `json:"user_id"`
+}
+
+// UnblockUserJSONBody defines parameters for UnblockUser.
+type UnblockUserJSONBody struct {
 	UserId string `json:"user_id"`
 }
 
@@ -1023,12 +1024,6 @@ type UpdateMessageJSONRequestBody UpdateMessageJSONBody
 // UpdateScheduledMessageJSONRequestBody defines body for UpdateScheduledMessage for application/json ContentType.
 type UpdateScheduledMessageJSONRequestBody = UpdateScheduledMessageInput
 
-// BlockUserJSONRequestBody defines body for BlockUser for application/json ContentType.
-type BlockUserJSONRequestBody BlockUserJSONBody
-
-// UnblockUserJSONRequestBody defines body for UnblockUser for application/json ContentType.
-type UnblockUserJSONRequestBody UnblockUserJSONBody
-
 // UploadAvatarMultipartRequestBody defines body for UploadAvatar for multipart/form-data ContentType.
 type UploadAvatarMultipartRequestBody UploadAvatarMultipartBody
 
@@ -1049,6 +1044,12 @@ type ListBansJSONRequestBody ListBansJSONBody
 
 // UnbanUserJSONRequestBody defines body for UnbanUser for application/json ContentType.
 type UnbanUserJSONRequestBody UnbanUserJSONBody
+
+// BlockUserJSONRequestBody defines body for BlockUser for application/json ContentType.
+type BlockUserJSONRequestBody BlockUserJSONBody
+
+// UnblockUserJSONRequestBody defines body for UnblockUser for application/json ContentType.
+type UnblockUserJSONRequestBody UnblockUserJSONBody
 
 // CreateChannelJSONRequestBody defines body for CreateChannel for application/json ContentType.
 type CreateChannelJSONRequestBody = CreateChannelInput
@@ -1232,15 +1233,6 @@ type ServerInterface interface {
 	// Get server information
 	// (GET /server-info)
 	GetServerInfo(w http.ResponseWriter, r *http.Request)
-	// Block a user
-	// (POST /users/blocks/create)
-	BlockUser(w http.ResponseWriter, r *http.Request)
-	// List blocked users
-	// (POST /users/blocks/list)
-	ListBlocks(w http.ResponseWriter, r *http.Request)
-	// Unblock a user
-	// (POST /users/blocks/remove)
-	UnblockUser(w http.ResponseWriter, r *http.Request)
 	// Remove avatar
 	// (DELETE /users/me/avatar)
 	DeleteAvatar(w http.ResponseWriter, r *http.Request)
@@ -1274,6 +1266,15 @@ type ServerInterface interface {
 	// Unban a user from workspace
 	// (POST /workspaces/{wid}/bans/remove)
 	UnbanUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// Block a user in workspace
+	// (POST /workspaces/{wid}/blocks/create)
+	BlockUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// List blocked users in workspace
+	// (GET /workspaces/{wid}/blocks/list)
+	ListBlocks(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// Unblock a user in workspace
+	// (POST /workspaces/{wid}/blocks/remove)
+	UnblockUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
 	// Create a channel
 	// (POST /workspaces/{wid}/channels/create)
 	CreateChannel(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
@@ -1622,24 +1623,6 @@ func (_ Unimplemented) GetServerInfo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Block a user
-// (POST /users/blocks/create)
-func (_ Unimplemented) BlockUser(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// List blocked users
-// (POST /users/blocks/list)
-func (_ Unimplemented) ListBlocks(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Unblock a user
-// (POST /users/blocks/remove)
-func (_ Unimplemented) UnblockUser(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // Remove avatar
 // (DELETE /users/me/avatar)
 func (_ Unimplemented) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
@@ -1703,6 +1686,24 @@ func (_ Unimplemented) ListBans(w http.ResponseWriter, r *http.Request, wid Work
 // Unban a user from workspace
 // (POST /workspaces/{wid}/bans/remove)
 func (_ Unimplemented) UnbanUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Block a user in workspace
+// (POST /workspaces/{wid}/blocks/create)
+func (_ Unimplemented) BlockUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List blocked users in workspace
+// (GET /workspaces/{wid}/blocks/list)
+func (_ Unimplemented) ListBlocks(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Unblock a user in workspace
+// (POST /workspaces/{wid}/blocks/remove)
+func (_ Unimplemented) UnblockUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -3202,66 +3203,6 @@ func (siw *ServerInterfaceWrapper) GetServerInfo(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
-// BlockUser operation middleware
-func (siw *ServerInterfaceWrapper) BlockUser(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.BlockUser(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListBlocks operation middleware
-func (siw *ServerInterfaceWrapper) ListBlocks(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListBlocks(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// UnblockUser operation middleware
-func (siw *ServerInterfaceWrapper) UnblockUser(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UnblockUser(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // DeleteAvatar operation middleware
 func (siw *ServerInterfaceWrapper) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
 
@@ -3528,6 +3469,99 @@ func (siw *ServerInterfaceWrapper) UnbanUser(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UnbanUser(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BlockUser operation middleware
+func (siw *ServerInterfaceWrapper) BlockUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BlockUser(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListBlocks operation middleware
+func (siw *ServerInterfaceWrapper) ListBlocks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBlocks(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnblockUser operation middleware
+func (siw *ServerInterfaceWrapper) UnblockUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnblockUser(w, r, wid)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4353,15 +4387,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/server-info", wrapper.GetServerInfo)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/users/blocks/create", wrapper.BlockUser)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/users/blocks/list", wrapper.ListBlocks)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/users/blocks/remove", wrapper.UnblockUser)
-	})
-	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/users/me/avatar", wrapper.DeleteAvatar)
 	})
 	r.Group(func(r chi.Router) {
@@ -4393,6 +4418,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/{wid}/bans/remove", wrapper.UnbanUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/blocks/create", wrapper.BlockUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/workspaces/{wid}/blocks/list", wrapper.ListBlocks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/blocks/remove", wrapper.UnblockUser)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/{wid}/channels/create", wrapper.CreateChannel)
@@ -6490,103 +6524,6 @@ func (response GetServerInfo200JSONResponse) VisitGetServerInfoResponse(w http.R
 	return json.NewEncoder(w).Encode(response)
 }
 
-type BlockUserRequestObject struct {
-	Body *BlockUserJSONRequestBody
-}
-
-type BlockUserResponseObject interface {
-	VisitBlockUserResponse(w http.ResponseWriter) error
-}
-
-type BlockUser200JSONResponse SuccessResponse
-
-func (response BlockUser200JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type BlockUser400JSONResponse struct{ BadRequestJSONResponse }
-
-func (response BlockUser400JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type BlockUser401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response BlockUser401JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type BlockUser404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response BlockUser404JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type ListBlocksRequestObject struct {
-}
-
-type ListBlocksResponseObject interface {
-	VisitListBlocksResponse(w http.ResponseWriter) error
-}
-
-type ListBlocks200JSONResponse struct {
-	Blocks *[]BlockWithUser `json:"blocks,omitempty"`
-}
-
-func (response ListBlocks200JSONResponse) VisitListBlocksResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type ListBlocks401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response ListBlocks401JSONResponse) VisitListBlocksResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type UnblockUserRequestObject struct {
-	Body *UnblockUserJSONRequestBody
-}
-
-type UnblockUserResponseObject interface {
-	VisitUnblockUserResponse(w http.ResponseWriter) error
-}
-
-type UnblockUser200JSONResponse SuccessResponse
-
-func (response UnblockUser200JSONResponse) VisitUnblockUserResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type UnblockUser401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response UnblockUser401JSONResponse) VisitUnblockUserResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type DeleteAvatarRequestObject struct {
 }
 
@@ -7003,6 +6940,115 @@ type UnbanUser404JSONResponse struct{ NotFoundJSONResponse }
 func (response UnbanUser404JSONResponse) VisitUnbanUserResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BlockUserRequestObject struct {
+	Wid  WorkspaceId `json:"wid"`
+	Body *BlockUserJSONRequestBody
+}
+
+type BlockUserResponseObject interface {
+	VisitBlockUserResponse(w http.ResponseWriter) error
+}
+
+type BlockUser200JSONResponse SuccessResponse
+
+func (response BlockUser200JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BlockUser400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response BlockUser400JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BlockUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response BlockUser401JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BlockUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response BlockUser403JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BlockUser404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response BlockUser404JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListBlocksRequestObject struct {
+	Wid WorkspaceId `json:"wid"`
+}
+
+type ListBlocksResponseObject interface {
+	VisitListBlocksResponse(w http.ResponseWriter) error
+}
+
+type ListBlocks200JSONResponse struct {
+	Blocks *[]BlockWithUser `json:"blocks,omitempty"`
+}
+
+func (response ListBlocks200JSONResponse) VisitListBlocksResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListBlocks401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListBlocks401JSONResponse) VisitListBlocksResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnblockUserRequestObject struct {
+	Wid  WorkspaceId `json:"wid"`
+	Body *UnblockUserJSONRequestBody
+}
+
+type UnblockUserResponseObject interface {
+	VisitUnblockUserResponse(w http.ResponseWriter) error
+}
+
+type UnblockUser200JSONResponse SuccessResponse
+
+func (response UnblockUser200JSONResponse) VisitUnblockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnblockUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnblockUser401JSONResponse) VisitUnblockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -7854,15 +7900,6 @@ type StrictServerInterface interface {
 	// Get server information
 	// (GET /server-info)
 	GetServerInfo(ctx context.Context, request GetServerInfoRequestObject) (GetServerInfoResponseObject, error)
-	// Block a user
-	// (POST /users/blocks/create)
-	BlockUser(ctx context.Context, request BlockUserRequestObject) (BlockUserResponseObject, error)
-	// List blocked users
-	// (POST /users/blocks/list)
-	ListBlocks(ctx context.Context, request ListBlocksRequestObject) (ListBlocksResponseObject, error)
-	// Unblock a user
-	// (POST /users/blocks/remove)
-	UnblockUser(ctx context.Context, request UnblockUserRequestObject) (UnblockUserResponseObject, error)
 	// Remove avatar
 	// (DELETE /users/me/avatar)
 	DeleteAvatar(ctx context.Context, request DeleteAvatarRequestObject) (DeleteAvatarResponseObject, error)
@@ -7896,6 +7933,15 @@ type StrictServerInterface interface {
 	// Unban a user from workspace
 	// (POST /workspaces/{wid}/bans/remove)
 	UnbanUser(ctx context.Context, request UnbanUserRequestObject) (UnbanUserResponseObject, error)
+	// Block a user in workspace
+	// (POST /workspaces/{wid}/blocks/create)
+	BlockUser(ctx context.Context, request BlockUserRequestObject) (BlockUserResponseObject, error)
+	// List blocked users in workspace
+	// (GET /workspaces/{wid}/blocks/list)
+	ListBlocks(ctx context.Context, request ListBlocksRequestObject) (ListBlocksResponseObject, error)
+	// Unblock a user in workspace
+	// (POST /workspaces/{wid}/blocks/remove)
+	UnblockUser(ctx context.Context, request UnblockUserRequestObject) (UnblockUserResponseObject, error)
 	// Create a channel
 	// (POST /workspaces/{wid}/channels/create)
 	CreateChannel(ctx context.Context, request CreateChannelRequestObject) (CreateChannelResponseObject, error)
@@ -9361,92 +9407,6 @@ func (sh *strictHandler) GetServerInfo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// BlockUser operation middleware
-func (sh *strictHandler) BlockUser(w http.ResponseWriter, r *http.Request) {
-	var request BlockUserRequestObject
-
-	var body BlockUserJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.BlockUser(ctx, request.(BlockUserRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "BlockUser")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(BlockUserResponseObject); ok {
-		if err := validResponse.VisitBlockUserResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// ListBlocks operation middleware
-func (sh *strictHandler) ListBlocks(w http.ResponseWriter, r *http.Request) {
-	var request ListBlocksRequestObject
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListBlocks(ctx, request.(ListBlocksRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListBlocks")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListBlocksResponseObject); ok {
-		if err := validResponse.VisitListBlocksResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// UnblockUser operation middleware
-func (sh *strictHandler) UnblockUser(w http.ResponseWriter, r *http.Request) {
-	var request UnblockUserRequestObject
-
-	var body UnblockUserJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.UnblockUser(ctx, request.(UnblockUserRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "UnblockUser")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(UnblockUserResponseObject); ok {
-		if err := validResponse.VisitUnblockUserResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // DeleteAvatar operation middleware
 func (sh *strictHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
 	var request DeleteAvatarRequestObject
@@ -9763,6 +9723,98 @@ func (sh *strictHandler) UnbanUser(w http.ResponseWriter, r *http.Request, wid W
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UnbanUserResponseObject); ok {
 		if err := validResponse.VisitUnbanUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BlockUser operation middleware
+func (sh *strictHandler) BlockUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request BlockUserRequestObject
+
+	request.Wid = wid
+
+	var body BlockUserJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BlockUser(ctx, request.(BlockUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BlockUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BlockUserResponseObject); ok {
+		if err := validResponse.VisitBlockUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListBlocks operation middleware
+func (sh *strictHandler) ListBlocks(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request ListBlocksRequestObject
+
+	request.Wid = wid
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBlocks(ctx, request.(ListBlocksRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBlocks")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListBlocksResponseObject); ok {
+		if err := validResponse.VisitListBlocksResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnblockUser operation middleware
+func (sh *strictHandler) UnblockUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request UnblockUserRequestObject
+
+	request.Wid = wid
+
+	var body UnblockUserJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnblockUser(ctx, request.(UnblockUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnblockUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnblockUserResponseObject); ok {
+		if err := validResponse.VisitUnblockUserResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

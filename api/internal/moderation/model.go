@@ -25,11 +25,12 @@ type BanWithUser struct {
 	BannedByName    string  `json:"banned_by_name"`
 }
 
-// Block represents one user blocking another (cross-workspace)
+// Block represents one user blocking another within a workspace
 type Block struct {
-	BlockerID string    `json:"blocker_id"`
-	BlockedID string    `json:"blocked_id"`
-	CreatedAt time.Time `json:"created_at"`
+	WorkspaceID string    `json:"workspace_id"`
+	BlockerID   string    `json:"blocker_id"`
+	BlockedID   string    `json:"blocked_id"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 // BlockWithUser includes display info for the blocked user

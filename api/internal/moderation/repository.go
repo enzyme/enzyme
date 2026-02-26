@@ -191,13 +191,13 @@ func (r *Repository) ListActiveBans(ctx context.Context, workspaceID string, cur
 
 // --- Blocks ---
 
-// CreateBlock creates a user block
-func (r *Repository) CreateBlock(ctx context.Context, blockerID, blockedID string) error {
+// CreateBlock creates a workspace-scoped user block
+func (r *Repository) CreateBlock(ctx context.Context, workspaceID, blockerID, blockedID string) error {
 	now := time.Now().UTC()
 	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO user_blocks (blocker_id, blocked_id, created_at)
-		VALUES (?, ?, ?)
-	`, blockerID, blockedID, now.Format(time.RFC3339))
+		INSERT INTO user_blocks (workspace_id, blocker_id, blocked_id, created_at)
+		VALUES (?, ?, ?, ?)
+	`, workspaceID, blockerID, blockedID, now.Format(time.RFC3339))
 	if err != nil {
 		if isUniqueViolation(err) {
 			return nil // Idempotent — already blocked
@@ -207,24 +207,24 @@ func (r *Repository) CreateBlock(ctx context.Context, blockerID, blockedID strin
 	return nil
 }
 
-// DeleteBlock removes a user block
-func (r *Repository) DeleteBlock(ctx context.Context, blockerID, blockedID string) error {
+// DeleteBlock removes a workspace-scoped user block
+func (r *Repository) DeleteBlock(ctx context.Context, workspaceID, blockerID, blockedID string) error {
 	_, err := r.db.ExecContext(ctx, `
-		DELETE FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?
-	`, blockerID, blockedID)
+		DELETE FROM user_blocks WHERE workspace_id = ? AND blocker_id = ? AND blocked_id = ?
+	`, workspaceID, blockerID, blockedID)
 	return err // Idempotent — no error if not found
 }
 
-// ListBlocks returns all users blocked by the given user
-func (r *Repository) ListBlocks(ctx context.Context, blockerID string) ([]BlockWithUser, error) {
+// ListBlocks returns all users blocked by the given user in a workspace
+func (r *Repository) ListBlocks(ctx context.Context, workspaceID, blockerID string) ([]BlockWithUser, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT ub.blocker_id, ub.blocked_id, ub.created_at,
+		SELECT ub.workspace_id, ub.blocker_id, ub.blocked_id, ub.created_at,
 			   u.display_name, u.email, u.avatar_url
 		FROM user_blocks ub
 		JOIN users u ON u.id = ub.blocked_id
-		WHERE ub.blocker_id = ?
+		WHERE ub.workspace_id = ? AND ub.blocker_id = ?
 		ORDER BY ub.created_at DESC
-	`, blockerID)
+	`, workspaceID, blockerID)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +235,7 @@ func (r *Repository) ListBlocks(ctx context.Context, blockerID string) ([]BlockW
 		var b BlockWithUser
 		var createdAt string
 		err := rows.Scan(
-			&b.BlockerID, &b.BlockedID, &createdAt,
+			&b.WorkspaceID, &b.BlockerID, &b.BlockedID, &createdAt,
 			&b.DisplayName, &b.Email, &b.AvatarURL,
 		)
 		if err != nil {
@@ -247,11 +247,11 @@ func (r *Repository) ListBlocks(ctx context.Context, blockerID string) ([]BlockW
 	return blocks, nil
 }
 
-// GetBlockedUserIDs returns the set of user IDs blocked by the given user
-func (r *Repository) GetBlockedUserIDs(ctx context.Context, blockerID string) (map[string]bool, error) {
+// GetBlockedUserIDs returns the set of user IDs blocked by the given user in a workspace
+func (r *Repository) GetBlockedUserIDs(ctx context.Context, workspaceID, blockerID string) (map[string]bool, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT blocked_id FROM user_blocks WHERE blocker_id = ?
-	`, blockerID)
+		SELECT blocked_id FROM user_blocks WHERE workspace_id = ? AND blocker_id = ?
+	`, workspaceID, blockerID)
 	if err != nil {
 		return nil, err
 	}
@@ -268,25 +268,25 @@ func (r *Repository) GetBlockedUserIDs(ctx context.Context, blockerID string) (m
 	return blocked, nil
 }
 
-// IsBlocked checks if blockerID has blocked blockedID
-func (r *Repository) IsBlocked(ctx context.Context, blockerID, blockedID string) (bool, error) {
+// IsBlocked checks if blockerID has blocked blockedID in a workspace
+func (r *Repository) IsBlocked(ctx context.Context, workspaceID, blockerID, blockedID string) (bool, error) {
 	var count int
 	err := r.db.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?
-	`, blockerID, blockedID).Scan(&count)
+		SELECT COUNT(*) FROM user_blocks WHERE workspace_id = ? AND blocker_id = ? AND blocked_id = ?
+	`, workspaceID, blockerID, blockedID).Scan(&count)
 	if err != nil {
 		return false, err
 	}
 	return count > 0, nil
 }
 
-// IsBlockedEitherDirection checks if either user has blocked the other
-func (r *Repository) IsBlockedEitherDirection(ctx context.Context, userA, userB string) (bool, error) {
+// IsBlockedEitherDirection checks if either user has blocked the other in a workspace
+func (r *Repository) IsBlockedEitherDirection(ctx context.Context, workspaceID, userA, userB string) (bool, error) {
 	var count int
 	err := r.db.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM user_blocks
-		WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)
-	`, userA, userB, userB, userA).Scan(&count)
+		WHERE workspace_id = ? AND ((blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?))
+	`, workspaceID, userA, userB, userB, userA).Scan(&count)
 	if err != nil {
 		return false, err
 	}

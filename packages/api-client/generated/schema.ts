@@ -1232,7 +1232,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/users/blocks/create": {
+    "/workspaces/{wid}/blocks/create": {
         parameters: {
             query?: never;
             header?: never;
@@ -1241,7 +1241,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Block a user */
+        /** Block a user in workspace */
         post: operations["blockUser"];
         delete?: never;
         options?: never;
@@ -1249,7 +1249,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/users/blocks/remove": {
+    "/workspaces/{wid}/blocks/remove": {
         parameters: {
             query?: never;
             header?: never;
@@ -1258,7 +1258,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Unblock a user */
+        /** Unblock a user in workspace */
         post: operations["unblockUser"];
         delete?: never;
         options?: never;
@@ -1266,17 +1266,17 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/users/blocks/list": {
+    "/workspaces/{wid}/blocks/list": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List blocked users in workspace */
+        get: operations["listBlocks"];
         put?: never;
-        /** List blocked users */
-        post: operations["listBlocks"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2124,6 +2124,7 @@ export interface components {
             banned_by_name?: string;
         };
         BlockWithUser: {
+            workspace_id: string;
             blocker_id: string;
             blocked_id: string;
             /** Format: date-time */
@@ -4423,7 +4424,10 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Workspace ID */
+                wid: components["parameters"]["workspaceId"];
+            };
             cookie?: never;
         };
         requestBody: {
@@ -4445,6 +4449,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -4452,7 +4457,10 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Workspace ID */
+                wid: components["parameters"]["workspaceId"];
+            };
             cookie?: never;
         };
         requestBody: {
@@ -4479,7 +4487,10 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Workspace ID */
+                wid: components["parameters"]["workspaceId"];
+            };
             cookie?: never;
         };
         requestBody?: never;

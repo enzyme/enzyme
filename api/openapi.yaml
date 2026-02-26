@@ -2245,13 +2245,15 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /users/blocks/create:
+  /workspaces/{wid}/blocks/create:
     post:
-      tags: [users]
-      summary: Block a user
+      tags: [workspaces]
+      summary: Block a user in workspace
       operationId: blockUser
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
       requestBody:
         required: true
         content:
@@ -2273,16 +2275,20 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /users/blocks/remove:
+  /workspaces/{wid}/blocks/remove:
     post:
-      tags: [users]
-      summary: Unblock a user
+      tags: [workspaces]
+      summary: Unblock a user in workspace
       operationId: unblockUser
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
       requestBody:
         required: true
         content:
@@ -2303,13 +2309,15 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /users/blocks/list:
-    post:
-      tags: [users]
-      summary: List blocked users
+  /workspaces/{wid}/blocks/list:
+    get:
+      tags: [workspaces]
+      summary: List blocked users in workspace
       operationId: listBlocks
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
       responses:
         '200':
           description: List of blocked users
@@ -3991,8 +3999,10 @@ components:
 
     BlockWithUser:
       type: object
-      required: [blocker_id, blocked_id, created_at]
+      required: [workspace_id, blocker_id, blocked_id, created_at]
       properties:
+        workspace_id:
+          type: string
         blocker_id:
           type: string
         blocked_id:

@@ -251,6 +251,7 @@ func (h *Handler) BlockUser(ctx context.Context, request openapi.BlockUserReques
 		return openapi.BlockUser401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
 	}
 
+	workspaceID := string(request.Wid)
 	targetUserID := request.Body.UserId
 
 	// Prevent self-block
@@ -258,41 +259,68 @@ func (h *Handler) BlockUser(ctx context.Context, request openapi.BlockUserReques
 		return openapi.BlockUser400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Cannot block yourself")}, nil
 	}
 
-	// Verify target exists
-	_, err := h.userRepo.GetByID(ctx, targetUserID)
+	// Verify blocker is a workspace member
+	_, err := h.workspaceRepo.GetMembership(ctx, userID, workspaceID)
 	if err != nil {
-		return openapi.BlockUser404JSONResponse{NotFoundJSONResponse: notFoundResponse("User not found")}, nil
+		return openapi.BlockUser403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Not a workspace member")}, nil
 	}
 
-	if err := h.moderationRepo.CreateBlock(ctx, userID, targetUserID); err != nil {
+	// Verify target is a workspace member
+	targetMembership, err := h.workspaceRepo.GetMembership(ctx, targetUserID, workspaceID)
+	if err != nil {
+		return openapi.BlockUser404JSONResponse{NotFoundJSONResponse: notFoundResponse("User is not a member of this workspace")}, nil
+	}
+
+	// Role gating: cannot block admins or owners
+	if targetMembership.Role == workspace.RoleAdmin || targetMembership.Role == workspace.RoleOwner {
+		return openapi.BlockUser403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Cannot block users with admin or owner role")}, nil
+	}
+
+	if err := h.moderationRepo.CreateBlock(ctx, workspaceID, userID, targetUserID); err != nil {
 		return nil, err
 	}
 
 	return openapi.BlockUser200JSONResponse{Success: true}, nil
 }
 
-// UnblockUser unblocks a user
+// UnblockUser unblocks a user in a workspace
 func (h *Handler) UnblockUser(ctx context.Context, request openapi.UnblockUserRequestObject) (openapi.UnblockUserResponseObject, error) {
 	userID := h.getUserID(ctx)
 	if userID == "" {
 		return openapi.UnblockUser401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
 	}
 
-	if err := h.moderationRepo.DeleteBlock(ctx, userID, request.Body.UserId); err != nil {
+	workspaceID := string(request.Wid)
+
+	// Verify blocker is a workspace member
+	_, err := h.workspaceRepo.GetMembership(ctx, userID, workspaceID)
+	if err != nil {
+		return openapi.UnblockUser401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+	}
+
+	if err := h.moderationRepo.DeleteBlock(ctx, workspaceID, userID, request.Body.UserId); err != nil {
 		return nil, err
 	}
 
 	return openapi.UnblockUser200JSONResponse{Success: true}, nil
 }
 
-// ListBlocks lists users blocked by the current user
+// ListBlocks lists users blocked by the current user in a workspace
 func (h *Handler) ListBlocks(ctx context.Context, request openapi.ListBlocksRequestObject) (openapi.ListBlocksResponseObject, error) {
 	userID := h.getUserID(ctx)
 	if userID == "" {
 		return openapi.ListBlocks401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
 	}
 
-	blocks, err := h.moderationRepo.ListBlocks(ctx, userID)
+	workspaceID := string(request.Wid)
+
+	// Verify user is a workspace member
+	_, err := h.workspaceRepo.GetMembership(ctx, userID, workspaceID)
+	if err != nil {
+		return openapi.ListBlocks401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+	}
+
+	blocks, err := h.moderationRepo.ListBlocks(ctx, workspaceID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -300,6 +328,7 @@ func (h *Handler) ListBlocks(ctx context.Context, request openapi.ListBlocksRequ
 	apiBlocks := make([]openapi.BlockWithUser, len(blocks))
 	for i, b := range blocks {
 		apiBlocks[i] = openapi.BlockWithUser{
+			WorkspaceId: b.WorkspaceID,
 			BlockerId:   b.BlockerID,
 			BlockedId:   b.BlockedID,
 			CreatedAt:   b.CreatedAt,
