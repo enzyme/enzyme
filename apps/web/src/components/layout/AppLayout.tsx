@@ -17,7 +17,7 @@ import { useSidebar } from '../../hooks/useSidebar';
 import { useResizableWidth } from '../../hooks/useResizableWidth';
 import { recordChannelVisit } from '../../lib/recentChannels';
 
-function Divider({ ...props }: React.HTMLAttributes<HTMLDivElement>) {
+function Divider(props: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className="relative z-10 -mx-0.5 w-1 flex-shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-blue-200 active:bg-blue-300 dark:hover:bg-blue-800 dark:active:bg-blue-700"

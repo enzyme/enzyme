@@ -44,11 +44,11 @@ body {
 }
 
 /* Scrollbar — uses standard properties so native overlay behavior is preserved */
-* {
+body {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
 }
-.dark * {
+.dark body {
   scrollbar-color: #475569 transparent;
 }
 
