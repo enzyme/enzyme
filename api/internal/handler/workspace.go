@@ -13,6 +13,7 @@ import (
 	"github.com/enzyme/api/internal/channel"
 	"github.com/enzyme/api/internal/gravatar"
 	"github.com/enzyme/api/internal/message"
+	"github.com/enzyme/api/internal/moderation"
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/sse"
 	"github.com/enzyme/api/internal/workspace"
@@ -183,12 +184,23 @@ func (h *Handler) RemoveWorkspaceMember(ctx context.Context, request openapi.Rem
 		return openapi.RemoveWorkspaceMember403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Permission denied")}, nil
 	}
 
+	// Role hierarchy: actor can only remove users with strictly lower RoleRank
+	if request.Body.UserId != userID {
+		targetMembership, err := h.workspaceRepo.GetMembership(ctx, request.Body.UserId, string(request.Wid))
+		if err != nil {
+			return openapi.RemoveWorkspaceMember404JSONResponse{NotFoundJSONResponse: notFoundResponse("User is not a member of this workspace")}, nil
+		}
+		if workspace.RoleRank(membership.Role) <= workspace.RoleRank(targetMembership.Role) {
+			return openapi.RemoveWorkspaceMember403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Cannot remove a user with equal or higher role")}, nil
+		}
+	}
+
 	if err := h.workspaceRepo.RemoveMember(ctx, request.Body.UserId, string(request.Wid)); err != nil {
 		return nil, err
 	}
 
 	// Audit log: only when an admin removes another user (not self-removal)
-	if request.Body.UserId != userID && h.moderationRepo != nil {
+	if request.Body.UserId != userID {
 		_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, string(request.Wid), userID, "member.removed", "user", request.Body.UserId, nil)
 	}
 
@@ -240,12 +252,10 @@ func (h *Handler) UpdateWorkspaceMemberRole(ctx context.Context, request openapi
 	}
 
 	// Audit log: role change
-	if h.moderationRepo != nil {
-		_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, string(request.Wid), userID, "member.role_changed", "user", request.Body.UserId, map[string]interface{}{
-			"old_role": targetMembership.Role,
-			"new_role": newRole,
-		})
-	}
+	_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, string(request.Wid), userID, "member.role_changed", "user", request.Body.UserId, map[string]interface{}{
+		"old_role": targetMembership.Role,
+		"new_role": newRole,
+	})
 
 	return openapi.UpdateWorkspaceMemberRole200JSONResponse{
 		Success: true,
@@ -338,7 +348,7 @@ func (h *Handler) AcceptInvite(ctx context.Context, request openapi.AcceptInvite
 
 	// Look up the invite to get the workspace ID for ban check
 	invite, err := h.workspaceRepo.GetInviteByCode(ctx, request.Code)
-	if err == nil && invite != nil && h.moderationRepo != nil {
+	if err == nil && invite != nil {
 		// Check for active ban before allowing join
 		ban, _ := h.moderationRepo.GetActiveBan(ctx, invite.WorkspaceID, userID)
 		if ban != nil {
@@ -707,7 +717,7 @@ func (h *Handler) ListAllUnreads(ctx context.Context, request openapi.ListAllUnr
 		}
 	}
 
-	filter := &message.FilterOptions{WorkspaceID: string(request.Wid), RequestingUserID: userID}
+	filter := &moderation.FilterOptions{WorkspaceID: string(request.Wid), RequestingUserID: userID}
 	result, err := h.messageRepo.ListAllUnreads(ctx, string(request.Wid), userID, opts, filter)
 	if err != nil {
 		return nil, err

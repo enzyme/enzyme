@@ -513,7 +513,11 @@ export function WorkspaceSettingsModal({
                                 <Button
                                   variant="secondary"
                                   size="sm"
-                                  onPress={() => unblockUser.mutate(member.user_id)}
+                                  onPress={() =>
+                                    unblockUser.mutate(member.user_id, {
+                                      onError: () => toast('Failed to unblock user', 'error'),
+                                    })
+                                  }
                                 >
                                   Unblock
                                 </Button>
@@ -524,7 +528,11 @@ export function WorkspaceSettingsModal({
                                 <Button
                                   variant="secondary"
                                   size="sm"
-                                  onPress={() => blockUser.mutate(member.user_id)}
+                                  onPress={() =>
+                                    blockUser.mutate(member.user_id, {
+                                      onError: () => toast('Failed to block user', 'error'),
+                                    })
+                                  }
                                 >
                                   <NoSymbolIcon className="mr-1 h-4 w-4" />
                                   Block

@@ -51,7 +51,7 @@ func (h *Handler) BanUser(ctx context.Context, request openapi.BanUserRequestObj
 	ban := &moderation.Ban{
 		WorkspaceID: string(request.Wid),
 		UserID:      targetUserID,
-		BannedBy:    userID,
+		BannedBy:    &userID,
 		Reason:      request.Body.Reason,
 	}
 	if request.Body.HideMessages != nil && *request.Body.HideMessages {
@@ -62,22 +62,11 @@ func (h *Handler) BanUser(ctx context.Context, request openapi.BanUserRequestObj
 		ban.ExpiresAt = &expiresAt
 	}
 
-	// Use a transaction for ban creation
-	tx, err := h.workspaceRepo.BeginTx(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
 	// Create ban record (membership is preserved — write endpoints check GetActiveBan)
-	if err := h.moderationRepo.CreateBan(ctx, tx, ban); err != nil {
+	if err := h.moderationRepo.CreateBan(ctx, ban); err != nil {
 		if errors.Is(err, moderation.ErrAlreadyBanned) {
 			return openapi.BanUser409JSONResponse(newErrorResponse(ErrCodeConflict, "User is already banned")), nil
 		}
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
@@ -94,22 +83,14 @@ func (h *Handler) BanUser(ctx context.Context, request openapi.BanUserRequestObj
 		slog.Error("failed to create audit log entry for ban", "error", err)
 	}
 
-	// Broadcast SSE event with enriched data
+	// Broadcast SSE event
 	if h.hub != nil {
-		eventData := map[string]interface{}{
-			"user_id":      targetUserID,
-			"workspace_id": string(request.Wid),
-			"banned_by":    userID,
-		}
-		if ban.ExpiresAt != nil {
-			eventData["expires_at"] = ban.ExpiresAt.Format(time.RFC3339)
-		}
-		if ws, err := h.workspaceRepo.GetByID(ctx, string(request.Wid)); err == nil {
-			eventData["workspace_name"] = ws.Name
-		}
 		h.hub.BroadcastToWorkspace(string(request.Wid), sse.Event{
 			Type: sse.EventMemberBanned,
-			Data: eventData,
+			Data: map[string]interface{}{
+				"user_id":      targetUserID,
+				"workspace_id": string(request.Wid),
+			},
 		})
 
 		// Disconnect the banned user's SSE connections so they stop receiving events
@@ -117,11 +98,15 @@ func (h *Handler) BanUser(ctx context.Context, request openapi.BanUserRequestObj
 	}
 
 	// Convert to API response
+	bannedByStr := ""
+	if ban.BannedBy != nil {
+		bannedByStr = *ban.BannedBy
+	}
 	apiBan := openapi.Ban{
 		Id:           ban.ID,
 		WorkspaceId:  ban.WorkspaceID,
 		UserId:       ban.UserID,
-		BannedBy:     ban.BannedBy,
+		BannedBy:     bannedByStr,
 		Reason:       ban.Reason,
 		HideMessages: ban.HideMessages,
 		ExpiresAt:    ban.ExpiresAt,
@@ -207,11 +192,15 @@ func (h *Handler) ListBans(ctx context.Context, request openapi.ListBansRequestO
 
 	apiBans := make([]openapi.BanWithUser, len(bans))
 	for i, b := range bans {
+		bannedByStr := ""
+		if b.BannedBy != nil {
+			bannedByStr = *b.BannedBy
+		}
 		apiBans[i] = openapi.BanWithUser{
 			Id:              b.ID,
 			WorkspaceId:     b.WorkspaceID,
 			UserId:          b.UserID,
-			BannedBy:        b.BannedBy,
+			BannedBy:        bannedByStr,
 			Reason:          b.Reason,
 			HideMessages:    b.HideMessages,
 			ExpiresAt:       b.ExpiresAt,
@@ -219,7 +208,7 @@ func (h *Handler) ListBans(ctx context.Context, request openapi.ListBansRequestO
 			UserDisplayName: &b.UserDisplayName,
 			UserEmail:       &b.UserEmail,
 			UserAvatarUrl:   b.UserAvatarURL,
-			BannedByName:    &b.BannedByName,
+			BannedByName:    b.BannedByName,
 		}
 	}
 
@@ -266,6 +255,11 @@ func (h *Handler) BlockUser(ctx context.Context, request openapi.BlockUserReques
 		return nil, err
 	}
 
+	// Create audit log entry (non-critical)
+	if err := h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, workspaceID, userID, moderation.ActionUserBlocked, moderation.TargetTypeUser, targetUserID, nil); err != nil {
+		slog.Error("failed to create audit log entry for block", "error", err)
+	}
+
 	return openapi.BlockUser200JSONResponse{Success: true}, nil
 }
 
@@ -286,6 +280,11 @@ func (h *Handler) UnblockUser(ctx context.Context, request openapi.UnblockUserRe
 
 	if err := h.moderationRepo.DeleteBlock(ctx, workspaceID, userID, request.Body.UserId); err != nil {
 		return nil, err
+	}
+
+	// Create audit log entry (non-critical)
+	if err := h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, workspaceID, userID, moderation.ActionUserUnblocked, moderation.TargetTypeUser, request.Body.UserId, nil); err != nil {
+		slog.Error("failed to create audit log entry for unblock", "error", err)
 	}
 
 	return openapi.UnblockUser200JSONResponse{Success: true}, nil

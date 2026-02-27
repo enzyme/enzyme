@@ -97,15 +97,6 @@ type ListOptions struct {
 	Direction string // "before", "after", or "around"
 }
 
-// FilterOptions carries context for ban-hide and block filtering in message queries.
-// When non-nil, messages from banned users (with hide_messages=1) and blocked users
-// are excluded from results. Reactions and thread participants from those users are
-// also filtered.
-type FilterOptions struct {
-	WorkspaceID      string // Required for ban-hide (workspace_bans) and block (user_blocks) filters
-	RequestingUserID string // Required for block filter (blocker_id)
-}
-
 type ListResult struct {
 	Messages   []MessageWithUser `json:"messages"`
 	HasMore    bool              `json:"has_more"`

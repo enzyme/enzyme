@@ -192,25 +192,35 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
       )}
 
       {/* Block button (only for other profiles, hidden for banned users) */}
-      {!isOwnProfile && targetIsBanned ? null : !isOwnProfile && !canBlock && !isBlocked ? (
-        <Tooltip content="Cannot block users with admin or owner role">
-          <AriaButton className="flex w-full cursor-default items-center justify-center gap-1 rounded-lg border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500">
-            <NoSymbolIcon className="mr-1 h-4 w-4" />
-            Block User
-          </AriaButton>
-        </Tooltip>
-      ) : !isOwnProfile ? (
-        isBlocked ? (
-          <Button
-            variant="secondary"
-            className="w-full"
-            onPress={handleToggleBlock}
-            isLoading={unblockUserMutation.isPending}
-          >
-            <NoSymbolIcon className="mr-1 h-4 w-4" />
-            Unblock User
-          </Button>
-        ) : (
+      {(() => {
+        if (isOwnProfile || targetIsBanned) return null;
+
+        if (!canBlock && !isBlocked) {
+          return (
+            <Tooltip content="Cannot block users with admin or owner role">
+              <AriaButton className="flex w-full cursor-default items-center justify-center gap-1 rounded-lg border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500">
+                <NoSymbolIcon className="mr-1 h-4 w-4" />
+                Block User
+              </AriaButton>
+            </Tooltip>
+          );
+        }
+
+        if (isBlocked) {
+          return (
+            <Button
+              variant="secondary"
+              className="w-full"
+              onPress={handleToggleBlock}
+              isLoading={unblockUserMutation.isPending}
+            >
+              <NoSymbolIcon className="mr-1 h-4 w-4" />
+              Unblock User
+            </Button>
+          );
+        }
+
+        return (
           <Button
             variant="danger"
             className="w-full"
@@ -220,8 +230,8 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
             <NoSymbolIcon className="mr-1 h-4 w-4" />
             Block User
           </Button>
-        )
-      ) : null}
+        );
+      })()}
 
       <Modal
         isOpen={showBlockConfirm}

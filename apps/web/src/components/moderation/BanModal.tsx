@@ -11,7 +11,8 @@ interface BanScreenProps {
 export function BanScreen({ workspace }: BanScreenProps) {
   const navigate = useNavigate();
   const { workspaces } = useAuth();
-  const ban = workspace.ban!;
+  if (!workspace.ban) return null;
+  const ban = workspace.ban;
 
   const otherWorkspaces = workspaces?.filter((ws) => ws.id !== workspace.id && !ws.ban) ?? [];
 

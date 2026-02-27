@@ -27,8 +27,9 @@ func NewRepository(db *sql.DB) *Repository {
 
 // --- Bans ---
 
-// CreateBan creates a new workspace ban. Uses the provided transaction if non-nil.
-func (r *Repository) CreateBan(ctx context.Context, tx *sql.Tx, ban *Ban) error {
+// CreateBan creates a new workspace ban. It uses an internal transaction to
+// atomically delete any expired ban for the same user before inserting the new one.
+func (r *Repository) CreateBan(ctx context.Context, ban *Ban) error {
 	ban.ID = ulid.Make().String()
 	now := time.Now().UTC()
 	ban.CreatedAt = now
@@ -44,22 +45,19 @@ func (r *Repository) CreateBan(ctx context.Context, tx *sql.Tx, ban *Ban) error 
 		expiresAt = &s
 	}
 
-	var execer interface {
-		ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
 	}
-	if tx != nil {
-		execer = tx
-	} else {
-		execer = r.db
-	}
+	defer tx.Rollback()
 
 	// Remove any expired ban for this user so the unique constraint doesn't block re-banning
-	_, _ = execer.ExecContext(ctx, `
+	_, _ = tx.ExecContext(ctx, `
 		DELETE FROM workspace_bans WHERE workspace_id = ? AND user_id = ?
 		AND expires_at IS NOT NULL AND expires_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
 	`, ban.WorkspaceID, ban.UserID)
 
-	_, err := execer.ExecContext(ctx, `
+	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workspace_bans (id, workspace_id, user_id, banned_by, reason, hide_messages, expires_at, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`, ban.ID, ban.WorkspaceID, ban.UserID, ban.BannedBy, ban.Reason, hideMessages, expiresAt, now.Format(time.RFC3339))
@@ -69,7 +67,8 @@ func (r *Repository) CreateBan(ctx context.Context, tx *sql.Tx, ban *Ban) error 
 		}
 		return err
 	}
-	return nil
+
+	return tx.Commit()
 }
 
 // DeleteBan removes a ban record
@@ -94,6 +93,7 @@ func (r *Repository) DeleteBan(ctx context.Context, workspaceID, userID string) 
 func (r *Repository) GetActiveBan(ctx context.Context, workspaceID, userID string) (*Ban, error) {
 	var ban Ban
 	var hideMessages int
+	var bannedBy sql.NullString
 	var expiresAt, createdAt sql.NullString
 
 	err := r.db.QueryRowContext(ctx, `
@@ -102,7 +102,7 @@ func (r *Repository) GetActiveBan(ctx context.Context, workspaceID, userID strin
 		WHERE workspace_id = ? AND user_id = ?
 		AND (expires_at IS NULL OR expires_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 	`, workspaceID, userID).Scan(
-		&ban.ID, &ban.WorkspaceID, &ban.UserID, &ban.BannedBy,
+		&ban.ID, &ban.WorkspaceID, &ban.UserID, &bannedBy,
 		&ban.Reason, &hideMessages, &expiresAt, &createdAt,
 	)
 	if err != nil {
@@ -113,6 +113,9 @@ func (r *Repository) GetActiveBan(ctx context.Context, workspaceID, userID strin
 	}
 
 	ban.HideMessages = hideMessages == 1
+	if bannedBy.Valid {
+		ban.BannedBy = &bannedBy.String
+	}
 	if expiresAt.Valid {
 		t, _ := time.Parse(time.RFC3339, expiresAt.String)
 		ban.ExpiresAt = &t
@@ -124,11 +127,17 @@ func (r *Repository) GetActiveBan(ctx context.Context, workspaceID, userID strin
 	return &ban, nil
 }
 
-// ListActiveBans returns active bans for a workspace with user display info
+// ListActiveBans returns active bans for a workspace with user display info.
+// As a side effect, it deletes any expired bans (cleanup-on-read).
 func (r *Repository) ListActiveBans(ctx context.Context, workspaceID string, cursor string, limit int) ([]BanWithUser, bool, string, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
+
+	// Clean up expired bans on read
+	_, _ = r.db.ExecContext(ctx, `
+		DELETE FROM workspace_bans WHERE expires_at IS NOT NULL AND expires_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+	`)
 
 	args := []interface{}{workspaceID}
 	cursorClause := ""
@@ -145,7 +154,7 @@ func (r *Repository) ListActiveBans(ctx context.Context, workspaceID string, cur
 			   b.display_name
 		FROM workspace_bans wb
 		JOIN users u ON u.id = wb.user_id
-		JOIN users b ON b.id = wb.banned_by
+		LEFT JOIN users b ON b.id = wb.banned_by
 		WHERE wb.workspace_id = ?
 		AND (wb.expires_at IS NULL OR wb.expires_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 		`+cursorClause+`
@@ -161,19 +170,27 @@ func (r *Repository) ListActiveBans(ctx context.Context, workspaceID string, cur
 	for rows.Next() {
 		var b BanWithUser
 		var hideMessages int
+		var bannedBy sql.NullString
 		var expiresAt, createdAt sql.NullString
+		var bannedByName sql.NullString
 
 		err := rows.Scan(
-			&b.ID, &b.WorkspaceID, &b.UserID, &b.BannedBy, &b.Reason,
+			&b.ID, &b.WorkspaceID, &b.UserID, &bannedBy, &b.Reason,
 			&hideMessages, &expiresAt, &createdAt,
 			&b.UserDisplayName, &b.UserEmail, &b.UserAvatarURL,
-			&b.BannedByName,
+			&bannedByName,
 		)
 		if err != nil {
 			return nil, false, "", err
 		}
 
 		b.HideMessages = hideMessages == 1
+		if bannedBy.Valid {
+			b.BannedBy = &bannedBy.String
+		}
+		if bannedByName.Valid {
+			b.BannedByName = &bannedByName.String
+		}
 		if expiresAt.Valid {
 			t, _ := time.Parse(time.RFC3339, expiresAt.String)
 			b.ExpiresAt = &t
@@ -293,18 +310,6 @@ func (r *Repository) GetUsersWhoBlocked(ctx context.Context, workspaceID, blocke
 		blockers[id] = true
 	}
 	return blockers, nil
-}
-
-// IsBlocked checks if blockerID has blocked blockedID in a workspace
-func (r *Repository) IsBlocked(ctx context.Context, workspaceID, blockerID, blockedID string) (bool, error) {
-	var count int
-	err := r.db.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM user_blocks WHERE workspace_id = ? AND blocker_id = ? AND blocked_id = ?
-	`, workspaceID, blockerID, blockedID).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
 }
 
 // IsBlockedEitherDirection checks if either user has blocked the other in a workspace

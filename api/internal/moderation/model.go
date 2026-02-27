@@ -9,7 +9,7 @@ type Ban struct {
 	ID           string     `json:"id"`
 	WorkspaceID  string     `json:"workspace_id"`
 	UserID       string     `json:"user_id"`
-	BannedBy     string     `json:"banned_by"`
+	BannedBy     *string    `json:"banned_by"`
 	Reason       *string    `json:"reason,omitempty"`
 	HideMessages bool       `json:"hide_messages"`
 	ExpiresAt    *time.Time `json:"expires_at,omitempty"`
@@ -22,7 +22,7 @@ type BanWithUser struct {
 	UserDisplayName string  `json:"user_display_name"`
 	UserEmail       string  `json:"user_email"`
 	UserAvatarURL   *string `json:"user_avatar_url,omitempty"`
-	BannedByName    string  `json:"banned_by_name"`
+	BannedByName    *string `json:"banned_by_name,omitempty"`
 }
 
 // Block represents one user blocking another within a workspace
@@ -65,6 +65,8 @@ type AuditLogEntryWithActor struct {
 const (
 	ActionUserBanned        = "user.banned"
 	ActionUserUnbanned      = "user.unbanned"
+	ActionUserBlocked       = "user.blocked"
+	ActionUserUnblocked     = "user.unblocked"
 	ActionMessageDeleted    = "message.deleted"
 	ActionMemberRemoved     = "member.removed"
 	ActionMemberRoleChanged = "member.role_changed"

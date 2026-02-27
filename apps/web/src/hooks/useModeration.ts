@@ -1,6 +1,35 @@
-import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+  QueryClient,
+} from '@tanstack/react-query';
 import { moderationApi } from '../api/moderation';
-import type { MessageListResult } from '@enzyme/api-client';
+import type { Message, MessageListResult } from '@enzyme/api-client';
+
+type MessagePages = { pages: MessageListResult[]; pageParams: (string | undefined)[] };
+
+/** Shared helper to update a single message inside all cached message pages. */
+function updateMessageInCache(
+  queryClient: QueryClient,
+  messageId: string,
+  updater: (message: Message) => Message,
+) {
+  queryClient.setQueriesData({ queryKey: ['messages'] }, (old: MessagePages | undefined) => {
+    if (!old) return old;
+    let changed = false;
+    const pages = old.pages.map((page) => {
+      if (!page.messages.some((m) => m.id === messageId)) return page;
+      changed = true;
+      return {
+        ...page,
+        messages: page.messages.map((m) => (m.id === messageId ? updater(m) : m)),
+      };
+    });
+    return changed ? { ...old, pages } : old;
+  });
+}
 
 // --- Pinning ---
 
@@ -9,6 +38,7 @@ export function usePinnedMessages(channelId: string | undefined) {
     queryKey: ['pinned-messages', channelId],
     queryFn: () => moderationApi.listPinnedMessages(channelId!, { limit: 50 }),
     enabled: !!channelId,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -18,26 +48,7 @@ export function usePinMessage(channelId: string) {
   return useMutation({
     mutationFn: (messageId: string) => moderationApi.pinMessage(messageId),
     onSuccess: (data) => {
-      // Update the message in cache with pinned_at/pinned_by
-      queryClient.setQueriesData(
-        { queryKey: ['messages'] },
-        (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
-          if (!old) return old;
-          let changed = false;
-          const pages = old.pages.map((page) => {
-            if (!page.messages.some((m) => m.id === data.message.id)) return page;
-            changed = true;
-            return {
-              ...page,
-              messages: page.messages.map((m) =>
-                m.id === data.message.id ? { ...m, ...data.message } : m,
-              ),
-            };
-          });
-          return changed ? { ...old, pages } : old;
-        },
-      );
-      // Invalidate pinned messages list
+      updateMessageInCache(queryClient, data.message.id, (m) => ({ ...m, ...data.message }));
       queryClient.invalidateQueries({ queryKey: ['pinned-messages', channelId] });
     },
   });
@@ -49,25 +60,7 @@ export function useUnpinMessage(channelId: string) {
   return useMutation({
     mutationFn: (messageId: string) => moderationApi.unpinMessage(messageId),
     onSuccess: (data) => {
-      // Update the message in cache to clear pinned_at/pinned_by
-      queryClient.setQueriesData(
-        { queryKey: ['messages'] },
-        (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
-          if (!old) return old;
-          let changed = false;
-          const pages = old.pages.map((page) => {
-            if (!page.messages.some((m) => m.id === data.message.id)) return page;
-            changed = true;
-            return {
-              ...page,
-              messages: page.messages.map((m) =>
-                m.id === data.message.id ? { ...m, ...data.message } : m,
-              ),
-            };
-          });
-          return changed ? { ...old, pages } : old;
-        },
-      );
+      updateMessageInCache(queryClient, data.message.id, (m) => ({ ...m, ...data.message }));
       queryClient.invalidateQueries({ queryKey: ['pinned-messages', channelId] });
     },
   });
@@ -121,25 +114,29 @@ export function useBlocks(workspaceId: string | undefined) {
   });
 }
 
-export function useBlockUser(workspaceId: string | undefined) {
+export function useBlockUser(workspaceId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userId: string) => moderationApi.blockUser(workspaceId!, userId),
+    mutationFn: (userId: string) => moderationApi.blockUser(workspaceId, userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'blocks'] });
+      // Invalidates all message caches because blocked user's messages should be hidden
+      // across all channels. Consider scoping to active channel if performance becomes an issue.
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
   });
 }
 
-export function useUnblockUser(workspaceId: string | undefined) {
+export function useUnblockUser(workspaceId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userId: string) => moderationApi.unblockUser(workspaceId!, userId),
+    mutationFn: (userId: string) => moderationApi.unblockUser(workspaceId, userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'blocks'] });
+      // Invalidates all message caches because blocked user's messages should be hidden
+      // across all channels. Consider scoping to active channel if performance becomes an issue.
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
   });

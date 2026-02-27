@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/enzyme/api/internal/moderation"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -19,36 +20,6 @@ var (
 	ErrCannotEditSystemMsg   = errors.New("cannot edit system messages")
 	ErrCannotDeleteSystemMsg = errors.New("cannot delete system messages")
 )
-
-// moderationFilterSQL returns SQL WHERE clause fragments and args for ban-hide and block filtering.
-// userCol is the column reference for the user to filter (e.g., "m.user_id", "user_id").
-// Returns empty string and nil args when filter is nil or has no workspace context.
-func moderationFilterSQL(filter *FilterOptions, userCol string) (string, []interface{}) {
-	if filter == nil || filter.WorkspaceID == "" {
-		return "", nil
-	}
-	var sql string
-	var args []interface{}
-
-	// Ban-hide filter: exclude messages from banned users with hide_messages=1
-	sql += ` AND ` + userCol + ` NOT IN (
-		SELECT wb.user_id FROM workspace_bans wb
-		WHERE wb.workspace_id = ? AND wb.hide_messages = 1
-		AND (wb.expires_at IS NULL OR wb.expires_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
-	)`
-	args = append(args, filter.WorkspaceID)
-
-	// Block filter: exclude messages from users the requester has blocked
-	if filter.RequestingUserID != "" {
-		sql += ` AND ` + userCol + ` NOT IN (
-			SELECT ub.blocked_id FROM user_blocks ub
-			WHERE ub.workspace_id = ? AND ub.blocker_id = ?
-		)`
-		args = append(args, filter.WorkspaceID, filter.RequestingUserID)
-	}
-
-	return sql, args
-}
 
 type Repository struct {
 	db *sql.DB
@@ -250,7 +221,7 @@ func (r *Repository) Delete(ctx context.Context, id string) error {
 	return tx.Commit()
 }
 
-func (r *Repository) List(ctx context.Context, channelID string, opts ListOptions, filter *FilterOptions) (*ListResult, error) {
+func (r *Repository) List(ctx context.Context, channelID string, opts ListOptions, filter *moderation.FilterOptions) (*ListResult, error) {
 	if opts.Limit <= 0 || opts.Limit > 100 {
 		opts.Limit = 50
 	}
@@ -260,7 +231,7 @@ func (r *Repository) List(ctx context.Context, channelID string, opts ListOption
 		return r.listAround(ctx, channelID, opts, filter)
 	}
 
-	filterSQL, filterArgs := moderationFilterSQL(filter, "m.user_id")
+	filterSQL, filterArgs := moderation.FilterSQL(filter, "m.user_id")
 
 	var query string
 	var args []interface{}
@@ -348,13 +319,13 @@ func (r *Repository) List(ctx context.Context, channelID string, opts ListOption
 }
 
 // listAround loads messages centered on a cursor, returning limit/2 before and limit/2 after.
-func (r *Repository) listAround(ctx context.Context, channelID string, opts ListOptions, filter *FilterOptions) (*ListResult, error) {
+func (r *Repository) listAround(ctx context.Context, channelID string, opts ListOptions, filter *moderation.FilterOptions) (*ListResult, error) {
 	halfLimit := opts.Limit / 2
 	if halfLimit < 1 {
 		halfLimit = 25
 	}
 
-	filterSQL, filterArgs := moderationFilterSQL(filter, "m.user_id")
+	filterSQL, filterArgs := moderation.FilterSQL(filter, "m.user_id")
 
 	// Query messages at or before cursor (DESC order, includes the cursor message)
 	beforeQuery := `
@@ -456,7 +427,7 @@ func (r *Repository) listAround(ctx context.Context, channelID string, opts List
 }
 
 // loadReactionsAndParticipants loads reactions and thread participants for a slice of messages.
-func (r *Repository) loadReactionsAndParticipants(ctx context.Context, messages []MessageWithUser, filter *FilterOptions) {
+func (r *Repository) loadReactionsAndParticipants(ctx context.Context, messages []MessageWithUser, filter *moderation.FilterOptions) {
 	if len(messages) == 0 {
 		return
 	}
@@ -493,12 +464,12 @@ func (r *Repository) loadReactionsAndParticipants(ctx context.Context, messages 
 	}
 }
 
-func (r *Repository) ListThread(ctx context.Context, parentID string, opts ListOptions, filter *FilterOptions) (*ListResult, error) {
+func (r *Repository) ListThread(ctx context.Context, parentID string, opts ListOptions, filter *moderation.FilterOptions) (*ListResult, error) {
 	if opts.Limit <= 0 || opts.Limit > 100 {
 		opts.Limit = 50
 	}
 
-	filterSQL, filterArgs := moderationFilterSQL(filter, "m.user_id")
+	filterSQL, filterArgs := moderation.FilterSQL(filter, "m.user_id")
 
 	var query string
 	var args []interface{}
@@ -625,7 +596,7 @@ func (r *Repository) RemoveReaction(ctx context.Context, messageID, userID, emoj
 }
 
 // GetReactionsForMessage returns reactions for a single message
-func (r *Repository) GetReactionsForMessage(ctx context.Context, messageID string, filter *FilterOptions) ([]Reaction, error) {
+func (r *Repository) GetReactionsForMessage(ctx context.Context, messageID string, filter *moderation.FilterOptions) ([]Reaction, error) {
 	reactions, err := r.getReactionsForMessages(ctx, []string{messageID}, filter)
 	if err != nil {
 		return nil, err
@@ -634,7 +605,7 @@ func (r *Repository) GetReactionsForMessage(ctx context.Context, messageID strin
 }
 
 // GetThreadParticipants returns thread participants for a single parent message
-func (r *Repository) GetThreadParticipants(ctx context.Context, parentID string, filter *FilterOptions) ([]ThreadParticipant, error) {
+func (r *Repository) GetThreadParticipants(ctx context.Context, parentID string, filter *moderation.FilterOptions) ([]ThreadParticipant, error) {
 	participants, err := r.getThreadParticipantsForMessages(ctx, []string{parentID}, filter)
 	if err != nil {
 		return nil, err
@@ -642,7 +613,7 @@ func (r *Repository) GetThreadParticipants(ctx context.Context, parentID string,
 	return participants[parentID], nil
 }
 
-func (r *Repository) getThreadParticipantsForMessages(ctx context.Context, messageIDs []string, filter *FilterOptions) (map[string][]ThreadParticipant, error) {
+func (r *Repository) getThreadParticipantsForMessages(ctx context.Context, messageIDs []string, filter *moderation.FilterOptions) (map[string][]ThreadParticipant, error) {
 	if len(messageIDs) == 0 {
 		return nil, nil
 	}
@@ -654,7 +625,7 @@ func (r *Repository) getThreadParticipantsForMessages(ctx context.Context, messa
 		args[i] = id
 	}
 
-	filterSQL, filterArgs := moderationFilterSQL(filter, "user_id")
+	filterSQL, filterArgs := moderation.FilterSQL(filter, "user_id")
 
 	// Get distinct users who replied to each thread, ordered by first reply, limited to 3
 	query := `
@@ -702,7 +673,7 @@ func (r *Repository) getThreadParticipantsForMessages(ctx context.Context, messa
 	return participants, rows.Err()
 }
 
-func (r *Repository) getReactionsForMessages(ctx context.Context, messageIDs []string, filter *FilterOptions) (map[string][]Reaction, error) {
+func (r *Repository) getReactionsForMessages(ctx context.Context, messageIDs []string, filter *moderation.FilterOptions) (map[string][]Reaction, error) {
 	if len(messageIDs) == 0 {
 		return nil, nil
 	}
@@ -714,7 +685,7 @@ func (r *Repository) getReactionsForMessages(ctx context.Context, messageIDs []s
 		args[i] = id
 	}
 
-	filterSQL, filterArgs := moderationFilterSQL(filter, "user_id")
+	filterSQL, filterArgs := moderation.FilterSQL(filter, "user_id")
 
 	query := `
 		SELECT id, message_id, user_id, emoji, created_at
@@ -868,12 +839,12 @@ func isUniqueConstraintError(err error) bool {
 }
 
 // ListAllUnreads lists all unread messages across channels the user is a member of
-func (r *Repository) ListAllUnreads(ctx context.Context, workspaceID, userID string, opts ListOptions, filter *FilterOptions) (*UnreadListResult, error) {
+func (r *Repository) ListAllUnreads(ctx context.Context, workspaceID, userID string, opts ListOptions, filter *moderation.FilterOptions) (*UnreadListResult, error) {
 	if opts.Limit <= 0 || opts.Limit > 100 {
 		opts.Limit = 50
 	}
 
-	filterSQL, filterArgs := moderationFilterSQL(filter, "m.user_id")
+	filterSQL, filterArgs := moderation.FilterSQL(filter, "m.user_id")
 
 	var query string
 	var args []interface{}
@@ -1051,7 +1022,7 @@ func sanitizeFTSQuery(query string) string {
 }
 
 // Search searches messages across channels in a workspace using FTS5
-func (r *Repository) Search(ctx context.Context, workspaceID, currentUserID string, opts SearchOptions, filter *FilterOptions) (*SearchResult, error) {
+func (r *Repository) Search(ctx context.Context, workspaceID, currentUserID string, opts SearchOptions, filter *moderation.FilterOptions) (*SearchResult, error) {
 	if opts.Limit <= 0 || opts.Limit > 100 {
 		opts.Limit = 20
 	}
@@ -1079,7 +1050,7 @@ func (r *Repository) Search(ctx context.Context, workspaceID, currentUserID stri
 	baseArgs := []interface{}{workspaceID, sanitized}
 
 	// Add ban-hide and block filters
-	filterSQL, filterArgs := moderationFilterSQL(filter, "m.user_id")
+	filterSQL, filterArgs := moderation.FilterSQL(filter, "m.user_id")
 	if filterSQL != "" {
 		// Strip the leading " AND " since we're appending to whereClauses
 		whereClauses = append(whereClauses, filterSQL[5:])
@@ -1169,12 +1140,12 @@ func (r *Repository) Search(ctx context.Context, workspaceID, currentUserID stri
 }
 
 // ListUserThreads lists threads the user is subscribed to in a workspace, ordered by last_reply_at DESC
-func (r *Repository) ListUserThreads(ctx context.Context, workspaceID, userID string, opts ListOptions, filter *FilterOptions) (*ThreadListResult, error) {
+func (r *Repository) ListUserThreads(ctx context.Context, workspaceID, userID string, opts ListOptions, filter *moderation.FilterOptions) (*ThreadListResult, error) {
 	if opts.Limit <= 0 || opts.Limit > 100 {
 		opts.Limit = 20
 	}
 
-	filterSQL, filterArgs := moderationFilterSQL(filter, "m.user_id")
+	filterSQL, filterArgs := moderation.FilterSQL(filter, "m.user_id")
 
 	var query string
 	var args []interface{}
@@ -1396,12 +1367,12 @@ func (r *Repository) CountPinnedMessages(ctx context.Context, channelID string) 
 }
 
 // ListPinnedMessages returns pinned messages in a channel, ordered by pinned_at DESC.
-func (r *Repository) ListPinnedMessages(ctx context.Context, channelID string, cursor string, limit int, filter *FilterOptions) ([]MessageWithUser, bool, string, error) {
+func (r *Repository) ListPinnedMessages(ctx context.Context, channelID string, cursor string, limit int, filter *moderation.FilterOptions) ([]MessageWithUser, bool, string, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
 
-	filterSQL, filterArgs := moderationFilterSQL(filter, "m.user_id")
+	filterSQL, filterArgs := moderation.FilterSQL(filter, "m.user_id")
 
 	var query string
 	var args []interface{}

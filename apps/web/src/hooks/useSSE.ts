@@ -556,6 +556,7 @@ export function useSSE(workspaceId: string | undefined) {
 
     // Handle member unbanned
     connection.on('member.unbanned', (event) => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });
       queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'bans'] });
 
       // If the current user was unbanned, refresh auth state to clear the ban field

@@ -831,7 +831,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Pin a message */
+        /**
+         * Pin a message
+         * @description Pin a message to its channel. Any workspace member with access to the channel can pin messages. A channel can have at most 50 pinned messages. Already-pinned messages cannot be pinned again. The pinned message is returned with updated metadata including the pinned_by user and pinned_at timestamp.
+         *
+         *     Errors:
+         *     - 400: Message is already pinned, or the channel has reached the 50-pin limit.
+         *     - 401: Not authenticated.
+         *     - 403: Caller does not have access to the channel.
+         *     - 404: Message not found.
+         */
         post: operations["pinMessage"];
         delete?: never;
         options?: never;
@@ -848,7 +857,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Unpin a message */
+        /**
+         * Unpin a message
+         * @description Unpin a previously pinned message from its channel. Any workspace member with access to the channel can unpin messages (not restricted to the user who originally pinned it). The message is returned with its pin metadata cleared.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller does not have access to the channel.
+         *     - 404: Message not found or message is not currently pinned.
+         */
         post: operations["unpinMessage"];
         delete?: never;
         options?: never;
@@ -865,7 +882,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** List pinned messages in channel */
+        /**
+         * List pinned messages in channel
+         * @description List all pinned messages in a channel with cursor-based pagination. Returns messages in reverse chronological order of when they were pinned. Only workspace members with access to the channel can list its pins.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller does not have access to the channel.
+         *     - 404: Channel not found.
+         */
         post: operations["listPinnedMessages"];
         delete?: never;
         options?: never;
@@ -1190,7 +1215,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Ban a user from workspace */
+        /**
+         * Ban a user from workspace
+         * @description Ban a user from the workspace. Only admins and owners can ban. Cannot ban users with equal or higher role rank (admins cannot ban other admins or the owner). Self-banning is prohibited. Specify duration_hours for a temporary ban (1-8760 hours), or omit for a permanent ban. Set hide_messages to true to hide the banned user's messages from all queries.
+         *
+         *     Errors:
+         *     - 400: Self-ban attempted, or target user is not a workspace member.
+         *     - 403: Caller lacks admin/owner role, or target has equal or higher role rank.
+         *     - 404: Workspace not found.
+         *     - 409: User is already banned in this workspace.
+         */
         post: operations["banUser"];
         delete?: never;
         options?: never;
@@ -1207,7 +1241,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Unban a user from workspace */
+        /**
+         * Unban a user from workspace
+         * @description Remove an active ban for a user in the workspace, restoring their access. Only admins and owners can unban users. The user's membership is not automatically restored; they must rejoin or be re-invited.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller lacks admin/owner role.
+         *     - 404: Workspace not found or no active ban exists for the specified user.
+         */
         post: operations["unbanUser"];
         delete?: never;
         options?: never;
@@ -1224,7 +1266,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** List active bans in workspace */
+        /**
+         * List active bans in workspace
+         * @description List all currently active bans in the workspace with cursor-based pagination. Only admins and owners can view the ban list. Each ban includes the banned user's display name and email. Expired temporary bans are excluded from results.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller lacks admin/owner role.
+         */
         post: operations["listBans"];
         delete?: never;
         options?: never;
@@ -1241,7 +1290,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Block a user in workspace */
+        /**
+         * Block a user in workspace
+         * @description Block a user within the workspace scope. Blocking is workspace-scoped, meaning the block only applies within this workspace. Blocked users' messages are hidden from the blocker in message queries. Any authenticated workspace member can block another member. Self-blocking is not allowed.
+         *
+         *     Errors:
+         *     - 400: Self-block attempted, or target user is not a workspace member.
+         *     - 401: Not authenticated.
+         *     - 403: Caller is not a member of the workspace.
+         *     - 404: Workspace or target user not found.
+         */
         post: operations["blockUser"];
         delete?: never;
         options?: never;
@@ -1258,7 +1316,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Unblock a user in workspace */
+        /**
+         * Unblock a user in workspace
+         * @description Remove a block on a user within the workspace scope. Only the user who created the block can remove it. After unblocking, the previously blocked user's messages will be visible again in message queries.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller is not a member of the workspace.
+         */
         post: operations["unblockUser"];
         delete?: never;
         options?: never;
@@ -1273,7 +1338,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List blocked users in workspace */
+        /**
+         * List blocked users in workspace
+         * @description List all users the caller has blocked within this workspace. Returns only the caller's own blocks (users cannot see other members' block lists). Each entry includes the blocked user's display name and email.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller is not a member of the workspace.
+         */
         get: operations["listBlocks"];
         put?: never;
         post?: never;
@@ -1292,7 +1364,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** List moderation audit log */
+        /**
+         * List moderation audit log
+         * @description List the moderation audit log for the workspace with cursor-based pagination. Records all moderation actions including bans, unbans, and role changes. Only admins and owners can view the audit log. Each entry includes the acting user's display name and email for accountability.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller lacks admin/owner role.
+         */
         post: operations["listModerationLog"];
         delete?: never;
         options?: never;

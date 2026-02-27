@@ -2,25 +2,15 @@ package handler
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 	"time"
 
-	"github.com/enzyme/api/internal/moderation"
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/testutil"
 )
 
-// testHandlerWithModeration creates a handler with moderation repo wired in.
-func testHandlerWithModeration(t *testing.T) (*Handler, *sql.DB) {
-	t.Helper()
-	h, db := testHandler(t)
-	h.moderationRepo = moderation.NewRepository(db)
-	return h, db
-}
-
 func TestBlockUser_Success(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@test.com", "Member")
@@ -43,7 +33,7 @@ func TestBlockUser_Success(t *testing.T) {
 }
 
 func TestBlockUser_CannotBlockAdmin(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	admin := testutil.CreateTestUser(t, db, "admin@test.com", "Admin")
@@ -66,7 +56,7 @@ func TestBlockUser_CannotBlockAdmin(t *testing.T) {
 }
 
 func TestBlockUser_CannotBlockOwner(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@test.com", "Member")
@@ -87,7 +77,7 @@ func TestBlockUser_CannotBlockOwner(t *testing.T) {
 }
 
 func TestBlockUser_AdminCanBlockMember(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	admin := testutil.CreateTestUser(t, db, "admin@test.com", "Admin")
@@ -110,7 +100,7 @@ func TestBlockUser_AdminCanBlockMember(t *testing.T) {
 }
 
 func TestBlockUser_NonMemberCannotBlock(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	outsider := testutil.CreateTestUser(t, db, "outsider@test.com", "Outsider")
@@ -132,7 +122,7 @@ func TestBlockUser_NonMemberCannotBlock(t *testing.T) {
 }
 
 func TestBlockUser_CannotBlockSelf(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "WS")
@@ -151,7 +141,7 @@ func TestBlockUser_CannotBlockSelf(t *testing.T) {
 }
 
 func TestUnblockUser_NoRoleRestriction(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@test.com", "Member")
@@ -177,7 +167,7 @@ func TestUnblockUser_NoRoleRestriction(t *testing.T) {
 }
 
 func TestListBlocks_Success(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@test.com", "Member")
@@ -211,7 +201,7 @@ func TestListBlocks_Success(t *testing.T) {
 // --- Ban handler permission tests ---
 
 func TestBanUser_MemberCannotBan(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	member := testutil.CreateTestUser(t, db, "member@test.com", "Member")
@@ -234,7 +224,7 @@ func TestBanUser_MemberCannotBan(t *testing.T) {
 }
 
 func TestBanUser_AdminCanBanMember(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	admin := testutil.CreateTestUser(t, db, "admin@test.com", "Admin")
@@ -257,7 +247,7 @@ func TestBanUser_AdminCanBanMember(t *testing.T) {
 }
 
 func TestBanUser_AdminCannotBanAdmin(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	admin1 := testutil.CreateTestUser(t, db, "admin1@test.com", "Admin1")
@@ -280,7 +270,7 @@ func TestBanUser_AdminCannotBanAdmin(t *testing.T) {
 }
 
 func TestBanUser_AdminCannotBanOwner(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	admin := testutil.CreateTestUser(t, db, "admin@test.com", "Admin")
@@ -301,7 +291,7 @@ func TestBanUser_AdminCannotBanOwner(t *testing.T) {
 }
 
 func TestBanUser_OwnerCanBanAdmin(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	admin := testutil.CreateTestUser(t, db, "admin@test.com", "Admin")
@@ -322,7 +312,7 @@ func TestBanUser_OwnerCanBanAdmin(t *testing.T) {
 }
 
 func TestBanUser_CannotSelfBan(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "WS")
@@ -343,7 +333,7 @@ func TestBanUser_CannotSelfBan(t *testing.T) {
 // --- Ban-hide message filter tests ---
 
 func TestListMessages_BanHideFiltersMessages(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	banned := testutil.CreateTestUser(t, db, "banned@test.com", "Banned")
@@ -402,7 +392,7 @@ func TestListMessages_BanHideFiltersMessages(t *testing.T) {
 }
 
 func TestListMessages_BanWithoutHideShowsMessages(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	banned := testutil.CreateTestUser(t, db, "banned@test.com", "Banned")
@@ -453,7 +443,7 @@ func TestListMessages_BanWithoutHideShowsMessages(t *testing.T) {
 // --- Block message filter tests ---
 
 func TestListMessages_BlockFiltersMessages(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	blocker := testutil.CreateTestUser(t, db, "blocker@test.com", "Blocker")
@@ -534,7 +524,7 @@ func TestListMessages_BlockFiltersMessages(t *testing.T) {
 // --- DM creation block enforcement tests ---
 
 func TestCreateDM_BlockedUserCannotCreateDM(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	user1 := testutil.CreateTestUser(t, db, "user1@test.com", "User1")
@@ -564,7 +554,7 @@ func TestCreateDM_BlockedUserCannotCreateDM(t *testing.T) {
 }
 
 func TestCreateDM_BlockerCannotCreateDM(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	user1 := testutil.CreateTestUser(t, db, "user1@test.com", "User1")
@@ -594,7 +584,7 @@ func TestCreateDM_BlockerCannotCreateDM(t *testing.T) {
 }
 
 func TestCreateDM_NoBlockAllowsDM(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	user1 := testutil.CreateTestUser(t, db, "user1@test.com", "User1")
@@ -620,7 +610,7 @@ func TestCreateDM_NoBlockAllowsDM(t *testing.T) {
 // --- Ban-hide expired ban test ---
 
 func TestListMessages_ExpiredBanDoesNotFilter(t *testing.T) {
-	h, db := testHandlerWithModeration(t)
+	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
 	banned := testutil.CreateTestUser(t, db, "banned@test.com", "Banned")

@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/enzyme/api/internal/auth"
 	"github.com/enzyme/api/internal/handler"
@@ -17,6 +20,36 @@ import (
 	"github.com/go-chi/cors"
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 )
+
+// banCacheEntry stores a cached ban lookup result with a TTL.
+type banCacheEntry struct {
+	banned    bool
+	expiresAt time.Time
+}
+
+const banCacheTTL = 30 * time.Second
+
+// banCache is a package-level cache for ban status lookups.
+// Keys are "workspaceID:userID", values are *banCacheEntry.
+var banCache sync.Map
+
+// InvalidateBanCache removes all cached ban entries matching the given
+// workspace and user. The key format is "workspaceID:userID".
+func InvalidateBanCache(workspaceID, userID string) {
+	banCache.Delete(workspaceID + ":" + userID)
+}
+
+// InvalidateBanCacheByWorkspace removes all cached ban entries for a given
+// workspace. This is useful when a workspace-wide moderation change occurs.
+func InvalidateBanCacheByWorkspace(workspaceID string) {
+	prefix := workspaceID + ":"
+	banCache.Range(func(key, value any) bool {
+		if k, ok := key.(string); ok && strings.HasPrefix(k, prefix) {
+			banCache.Delete(key)
+		}
+		return true
+	})
+}
 
 // NewRouter creates a new HTTP router with all routes registered.
 // If spaHandler is non-nil, it is mounted as a fallback for unmatched routes
@@ -116,6 +149,8 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.S
 }
 
 // BanCheckMiddleware rejects workspace-scoped requests from banned users with 403.
+// It uses an in-memory cache (banCache) with a 30-second TTL to avoid hitting
+// the database on every request.
 func BanCheckMiddleware(moderationRepo *moderation.Repository) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -131,25 +166,59 @@ func BanCheckMiddleware(moderationRepo *moderation.Repository) func(http.Handler
 				return
 			}
 
+			cacheKey := wid + ":" + userID
+
+			// Check the in-memory cache first.
+			if entry, ok := banCache.Load(cacheKey); ok {
+				if cached, ok := entry.(*banCacheEntry); ok && time.Now().Before(cached.expiresAt) {
+					if cached.banned {
+						writeBannedResponse(w)
+						return
+					}
+					next.ServeHTTP(w, r)
+					return
+				}
+				// Entry expired; remove it.
+				banCache.Delete(cacheKey)
+			}
+
+			// Cache miss or expired -- query the database.
 			ban, err := moderationRepo.GetActiveBan(r.Context(), wid, userID)
 			if err != nil {
+				// Fail-open: allow request through on DB error to prevent
+				// legitimate users from being blocked during transient DB
+				// issues. This means banned users may temporarily bypass
+				// enforcement during database problems. This is a deliberate
+				// availability-over-security tradeoff.
 				slog.Error("ban check failed", "error", err, "workspace", wid, "user", userID)
 				next.ServeHTTP(w, r)
 				return
 			}
-			if ban != nil {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusForbidden)
-				_ = json.NewEncoder(w).Encode(map[string]interface{}{
-					"error": map[string]string{
-						"code":    "BANNED",
-						"message": "You are banned from this workspace",
-					},
-				})
+
+			isBanned := ban != nil
+			banCache.Store(cacheKey, &banCacheEntry{
+				banned:    isBanned,
+				expiresAt: time.Now().Add(banCacheTTL),
+			})
+
+			if isBanned {
+				writeBannedResponse(w)
 				return
 			}
 
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// writeBannedResponse writes a 403 JSON response for banned users.
+func writeBannedResponse(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusForbidden)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"error": map[string]string{
+			"code":    "BANNED",
+			"message": "You are banned from this workspace",
+		},
+	})
 }

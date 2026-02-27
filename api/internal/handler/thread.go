@@ -7,6 +7,7 @@ import (
 	"github.com/enzyme/api/internal/channel"
 	"github.com/enzyme/api/internal/gravatar"
 	"github.com/enzyme/api/internal/message"
+	"github.com/enzyme/api/internal/moderation"
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/thread"
 )
@@ -253,7 +254,7 @@ func (h *Handler) ListUserThreads(ctx context.Context, request openapi.ListUserT
 		}
 	}
 
-	filter := &message.FilterOptions{WorkspaceID: string(request.Wid), RequestingUserID: userID}
+	filter := &moderation.FilterOptions{WorkspaceID: string(request.Wid), RequestingUserID: userID}
 	result, err := h.messageRepo.ListUserThreads(ctx, string(request.Wid), userID, opts, filter)
 	if err != nil {
 		return nil, err

@@ -16,6 +16,7 @@ import (
 	"github.com/enzyme/api/internal/gravatar"
 	"github.com/enzyme/api/internal/linkpreview"
 	"github.com/enzyme/api/internal/message"
+	"github.com/enzyme/api/internal/moderation"
 	"github.com/enzyme/api/internal/notification"
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/sse"
@@ -36,12 +37,11 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 		return nil, err
 	}
 
-	// Check if user is banned from this workspace
-	if h.moderationRepo != nil {
-		ban, _ := h.moderationRepo.GetActiveBan(ctx, ch.WorkspaceID, userID)
-		if ban != nil {
-			return openapi.SendMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("You are banned from this workspace")}, nil
-		}
+	// Ban check required here because this route uses channel ID, not workspace ID,
+	// so the ban middleware cannot intercept it.
+	ban, _ := h.moderationRepo.GetActiveBan(ctx, ch.WorkspaceID, userID)
+	if ban != nil {
+		return openapi.SendMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("You are banned from this workspace")}, nil
 	}
 
 	// Check channel is not archived
@@ -144,7 +144,7 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 		mentions, _ = notification.ParseMentions(ctx, h.userRepo, ch.WorkspaceID, content)
 
 		// Strip mentions of blocked users in either direction (workspace-scoped)
-		if h.moderationRepo != nil && len(mentions) > 0 {
+		if len(mentions) > 0 {
 			// Batch-fetch block relationships to avoid N+1 queries
 			blockedByMe, err := h.moderationRepo.GetBlockedUserIDs(ctx, ch.WorkspaceID, userID)
 			if err != nil {
@@ -246,7 +246,7 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 
 	// Broadcast message via SSE (use API type to include attachment URLs)
 	if h.hub != nil {
-		if (ch.Type == channel.TypeDM || ch.Type == channel.TypeGroupDM) && h.moderationRepo != nil {
+		if ch.Type == channel.TypeDM || ch.Type == channel.TypeGroupDM {
 			// For DM channels, skip delivery to users who have blocked the sender (batch lookup)
 			memberIDs, _ := h.channelRepo.GetMemberUserIDs(ctx, string(request.Id))
 			usersWhoBlockedSender, err := h.moderationRepo.GetUsersWhoBlocked(ctx, ch.WorkspaceID, userID)
@@ -347,7 +347,7 @@ func (h *Handler) ListMessages(ctx context.Context, request openapi.ListMessages
 		}
 	}
 
-	filter := &message.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
+	filter := &moderation.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
 	result, err := h.messageRepo.List(ctx, string(request.Id), opts, filter)
 	if err != nil {
 		return nil, err
@@ -374,8 +374,9 @@ func (h *Handler) UpdateMessage(ctx context.Context, request openapi.UpdateMessa
 		return nil, err
 	}
 
-	// Check if user is banned from the workspace
-	if h.moderationRepo != nil {
+	// Ban check required here because this route uses channel ID, not workspace ID,
+	// so the ban middleware cannot intercept it.
+	{
 		ch, err := h.channelRepo.GetByID(ctx, msg.ChannelID)
 		if err == nil {
 			ban, _ := h.moderationRepo.GetActiveBan(ctx, ch.WorkspaceID, userID)
@@ -523,7 +524,7 @@ func (h *Handler) DeleteMessage(ctx context.Context, request openapi.DeleteMessa
 	}
 
 	// Audit log: admin message delete (when actor != author)
-	if isAdminDelete && h.moderationRepo != nil {
+	if isAdminDelete {
 		_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, ch.WorkspaceID, userID, "message.deleted", "message", string(request.Id), map[string]interface{}{
 			"channel_id":       msg.ChannelID,
 			"original_content": msg.Content,
@@ -607,11 +608,9 @@ func (h *Handler) AddReaction(ctx context.Context, request openapi.AddReactionRe
 	}
 
 	// Check if user is banned from the workspace
-	if h.moderationRepo != nil {
-		ban, _ := h.moderationRepo.GetActiveBan(ctx, ch.WorkspaceID, userID)
-		if ban != nil {
-			return openapi.AddReaction403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("You are banned from this workspace")}, nil
-		}
+	ban, _ := h.moderationRepo.GetActiveBan(ctx, ch.WorkspaceID, userID)
+	if ban != nil {
+		return openapi.AddReaction403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("You are banned from this workspace")}, nil
 	}
 
 	_, err = h.channelRepo.GetMembership(ctx, userID, msg.ChannelID)
@@ -729,7 +728,7 @@ func (h *Handler) ListThread(ctx context.Context, request openapi.ListThreadRequ
 		}
 	}
 
-	filter := &message.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
+	filter := &moderation.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
 	result, err := h.messageRepo.ListThread(ctx, string(request.Id), opts, filter)
 	if err != nil {
 		return nil, err
@@ -783,7 +782,7 @@ func (h *Handler) SearchMessages(ctx context.Context, request openapi.SearchMess
 		opts.Offset = *request.Body.Offset
 	}
 
-	filter := &message.FilterOptions{WorkspaceID: string(request.Wid), RequestingUserID: userID}
+	filter := &moderation.FilterOptions{WorkspaceID: string(request.Wid), RequestingUserID: userID}
 	result, err := h.messageRepo.Search(ctx, string(request.Wid), userID, opts, filter)
 	if err != nil {
 		return nil, err
@@ -1378,7 +1377,7 @@ func (h *Handler) GetMessage(ctx context.Context, request openapi.GetMessageRequ
 	}
 
 	// Load reactions for the message
-	filter := &message.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
+	filter := &moderation.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
 	reactions, err := h.messageRepo.GetReactionsForMessage(ctx, msgWithUser.ID, filter)
 	if err == nil {
 		msgWithUser.Reactions = reactions
@@ -1693,7 +1692,7 @@ func (h *Handler) ListPinnedMessages(ctx context.Context, request openapi.ListPi
 		}
 	}
 
-	filter := &message.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
+	filter := &moderation.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
 	messages, hasMore, nextCursor, err := h.messageRepo.ListPinnedMessages(ctx, string(request.Id), cursor, limit, filter)
 	if err != nil {
 		return nil, err

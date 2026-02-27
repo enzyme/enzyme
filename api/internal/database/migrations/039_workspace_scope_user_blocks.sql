@@ -1,4 +1,10 @@
 -- +goose Up
+-- This migration converts user_blocks from global scope to workspace-scoped.
+-- The old table (from migration 037) had no workspace_id column. Since blocks
+-- are semantically different when workspace-scoped (they enable role gating
+-- and per-workspace isolation), existing global blocks cannot be meaningfully
+-- migrated. Any blocks created between migrations 037 and 039 are intentionally
+-- discarded.
 DROP TABLE IF EXISTS user_blocks;
 
 CREATE TABLE user_blocks (

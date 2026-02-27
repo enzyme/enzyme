@@ -20,10 +20,10 @@ func TestCreateBan(t *testing.T) {
 	ban := &Ban{
 		WorkspaceID: ws.ID,
 		UserID:      user.ID,
-		BannedBy:    owner.ID,
+		BannedBy:    &owner.ID,
 	}
 
-	err := repo.CreateBan(ctx, nil, ban)
+	err := repo.CreateBan(ctx, ban)
 	if err != nil {
 		t.Fatalf("CreateBan() error = %v", err)
 	}
@@ -50,13 +50,13 @@ func TestCreateBan_WithReasonAndExpiry(t *testing.T) {
 	ban := &Ban{
 		WorkspaceID:  ws.ID,
 		UserID:       user.ID,
-		BannedBy:     owner.ID,
+		BannedBy:     &owner.ID,
 		Reason:       &reason,
 		HideMessages: true,
 		ExpiresAt:    &expires,
 	}
 
-	err := repo.CreateBan(ctx, nil, ban)
+	err := repo.CreateBan(ctx, ban)
 	if err != nil {
 		t.Fatalf("CreateBan() error = %v", err)
 	}
@@ -92,18 +92,18 @@ func TestCreateBan_Duplicate(t *testing.T) {
 	ban := &Ban{
 		WorkspaceID: ws.ID,
 		UserID:      user.ID,
-		BannedBy:    owner.ID,
+		BannedBy:    &owner.ID,
 	}
 
-	repo.CreateBan(ctx, nil, ban)
+	repo.CreateBan(ctx, ban)
 
 	// Second ban for same user+workspace should fail
 	ban2 := &Ban{
 		WorkspaceID: ws.ID,
 		UserID:      user.ID,
-		BannedBy:    owner.ID,
+		BannedBy:    &owner.ID,
 	}
-	err := repo.CreateBan(ctx, nil, ban2)
+	err := repo.CreateBan(ctx, ban2)
 	if err != ErrAlreadyBanned {
 		t.Errorf("CreateBan() error = %v, want %v", err, ErrAlreadyBanned)
 	}
@@ -121,9 +121,9 @@ func TestDeleteBan(t *testing.T) {
 	ban := &Ban{
 		WorkspaceID: ws.ID,
 		UserID:      user.ID,
-		BannedBy:    owner.ID,
+		BannedBy:    &owner.ID,
 	}
-	repo.CreateBan(ctx, nil, ban)
+	repo.CreateBan(ctx, ban)
 
 	err := repo.DeleteBan(ctx, ws.ID, user.ID)
 	if err != nil {
@@ -165,10 +165,10 @@ func TestGetActiveBan_Expired(t *testing.T) {
 	ban := &Ban{
 		WorkspaceID: ws.ID,
 		UserID:      user.ID,
-		BannedBy:    owner.ID,
+		BannedBy:    &owner.ID,
 		ExpiresAt:   &expired,
 	}
-	repo.CreateBan(ctx, nil, ban)
+	repo.CreateBan(ctx, ban)
 
 	// GetActiveBan should not return expired bans
 	got, err := repo.GetActiveBan(ctx, ws.ID, user.ID)
@@ -191,19 +191,19 @@ func TestCreateBan_AfterExpired(t *testing.T) {
 
 	// Create an expired ban
 	expired := time.Now().Add(-1 * time.Hour)
-	repo.CreateBan(ctx, nil, &Ban{
+	repo.CreateBan(ctx, &Ban{
 		WorkspaceID: ws.ID,
 		UserID:      user.ID,
-		BannedBy:    owner.ID,
+		BannedBy:    &owner.ID,
 		ExpiresAt:   &expired,
 	})
 
 	// Should be able to ban again after expiry
 	reason := "second ban"
-	err := repo.CreateBan(ctx, nil, &Ban{
+	err := repo.CreateBan(ctx, &Ban{
 		WorkspaceID: ws.ID,
 		UserID:      user.ID,
-		BannedBy:    owner.ID,
+		BannedBy:    &owner.ID,
 		Reason:      &reason,
 	})
 	if err != nil {
@@ -247,8 +247,8 @@ func TestListActiveBans(t *testing.T) {
 	user2 := testutil.CreateTestUser(t, db, "user2@example.com", "User Two")
 	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
-	repo.CreateBan(ctx, nil, &Ban{WorkspaceID: ws.ID, UserID: user1.ID, BannedBy: owner.ID})
-	repo.CreateBan(ctx, nil, &Ban{WorkspaceID: ws.ID, UserID: user2.ID, BannedBy: owner.ID})
+	repo.CreateBan(ctx, &Ban{WorkspaceID: ws.ID, UserID: user1.ID, BannedBy: &owner.ID})
+	repo.CreateBan(ctx, &Ban{WorkspaceID: ws.ID, UserID: user2.ID, BannedBy: &owner.ID})
 
 	bans, hasMore, _, err := repo.ListActiveBans(ctx, ws.ID, "", 50)
 	if err != nil {
@@ -266,7 +266,7 @@ func TestListActiveBans(t *testing.T) {
 		if b.UserDisplayName == "" {
 			t.Error("expected non-empty UserDisplayName")
 		}
-		if b.BannedByName == "" {
+		if b.BannedByName == nil || *b.BannedByName == "" {
 			t.Error("expected non-empty BannedByName")
 		}
 	}
@@ -283,7 +283,7 @@ func TestListActiveBans_Pagination(t *testing.T) {
 	// Create 3 banned users
 	for i := 0; i < 3; i++ {
 		u := testutil.CreateTestUser(t, db, "user"+string(rune('a'+i))+"@example.com", "User")
-		repo.CreateBan(ctx, nil, &Ban{WorkspaceID: ws.ID, UserID: u.ID, BannedBy: owner.ID})
+		repo.CreateBan(ctx, &Ban{WorkspaceID: ws.ID, UserID: u.ID, BannedBy: &owner.ID})
 	}
 
 	// Fetch page 1 with limit 2
@@ -325,11 +325,11 @@ func TestListActiveBans_ExcludesExpired(t *testing.T) {
 	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "Test WS")
 
 	// Active ban
-	repo.CreateBan(ctx, nil, &Ban{WorkspaceID: ws.ID, UserID: user1.ID, BannedBy: owner.ID})
+	repo.CreateBan(ctx, &Ban{WorkspaceID: ws.ID, UserID: user1.ID, BannedBy: &owner.ID})
 
 	// Expired ban
 	expired := time.Now().Add(-1 * time.Hour)
-	repo.CreateBan(ctx, nil, &Ban{WorkspaceID: ws.ID, UserID: user2.ID, BannedBy: owner.ID, ExpiresAt: &expired})
+	repo.CreateBan(ctx, &Ban{WorkspaceID: ws.ID, UserID: user2.ID, BannedBy: &owner.ID, ExpiresAt: &expired})
 
 	bans, _, _, err := repo.ListActiveBans(ctx, ws.ID, "", 50)
 	if err != nil {
@@ -359,13 +359,13 @@ func TestCreateBlock(t *testing.T) {
 		t.Fatalf("CreateBlock() error = %v", err)
 	}
 
-	// Verify block exists
-	blocked, err := repo.IsBlocked(ctx, ws.ID, owner.ID, user.ID)
+	// Verify block exists via GetBlockedUserIDs
+	blocked, err := repo.GetBlockedUserIDs(ctx, ws.ID, owner.ID)
 	if err != nil {
-		t.Fatalf("IsBlocked() error = %v", err)
+		t.Fatalf("GetBlockedUserIDs() error = %v", err)
 	}
-	if !blocked {
-		t.Error("expected IsBlocked = true")
+	if !blocked[user.ID] {
+		t.Error("expected user to be in blocked set")
 	}
 }
 
@@ -401,14 +401,14 @@ func TestCreateBlock_WorkspaceScoped(t *testing.T) {
 	repo.CreateBlock(ctx, ws1.ID, owner.ID, user.ID)
 
 	// Block should exist in workspace 1
-	blocked, _ := repo.IsBlocked(ctx, ws1.ID, owner.ID, user.ID)
-	if !blocked {
+	blocked, _ := repo.GetBlockedUserIDs(ctx, ws1.ID, owner.ID)
+	if !blocked[user.ID] {
 		t.Error("expected block in workspace 1")
 	}
 
 	// Block should NOT exist in workspace 2
-	blocked, _ = repo.IsBlocked(ctx, ws2.ID, owner.ID, user.ID)
-	if blocked {
+	blocked2, _ := repo.GetBlockedUserIDs(ctx, ws2.ID, owner.ID)
+	if blocked2[user.ID] {
 		t.Error("expected no block in workspace 2")
 	}
 }
@@ -430,9 +430,9 @@ func TestDeleteBlock(t *testing.T) {
 	}
 
 	// Verify block is gone
-	blocked, _ := repo.IsBlocked(ctx, ws.ID, owner.ID, user.ID)
-	if blocked {
-		t.Error("expected IsBlocked = false after deletion")
+	blocked, _ := repo.GetBlockedUserIDs(ctx, ws.ID, owner.ID)
+	if blocked[user.ID] {
+		t.Error("expected user not in blocked set after deletion")
 	}
 }
 
@@ -551,7 +551,7 @@ func TestGetBlockedUserIDs(t *testing.T) {
 	}
 }
 
-func TestIsBlocked_DirectionMatters(t *testing.T) {
+func TestGetBlockedUserIDs_DirectionMatters(t *testing.T) {
 	db := testutil.TestDB(t)
 	repo := NewRepository(db)
 	ctx := context.Background()
@@ -562,15 +562,15 @@ func TestIsBlocked_DirectionMatters(t *testing.T) {
 
 	repo.CreateBlock(ctx, ws.ID, owner.ID, user.ID)
 
-	// owner blocked user
-	blocked, _ := repo.IsBlocked(ctx, ws.ID, owner.ID, user.ID)
-	if !blocked {
+	// owner blocked user — user should appear in owner's blocked set
+	ownerBlocked, _ := repo.GetBlockedUserIDs(ctx, ws.ID, owner.ID)
+	if !ownerBlocked[user.ID] {
 		t.Error("expected owner->user blocked = true")
 	}
 
-	// user did NOT block owner
-	blocked, _ = repo.IsBlocked(ctx, ws.ID, user.ID, owner.ID)
-	if blocked {
+	// user did NOT block owner — owner should NOT appear in user's blocked set
+	userBlocked, _ := repo.GetBlockedUserIDs(ctx, ws.ID, user.ID)
+	if userBlocked[owner.ID] {
 		t.Error("expected user->owner blocked = false")
 	}
 }

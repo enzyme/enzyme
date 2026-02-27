@@ -128,22 +128,20 @@ func (h *Handler) CreateDM(ctx context.Context, request openapi.CreateDMRequestO
 	}
 
 	// Check for blocks between participants (workspace-scoped, batch lookup)
-	if h.moderationRepo != nil {
-		blockedByMe, err := h.moderationRepo.GetBlockedUserIDs(ctx, string(request.Wid), userID)
-		if err != nil {
-			return nil, err
+	blockedByMe, err := h.moderationRepo.GetBlockedUserIDs(ctx, string(request.Wid), userID)
+	if err != nil {
+		return nil, err
+	}
+	blockingMe, err := h.moderationRepo.GetUsersWhoBlocked(ctx, string(request.Wid), userID)
+	if err != nil {
+		return nil, err
+	}
+	for _, otherID := range deduped {
+		if otherID == userID {
+			continue
 		}
-		blockingMe, err := h.moderationRepo.GetUsersWhoBlocked(ctx, string(request.Wid), userID)
-		if err != nil {
-			return nil, err
-		}
-		for _, otherID := range deduped {
-			if otherID == userID {
-				continue
-			}
-			if blockedByMe[otherID] || blockingMe[otherID] {
-				return openapi.CreateDM400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Cannot create DM with a blocked user")}, nil
-			}
+		if blockedByMe[otherID] || blockingMe[otherID] {
+			return openapi.CreateDM400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Cannot create DM with a blocked user")}, nil
 		}
 	}
 
@@ -316,11 +314,9 @@ func (h *Handler) ArchiveChannel(ctx context.Context, request openapi.ArchiveCha
 	}
 
 	// Audit log: channel archived
-	if h.moderationRepo != nil {
-		_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, ch.WorkspaceID, userID, "channel.archived", "channel", string(request.Id), map[string]interface{}{
-			"channel_name": ch.Name,
-		})
-	}
+	_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, ch.WorkspaceID, userID, "channel.archived", "channel", string(request.Id), map[string]interface{}{
+		"channel_name": ch.Name,
+	})
 
 	return openapi.ArchiveChannel200JSONResponse{
 		Success: true,
@@ -366,19 +362,17 @@ func (h *Handler) AddChannelMember(ctx context.Context, request openapi.AddChann
 		}
 
 		// Check for blocks between new member and existing members
-		if h.moderationRepo != nil {
-			blockedByNew, err := h.moderationRepo.GetBlockedUserIDs(ctx, ch.WorkspaceID, request.Body.UserId)
-			if err != nil {
-				return nil, err
-			}
-			blockingNew, err := h.moderationRepo.GetUsersWhoBlocked(ctx, ch.WorkspaceID, request.Body.UserId)
-			if err != nil {
-				return nil, err
-			}
-			for _, existingID := range currentMemberIDs {
-				if blockedByNew[existingID] || blockingNew[existingID] {
-					return openapi.AddChannelMember403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Cannot add user due to a block relationship")}, nil
-				}
+		blockedByNew, err := h.moderationRepo.GetBlockedUserIDs(ctx, ch.WorkspaceID, request.Body.UserId)
+		if err != nil {
+			return nil, err
+		}
+		blockingNew, err := h.moderationRepo.GetUsersWhoBlocked(ctx, ch.WorkspaceID, request.Body.UserId)
+		if err != nil {
+			return nil, err
+		}
+		for _, existingID := range currentMemberIDs {
+			if blockedByNew[existingID] || blockingNew[existingID] {
+				return openapi.AddChannelMember403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Cannot add user due to a block relationship")}, nil
 			}
 		}
 
