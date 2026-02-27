@@ -102,7 +102,7 @@ export function MessageItem({ message, channelId, channels, isAdmin }: MessageIt
   const deleteLinkPreview = useDeleteLinkPreview();
   const pinMessage = usePinMessage(channelId);
   const unpinMessage = useUnpinMessage(channelId);
-  const blockUser = useBlockUser(workspaceId);
+  const blockUser = useBlockUser(workspaceId || '');
   const { data: membersData } = useWorkspaceMembers(workspaceId);
   const navigate = useNavigate();
   const createDM = useCreateDM(workspaceId || '');

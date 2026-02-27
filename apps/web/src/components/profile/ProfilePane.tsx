@@ -89,8 +89,8 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
   const { workspaces } = useAuth();
   const { data: blocksData } = useBlocks(workspaceId);
   const { data: membersData } = useWorkspaceMembers(workspaceId || '');
-  const blockUserMutation = useBlockUser(workspaceId);
-  const unblockUserMutation = useUnblockUser(workspaceId);
+  const blockUserMutation = useBlockUser(workspaceId || '');
+  const unblockUserMutation = useUnblockUser(workspaceId || '');
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const isBlocked = blocksData?.blocks?.some((b) => b.blocked_id === profile.id) ?? false;
   const targetMember = membersData?.members?.find((m) => m.user_id === profile.id);
