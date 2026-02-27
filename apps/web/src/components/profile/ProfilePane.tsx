@@ -30,7 +30,7 @@ export function ProfilePane({ userId }: ProfilePaneProps) {
   const profile = data?.user;
 
   return (
-    <div className="flex w-80 flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <div className="flex h-full flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 p-3 dark:border-gray-700">
         <h3 className="font-semibold text-gray-900 dark:text-white">Profile</h3>

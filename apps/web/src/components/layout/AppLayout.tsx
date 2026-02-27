@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { Outlet, useParams } from 'react-router-dom';
+import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from 'react-resizable-panels';
 import { WorkspaceSwitcher } from '../workspace/WorkspaceSwitcher';
 import { ChannelSidebar } from '../channel/ChannelSidebar';
 import { ThreadPanel } from '../thread/ThreadPanel';
@@ -14,7 +15,6 @@ import { BanScreen } from '../moderation/BanModal';
 import { useSSE, useAuth } from '../../hooks';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { useSidebar } from '../../hooks/useSidebar';
-import { cn } from '../../lib/utils';
 import { recordChannelVisit } from '../../lib/recentChannels';
 
 export function AppLayout() {
@@ -24,7 +24,17 @@ export function AppLayout() {
   const currentWorkspace = workspaces?.find((ws) => ws.id === workspaceId);
   const { threadId } = useThreadPanel();
   const { profileUserId } = useProfilePanel();
-  const { collapsed: sidebarCollapsed } = useSidebar();
+  const { collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed } = useSidebar();
+  const sidebarPanelRef = usePanelRef();
+  const rightPanelRef = usePanelRef();
+  const rightPanelOpen = Boolean(threadId || profileUserId);
+
+  // Persist panel layout in localStorage
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
+    id: 'enzyme:layout',
+    storage: localStorage,
+  });
+
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchInitialQuery, setSearchInitialQuery] = useState('');
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -80,6 +90,41 @@ export function AppLayout() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleOpenSearch]);
 
+  // Sync sidebar panel collapse state with useSidebar hook via onResize
+  const handleSidebarResize = useCallback(
+    (size: { asPercentage: number }) => {
+      const isNowCollapsed = size.asPercentage === 0;
+      if (isNowCollapsed && !sidebarCollapsed) {
+        setSidebarCollapsed(true);
+      } else if (!isNowCollapsed && sidebarCollapsed) {
+        setSidebarCollapsed(false);
+      }
+    },
+    [sidebarCollapsed, setSidebarCollapsed],
+  );
+
+  // Sync sidebar toggle (from keyboard shortcut) to panel ref
+  useLayoutEffect(() => {
+    const panel = sidebarPanelRef.current;
+    if (!panel) return;
+    if (sidebarCollapsed && !panel.isCollapsed()) {
+      panel.collapse();
+    } else if (!sidebarCollapsed && panel.isCollapsed()) {
+      panel.expand();
+    }
+  }, [sidebarCollapsed, sidebarPanelRef]);
+
+  // Sync URL params to right panel collapse/expand (after initial mount)
+  useLayoutEffect(() => {
+    const panel = rightPanelRef.current;
+    if (!panel) return;
+    if (rightPanelOpen) {
+      if (panel.isCollapsed()) panel.expand();
+    } else {
+      if (!panel.isCollapsed()) panel.collapse();
+    }
+  }, [rightPanelOpen, rightPanelRef]);
+
   return (
     <div className="flex h-screen flex-col bg-white dark:bg-gray-900">
       {/* Connection Status - full width */}
@@ -96,38 +141,67 @@ export function AppLayout() {
         {currentWorkspace?.ban ? (
           <BanScreen workspace={currentWorkspace} />
         ) : (
-          <>
+          <Group
+            orientation="horizontal"
+            defaultLayout={defaultLayout}
+            onLayoutChanged={onLayoutChanged}
+            id="enzyme:layout"
+          >
             {/* Channel Sidebar */}
-            <div
-              className={cn(
-                'flex-shrink-0 border-r border-gray-200 transition-all dark:border-gray-700',
-                sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-64',
-              )}
+            <Panel
+              id="sidebar"
+              panelRef={sidebarPanelRef}
+              collapsible
+              collapsedSize={0}
+              minSize={15}
+              maxSize={30}
+              defaultSize={sidebarCollapsed ? 0 : 20}
+              onResize={handleSidebarResize}
             >
-              <ChannelSidebar
-                workspaceId={workspaceId}
-                onSearchClick={() => setIsCommandPaletteOpen(true)}
-                onOpenWorkspaceSettings={handleOpenWorkspaceSettings}
-                onCreateChannel={handleCreateChannel}
-                onNewDM={handleNewDM}
-                isCreateModalOpen={isCreateModalOpen}
-                onCloseCreateModal={() => setIsCreateModalOpen(false)}
-                isNewDMModalOpen={isNewDMModalOpen}
-                onCloseNewDMModal={() => setIsNewDMModalOpen(false)}
-              />
-            </div>
+              <div className="h-full overflow-hidden border-r border-gray-200 dark:border-gray-700">
+                <ChannelSidebar
+                  workspaceId={workspaceId}
+                  onSearchClick={() => setIsCommandPaletteOpen(true)}
+                  onOpenWorkspaceSettings={handleOpenWorkspaceSettings}
+                  onCreateChannel={handleCreateChannel}
+                  onNewDM={handleNewDM}
+                  isCreateModalOpen={isCreateModalOpen}
+                  onCloseCreateModal={() => setIsCreateModalOpen(false)}
+                  isNewDMModalOpen={isNewDMModalOpen}
+                  onCloseNewDMModal={() => setIsNewDMModalOpen(false)}
+                />
+              </div>
+            </Panel>
+
+            <Separator className="w-1 cursor-col-resize bg-transparent transition-colors data-[separator=hover]:bg-blue-500/30 data-[separator=active]:bg-blue-500/50" />
 
             {/* Main Content */}
-            <div className="flex min-w-0 flex-1 flex-col">
-              <Outlet />
-            </div>
+            <Panel id="content" minSize={30}>
+              <div className="flex h-full min-w-0 flex-col">
+                <Outlet />
+              </div>
+            </Panel>
 
-            {/* Thread Panel */}
-            {threadId && !profileUserId && <ThreadPanel messageId={threadId} />}
+            <Separator className="w-1 cursor-col-resize bg-transparent transition-colors data-[separator=hover]:bg-blue-500/30 data-[separator=active]:bg-blue-500/50" />
 
-            {/* Profile Pane */}
-            {profileUserId && <ProfilePane userId={profileUserId} />}
-          </>
+            {/* Right Panel (Thread / Profile) */}
+            <Panel
+              id="right-panel"
+              panelRef={rightPanelRef}
+              collapsible
+              collapsedSize={0}
+              minSize={20}
+              maxSize={45}
+              defaultSize={rightPanelOpen ? 30 : 0}
+            >
+              {threadId && !profileUserId && (
+                <ThreadPanel messageId={threadId} />
+              )}
+              {profileUserId && (
+                <ProfilePane userId={profileUserId} />
+              )}
+            </Panel>
+          </Group>
         )}
       </div>
 
