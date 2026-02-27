@@ -1,7 +1,5 @@
-import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Outlet, useParams } from 'react-router-dom';
-import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from 'react-resizable-panels';
-import type { PanelSize } from 'react-resizable-panels';
 import { WorkspaceSwitcher } from '../workspace/WorkspaceSwitcher';
 import { ChannelSidebar } from '../channel/ChannelSidebar';
 import { ThreadPanel } from '../thread/ThreadPanel';
@@ -16,40 +14,42 @@ import { BanScreen } from '../moderation/BanModal';
 import { useSSE, useAuth } from '../../hooks';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { useSidebar } from '../../hooks/useSidebar';
+import { useResizableWidth } from '../../hooks/useResizableWidth';
 import { recordChannelVisit } from '../../lib/recentChannels';
+
+function Divider({ ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className="w-1 flex-shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-blue-200 active:bg-blue-300 dark:hover:bg-blue-800 dark:active:bg-blue-700"
+      {...props}
+    />
+  );
+}
 
 export function AppLayout() {
   const { workspaceId, channelId } = useParams<{ workspaceId: string; channelId: string }>();
   const { isReconnecting } = useSSE(workspaceId);
   const { workspaces } = useAuth();
   const currentWorkspace = workspaces?.find((ws) => ws.id === workspaceId);
-  const { threadId, closeThread } = useThreadPanel();
-  const { profileUserId, closeProfile } = useProfilePanel();
-  const { collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed } = useSidebar();
-  const sidebarPanelRef = usePanelRef();
-  const rightPanelRef = usePanelRef();
+  const { threadId } = useThreadPanel();
+  const { profileUserId } = useProfilePanel();
+  const { collapsed: sidebarCollapsed } = useSidebar();
   const rightPanelOpen = Boolean(threadId || profileUserId);
 
-  // Persist panel layout in localStorage
-  const { defaultLayout: persistedLayout, onLayoutChanged } = useDefaultLayout({
-    id: 'enzyme:layout',
-    storage: localStorage,
-  });
+  const { width: sidebarWidth, dividerProps: sidebarDividerProps } = useResizableWidth(
+    'enzyme:sidebar-width',
+    256,
+    180,
+    400,
+  );
 
-  // Reconcile persisted layout with URL state to prevent flash of wrong layout
-  const defaultLayout = useMemo(() => {
-    if (!persistedLayout) return undefined;
-    if (!rightPanelOpen && persistedLayout['right-panel'] > 0) {
-      const rightPanelSize = persistedLayout['right-panel'];
-      const contentSize = persistedLayout['content'] ?? 50;
-      return {
-        ...persistedLayout,
-        'right-panel': 0,
-        content: contentSize + rightPanelSize,
-      };
-    }
-    return persistedLayout;
-  }, [persistedLayout, rightPanelOpen]);
+  const { width: rightPanelWidth, dividerProps: rightPanelDividerProps } = useResizableWidth(
+    'enzyme:right-panel-width',
+    384,
+    300,
+    600,
+    'left',
+  );
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchInitialQuery, setSearchInitialQuery] = useState('');
@@ -106,48 +106,6 @@ export function AppLayout() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleOpenSearch]);
 
-  // Sync sidebar panel collapse state with useSidebar hook via onResize
-  const handleSidebarResize = useCallback(
-    (size: PanelSize) => setSidebarCollapsed(size.asPercentage === 0),
-    [setSidebarCollapsed],
-  );
-
-  // Clear URL params when user drags right panel to collapse
-  const handleRightPanelResize = useCallback(
-    (size: PanelSize) => {
-      if (size.asPercentage === 0) {
-        if (threadId) closeThread();
-        if (profileUserId) closeProfile();
-      }
-    },
-    [threadId, profileUserId, closeThread, closeProfile],
-  );
-
-  // Sync sidebar toggle (from keyboard shortcut) to panel ref
-  useLayoutEffect(() => {
-    const panel = sidebarPanelRef.current;
-    if (!panel) return;
-    if (sidebarCollapsed && !panel.isCollapsed()) {
-      panel.collapse();
-    } else if (!sidebarCollapsed && panel.isCollapsed()) {
-      panel.expand();
-    }
-  }, [sidebarCollapsed, sidebarPanelRef]);
-
-  // Sync URL params to right panel collapse/expand (after initial mount)
-  useLayoutEffect(() => {
-    const panel = rightPanelRef.current;
-    if (!panel) return;
-    if (rightPanelOpen) {
-      if (panel.isCollapsed()) panel.expand();
-    } else {
-      if (!panel.isCollapsed()) panel.collapse();
-    }
-  }, [rightPanelOpen, rightPanelRef]);
-
-  const separatorClassName =
-    'w-1 cursor-col-resize bg-transparent transition-colors data-[separator=hover]:bg-blue-500/30 data-[separator=active]:bg-blue-500/50';
-
   return (
     <div className="flex h-screen flex-col bg-white dark:bg-gray-900">
       {/* Connection Status - full width */}
@@ -164,24 +122,16 @@ export function AppLayout() {
         {currentWorkspace?.ban ? (
           <BanScreen workspace={currentWorkspace} />
         ) : (
-          <Group
-            orientation="horizontal"
-            defaultLayout={defaultLayout}
-            onLayoutChanged={onLayoutChanged}
-            id="enzyme:layout"
-          >
+          <>
             {/* Channel Sidebar */}
-            <Panel
-              id="sidebar"
-              panelRef={sidebarPanelRef}
-              collapsible
-              collapsedSize={0}
-              minSize={15}
-              maxSize={30}
-              defaultSize={sidebarCollapsed ? 0 : 20}
-              onResize={handleSidebarResize}
+            <div
+              className="flex-shrink-0 overflow-hidden"
+              style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
             >
-              <div className="h-full overflow-hidden border-r border-gray-200 dark:border-gray-700">
+              <div
+                className="h-full border-r border-gray-200 dark:border-gray-700"
+                style={{ width: sidebarWidth }}
+              >
                 <ChannelSidebar
                   workspaceId={workspaceId}
                   onSearchClick={() => setIsCommandPaletteOpen(true)}
@@ -194,38 +144,26 @@ export function AppLayout() {
                   onCloseNewDMModal={() => setIsNewDMModalOpen(false)}
                 />
               </div>
-            </Panel>
+            </div>
 
-            <Separator className={separatorClassName} />
+            {!sidebarCollapsed && <Divider {...sidebarDividerProps} />}
 
             {/* Main Content */}
-            <Panel id="content" minSize={30}>
-              <div className="flex h-full min-w-0 flex-col">
-                <Outlet />
-              </div>
-            </Panel>
-
-            <Separator className={separatorClassName} />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <Outlet />
+            </div>
 
             {/* Right Panel (Thread / Profile) */}
-            <Panel
-              id="right-panel"
-              panelRef={rightPanelRef}
-              collapsible
-              collapsedSize={0}
-              minSize={20}
-              maxSize={45}
-              defaultSize={rightPanelOpen ? 30 : 0}
-              onResize={handleRightPanelResize}
-            >
-              {threadId && !profileUserId && (
-                <ThreadPanel messageId={threadId} />
-              )}
-              {profileUserId && (
-                <ProfilePane userId={profileUserId} />
-              )}
-            </Panel>
-          </Group>
+            {rightPanelOpen && (
+              <>
+                <Divider {...rightPanelDividerProps} />
+                <div className="flex-shrink-0" style={{ width: rightPanelWidth }}>
+                  {threadId && !profileUserId && <ThreadPanel messageId={threadId} />}
+                  {profileUserId && <ProfilePane userId={profileUserId} />}
+                </div>
+              </>
+            )}
+          </>
         )}
       </div>
 

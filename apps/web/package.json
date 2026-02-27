@@ -37,7 +37,6 @@
     "react": "^19.2.0",
     "react-aria-components": "^1.14.0",
     "react-dom": "^19.2.0",
-    "react-resizable-panels": "^4.6.5",
     "react-router-dom": "^7.13.0",
     "tailwind-merge": "^3.4.0",
     "tailwind-variants": "^3.2.2",
