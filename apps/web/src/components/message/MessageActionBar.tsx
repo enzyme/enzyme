@@ -7,9 +7,8 @@ import {
   EyeSlashIcon,
   PencilSquareIcon,
   TrashIcon,
-  MapPinIcon,
 } from '@heroicons/react/24/outline';
-import { IconButton, Tooltip, Menu, MenuItem, EmojiGrid } from '../ui';
+import { IconButton, Tooltip, Menu, MenuItem, EmojiGrid, PinOutlineIcon } from '../ui';
 import { cn } from '../../lib/utils';
 import type { CustomEmoji } from '@enzyme/api-client';
 
@@ -106,7 +105,7 @@ export function MessageActionBar({
             Mark unread
           </MenuItem>
           {onPin && (
-            <MenuItem onAction={onPin} icon={<MapPinIcon className="h-4 w-4" />}>
+            <MenuItem onAction={onPin} icon={<PinOutlineIcon className="h-4 w-4" />}>
               {isPinned ? 'Unpin message' : 'Pin message'}
             </MenuItem>
           )}

@@ -6,7 +6,6 @@ import {
   LinkIcon,
   EyeSlashIcon,
   PencilSquareIcon,
-  MapPinIcon,
   NoSymbolIcon,
 } from '@heroicons/react/24/outline';
 import { UserIcon, ChatBubbleLeftIcon } from '@heroicons/react/24/outline';
@@ -43,6 +42,7 @@ import { usePinMessage, useUnpinMessage, useBlockUser } from '../../hooks/useMod
 import { useCustomEmojiMap, useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { cn, formatTime } from '../../lib/utils';
+import { PinSolidIcon } from '../ui';
 import type { MessageWithUser, ChannelWithMembership } from '@enzyme/api-client';
 
 function ClickableName({
@@ -268,10 +268,13 @@ export function MessageItem({ message, channelId, channels, isAdmin }: MessageIt
           ? '!max-h-0 overflow-hidden bg-red-400 !py-0 opacity-0 transition-all duration-500 dark:bg-red-700'
           : isEditing
             ? 'bg-yellow-50 dark:bg-yellow-900/10'
-            : 'hover:bg-gray-100 dark:hover:bg-gray-800',
+            : isPinned
+              ? 'bg-amber-50/60 hover:bg-amber-50 dark:bg-amber-900/10 dark:hover:bg-amber-900/20'
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800',
         (showDropdown || msgCtx.isOpen) &&
           !isDeleting &&
           !isEditing &&
+          !isPinned &&
           'bg-gray-100 dark:bg-gray-800',
       )}
       style={isDeleting ? { marginTop: 0, marginBottom: 0 } : undefined}
@@ -297,6 +300,18 @@ export function MessageItem({ message, channelId, channels, isAdmin }: MessageIt
 
         {/* Content */}
         <div className="min-w-0 flex-1">
+          {/* Pinned by indicator */}
+          {isPinned && (
+            <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+              <PinSolidIcon className="h-3 w-3" />
+              <span>
+                Pinned by{' '}
+                {membersData?.members?.find((m) => m.user_id === message.pinned_by)?.display_name ??
+                  'a member'}
+              </span>
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-baseline gap-2">
             <ClickableName
@@ -308,12 +323,6 @@ export function MessageItem({ message, channelId, channels, isAdmin }: MessageIt
               {formatTime(message.created_at)}
             </span>
             {isEdited && <span className="text-xs text-gray-400 dark:text-gray-500">(edited)</span>}
-            {isPinned && (
-              <span className="inline-flex items-center gap-0.5 text-xs text-amber-600 dark:text-amber-400">
-                <MapPinIcon className="h-3 w-3" />
-                Pinned
-              </span>
-            )}
           </div>
 
           {/* Broadcast thread reply indicator */}
@@ -443,7 +452,7 @@ export function MessageItem({ message, channelId, channels, isAdmin }: MessageIt
         {canPin && (
           <>
             <MenuSeparator />
-            <MenuItem onAction={handleTogglePin} icon={<MapPinIcon className="h-4 w-4" />}>
+            <MenuItem onAction={handleTogglePin} icon={<PinSolidIcon className="h-4 w-4" />}>
               {isPinned ? 'Unpin Message' : 'Pin Message'}
             </MenuItem>
           </>

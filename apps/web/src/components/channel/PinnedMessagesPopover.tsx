@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { DialogTrigger, Popover, Dialog } from 'react-aria-components';
-import { MapPinIcon } from '@heroicons/react/24/outline';
-import { IconButton, Tooltip, Spinner } from '../ui';
+import { IconButton, Tooltip, Spinner, PinOutlineIcon } from '../ui';
 import { MessageContent } from '../message/MessageContent';
 import { usePinnedMessages } from '../../hooks/useModeration';
 import { formatTime } from '../../lib/utils';
@@ -22,7 +21,7 @@ export function PinnedMessagesPopover({ channelId }: PinnedMessagesPopoverProps)
           aria-label="Pinned messages"
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
         >
-          <MapPinIcon className="h-4 w-4" />
+          <PinOutlineIcon className="h-4 w-4" />
         </IconButton>
       </Tooltip>
       <Popover
