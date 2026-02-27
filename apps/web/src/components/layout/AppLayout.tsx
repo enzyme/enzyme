@@ -1,6 +1,7 @@
-import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { Outlet, useParams } from 'react-router-dom';
 import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from 'react-resizable-panels';
+import type { PanelSize } from 'react-resizable-panels';
 import { WorkspaceSwitcher } from '../workspace/WorkspaceSwitcher';
 import { ChannelSidebar } from '../channel/ChannelSidebar';
 import { ThreadPanel } from '../thread/ThreadPanel';
@@ -22,18 +23,33 @@ export function AppLayout() {
   const { isReconnecting } = useSSE(workspaceId);
   const { workspaces } = useAuth();
   const currentWorkspace = workspaces?.find((ws) => ws.id === workspaceId);
-  const { threadId } = useThreadPanel();
-  const { profileUserId } = useProfilePanel();
+  const { threadId, closeThread } = useThreadPanel();
+  const { profileUserId, closeProfile } = useProfilePanel();
   const { collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed } = useSidebar();
   const sidebarPanelRef = usePanelRef();
   const rightPanelRef = usePanelRef();
   const rightPanelOpen = Boolean(threadId || profileUserId);
 
   // Persist panel layout in localStorage
-  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
+  const { defaultLayout: persistedLayout, onLayoutChanged } = useDefaultLayout({
     id: 'enzyme:layout',
     storage: localStorage,
   });
+
+  // Reconcile persisted layout with URL state to prevent flash of wrong layout
+  const defaultLayout = useMemo(() => {
+    if (!persistedLayout) return undefined;
+    if (!rightPanelOpen && persistedLayout['right-panel'] > 0) {
+      const rightPanelSize = persistedLayout['right-panel'];
+      const contentSize = persistedLayout['content'] ?? 50;
+      return {
+        ...persistedLayout,
+        'right-panel': 0,
+        content: contentSize + rightPanelSize,
+      };
+    }
+    return persistedLayout;
+  }, [persistedLayout, rightPanelOpen]);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchInitialQuery, setSearchInitialQuery] = useState('');
@@ -92,15 +108,19 @@ export function AppLayout() {
 
   // Sync sidebar panel collapse state with useSidebar hook via onResize
   const handleSidebarResize = useCallback(
-    (size: { asPercentage: number }) => {
-      const isNowCollapsed = size.asPercentage === 0;
-      if (isNowCollapsed && !sidebarCollapsed) {
-        setSidebarCollapsed(true);
-      } else if (!isNowCollapsed && sidebarCollapsed) {
-        setSidebarCollapsed(false);
+    (size: PanelSize) => setSidebarCollapsed(size.asPercentage === 0),
+    [setSidebarCollapsed],
+  );
+
+  // Clear URL params when user drags right panel to collapse
+  const handleRightPanelResize = useCallback(
+    (size: PanelSize) => {
+      if (size.asPercentage === 0) {
+        if (threadId) closeThread();
+        if (profileUserId) closeProfile();
       }
     },
-    [sidebarCollapsed, setSidebarCollapsed],
+    [threadId, profileUserId, closeThread, closeProfile],
   );
 
   // Sync sidebar toggle (from keyboard shortcut) to panel ref
@@ -124,6 +144,9 @@ export function AppLayout() {
       if (!panel.isCollapsed()) panel.collapse();
     }
   }, [rightPanelOpen, rightPanelRef]);
+
+  const separatorClassName =
+    'w-1 cursor-col-resize bg-transparent transition-colors data-[separator=hover]:bg-blue-500/30 data-[separator=active]:bg-blue-500/50';
 
   return (
     <div className="flex h-screen flex-col bg-white dark:bg-gray-900">
@@ -173,7 +196,7 @@ export function AppLayout() {
               </div>
             </Panel>
 
-            <Separator className="w-1 cursor-col-resize bg-transparent transition-colors data-[separator=hover]:bg-blue-500/30 data-[separator=active]:bg-blue-500/50" />
+            <Separator className={separatorClassName} />
 
             {/* Main Content */}
             <Panel id="content" minSize={30}>
@@ -182,7 +205,7 @@ export function AppLayout() {
               </div>
             </Panel>
 
-            <Separator className="w-1 cursor-col-resize bg-transparent transition-colors data-[separator=hover]:bg-blue-500/30 data-[separator=active]:bg-blue-500/50" />
+            <Separator className={separatorClassName} />
 
             {/* Right Panel (Thread / Profile) */}
             <Panel
@@ -193,6 +216,7 @@ export function AppLayout() {
               minSize={20}
               maxSize={45}
               defaultSize={rightPanelOpen ? 30 : 0}
+              onResize={handleRightPanelResize}
             >
               {threadId && !profileUserId && (
                 <ThreadPanel messageId={threadId} />
