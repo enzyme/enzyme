@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/enzyme/api/internal/auth"
+	"github.com/enzyme/api/internal/telemetry"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -89,6 +90,8 @@ func (r *Repository) Update(ctx context.Context, workspace *Workspace) error {
 }
 
 func (r *Repository) GetMembership(ctx context.Context, userID, workspaceID string) (*Membership, error) {
+	ctx, end := telemetry.StartDBSpan(ctx, "workspace.GetMembership")
+	defer end()
 	var m Membership
 	var displayNameOverride sql.NullString
 	var createdAt, updatedAt string

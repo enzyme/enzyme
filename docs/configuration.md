@@ -131,6 +131,48 @@ Rate limiting protects authentication endpoints from brute-force attacks. Limits
 | `sse.heartbeat_interval` | `ENZYME_SSE_HEARTBEAT_INTERVAL` | `30s`   | How often heartbeat events are sent to keep SSE connections alive. Minimum: 5s.        |
 | `sse.client_buffer_size` | `ENZYME_SSE_CLIENT_BUFFER_SIZE` | `256`   | Channel buffer size per SSE client. Increase for high-traffic workspaces. Minimum: 16. |
 
+## Telemetry (OpenTelemetry)
+
+Optional observability via OpenTelemetry. When enabled, Enzyme exports traces and metrics to any OTLP-compatible collector (Jaeger, Grafana Alloy, Datadog Agent, etc.). Disabled by default with zero overhead.
+
+| Key                      | Env Var                         | CLI Flag                   | Default          | Description                                                                    |
+| ------------------------ | ------------------------------- | -------------------------- | ---------------- | ------------------------------------------------------------------------------ |
+| `telemetry.enabled`      | `ENZYME_TELEMETRY_ENABLED`      | `--telemetry.enabled`      | `false`          | Enable OpenTelemetry instrumentation.                                          |
+| `telemetry.endpoint`     | `ENZYME_TELEMETRY_ENDPOINT`     | `--telemetry.endpoint`     | `localhost:4317` | OTLP collector endpoint (host:port).                                           |
+| `telemetry.protocol`     | `ENZYME_TELEMETRY_PROTOCOL`     | `--telemetry.protocol`     | `grpc`           | Export protocol: `grpc` or `http`.                                             |
+| `telemetry.sample_rate`  | `ENZYME_TELEMETRY_SAMPLE_RATE`  | `--telemetry.sample_rate`  | `1.0`            | Trace sampling rate. `1.0` = sample everything, `0.1` = sample 10%.            |
+| `telemetry.service_name` | `ENZYME_TELEMETRY_SERVICE_NAME` | `--telemetry.service_name` | `enzyme`         | Service name reported to the collector. Useful for multi-instance deployments. |
+
+### What's instrumented
+
+**Backend:**
+
+- HTTP request spans (method, route, status code, duration)
+- Database query spans for key operations (message create/list/search, channel lookups, workspace membership checks)
+- SSE metrics: active connections (`sse.connections.active`), events broadcast (`sse.events.broadcast`)
+- Log correlation: `trace_id` and `span_id` are injected into all slog output when telemetry is active
+
+**Frontend** (opt-in via env vars):
+
+- Fetch call instrumentation with W3C `traceparent` header propagation
+- Page load performance timing
+- Enable with `VITE_OTEL_ENABLED=true` and optionally `VITE_OTEL_ENDPOINT` (defaults to `/v1/traces`)
+
+### Example: Local development with Jaeger
+
+```bash
+# Start Jaeger all-in-one
+docker run -d --name jaeger \
+  -p 4317:4317 \
+  -p 16686:16686 \
+  jaegertracing/all-in-one:latest
+
+# Start Enzyme with telemetry
+ENZYME_TELEMETRY_ENABLED=true ./enzyme
+```
+
+Then open `http://localhost:16686` to view traces.
+
 ## Full Example
 
 ```yaml
@@ -197,4 +239,11 @@ sse:
   cleanup_interval: '1h'
   heartbeat_interval: '30s'
   client_buffer_size: 256
+
+telemetry:
+  enabled: false
+  endpoint: 'localhost:4317'
+  protocol: 'grpc'
+  sample_rate: 1.0
+  service_name: 'enzyme'
 ```

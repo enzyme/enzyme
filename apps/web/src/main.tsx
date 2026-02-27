@@ -9,6 +9,11 @@ if (apiBase) {
   setApiBase(apiBase);
 }
 
+// Initialize OpenTelemetry if enabled (lazy-loaded to avoid bundle cost when disabled)
+if (import.meta.env.VITE_OTEL_ENABLED === 'true') {
+  import('./lib/telemetry').then(({ initTelemetry }) => initTelemetry());
+}
+
 // Suppress the browser's native context menu app-wide
 document.addEventListener('contextmenu', (e) => e.preventDefault());
 

@@ -146,6 +146,22 @@ func Validate(cfg *Config) error {
 		errs = append(errs, fmt.Errorf("sse.client_buffer_size must be at least 16"))
 	}
 
+	// Telemetry validation (only when enabled)
+	if cfg.Telemetry.Enabled {
+		if cfg.Telemetry.Endpoint == "" {
+			errs = append(errs, fmt.Errorf("telemetry.endpoint is required when telemetry is enabled"))
+		}
+		switch cfg.Telemetry.Protocol {
+		case "grpc", "http":
+			// valid
+		default:
+			errs = append(errs, fmt.Errorf("telemetry.protocol must be one of: grpc, http"))
+		}
+	}
+	if cfg.Telemetry.SampleRate < 0 || cfg.Telemetry.SampleRate > 1 {
+		errs = append(errs, fmt.Errorf("telemetry.sample_rate must be between 0.0 and 1.0"))
+	}
+
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}

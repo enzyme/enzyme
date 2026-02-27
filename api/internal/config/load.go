@@ -170,6 +170,13 @@ func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 			"heartbeat_interval": d.defaults.SSE.HeartbeatInterval.String(),
 			"client_buffer_size": d.defaults.SSE.ClientBufferSize,
 		},
+		"telemetry": map[string]interface{}{
+			"enabled":      d.defaults.Telemetry.Enabled,
+			"endpoint":     d.defaults.Telemetry.Endpoint,
+			"protocol":     d.defaults.Telemetry.Protocol,
+			"sample_rate":  d.defaults.Telemetry.SampleRate,
+			"service_name": d.defaults.Telemetry.ServiceName,
+		},
 	}, nil
 }
 
@@ -193,6 +200,11 @@ func SetupFlags() *pflag.FlagSet {
 	flags.String("server.tls.auto.domain", "", "Domain for automatic TLS (auto mode)")
 	flags.String("server.tls.auto.email", "", "Contact email for Let's Encrypt (auto mode)")
 	flags.String("server.tls.auto.cache_dir", "", "Certificate cache directory (auto mode)")
+	flags.Bool("telemetry.enabled", false, "Enable OpenTelemetry instrumentation")
+	flags.String("telemetry.endpoint", "", "OTLP exporter endpoint")
+	flags.String("telemetry.protocol", "", "OTLP protocol: grpc or http")
+	flags.Float64("telemetry.sample_rate", 0, "Trace sample rate (0.0 to 1.0)")
+	flags.String("telemetry.service_name", "", "Service name for telemetry")
 	return flags
 }
 

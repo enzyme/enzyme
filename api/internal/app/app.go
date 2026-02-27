@@ -30,8 +30,10 @@ import (
 	"github.com/enzyme/api/internal/server"
 	"github.com/enzyme/api/internal/signing"
 	"github.com/enzyme/api/internal/sse"
+	"github.com/enzyme/api/internal/telemetry"
 	"github.com/enzyme/api/internal/thread"
 	"github.com/enzyme/api/internal/user"
+	"github.com/enzyme/api/internal/version"
 	"github.com/enzyme/api/internal/web"
 	"github.com/enzyme/api/internal/workspace"
 )
@@ -49,6 +51,7 @@ type App struct {
 	SessionStore        *auth.SessionStore
 	LinkPreviewRepo     *linkpreview.Repository
 	ScheduledWorker     *scheduled.Worker
+	Telemetry           *telemetry.Telemetry
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -67,6 +70,19 @@ func New(cfg *config.Config) (*App, error) {
 	if err := db.Migrate(); err != nil {
 		_ = db.Close()
 		return nil, err
+	}
+
+	// Initialize telemetry (before other components so they can use global providers)
+	var tel *telemetry.Telemetry
+	if cfg.Telemetry.Enabled {
+		tel, err = telemetry.Init(cfg.Telemetry, version.Version)
+		if err != nil {
+			_ = db.Close()
+			return nil, fmt.Errorf("initializing telemetry: %w", err)
+		}
+		slog.Info("telemetry enabled", "endpoint", cfg.Telemetry.Endpoint, "protocol", cfg.Telemetry.Protocol)
+	} else {
+		tel = telemetry.Noop()
 	}
 
 	// Initialize SSE hub
@@ -191,7 +207,7 @@ func New(cfg *config.Config) (*App, error) {
 	}
 
 	// Create router with generated handlers
-	router := server.NewRouter(h, sseHandler, sessionStore, moderationRepo, limiter, cfg.Server.AllowedOrigins, spaHandler)
+	router := server.NewRouter(h, sseHandler, sessionStore, moderationRepo, limiter, cfg.Server.AllowedOrigins, cfg.Telemetry.Enabled, spaHandler)
 
 	// Build TLS options
 	tlsOpts := server.TLSOptions{
@@ -226,6 +242,7 @@ func New(cfg *config.Config) (*App, error) {
 		SessionStore:        sessionStore,
 		LinkPreviewRepo:     linkPreviewRepo,
 		ScheduledWorker:     scheduledWorker,
+		Telemetry:           tel,
 	}, nil
 }
 
@@ -300,6 +317,10 @@ func (a *App) Start(ctx context.Context) error {
 func (a *App) Shutdown(ctx context.Context) error {
 	if err := a.Server.Shutdown(ctx); err != nil {
 		return err
+	}
+	// Flush telemetry before closing database
+	if err := a.Telemetry.Shutdown(ctx); err != nil {
+		slog.Error("telemetry shutdown error", "error", err)
 	}
 	return a.DB.Close()
 }

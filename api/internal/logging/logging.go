@@ -5,11 +5,14 @@ import (
 	"os"
 
 	"github.com/enzyme/api/internal/config"
+	"github.com/enzyme/api/internal/telemetry"
 )
 
 // Setup configures the default slog logger based on the provided config.
 // This also bridges the standard "log" package via slog.SetDefault (Go 1.22+).
-func Setup(cfg config.LogConfig) {
+// When telemetryEnabled is true, log records are enriched with trace_id and
+// span_id from the active span context.
+func Setup(cfg config.LogConfig, telemetryEnabled bool) {
 	var level slog.Level
 	switch cfg.Level {
 	case "debug":
@@ -29,6 +32,10 @@ func Setup(cfg config.LogConfig) {
 		handler = slog.NewJSONHandler(os.Stderr, opts)
 	} else {
 		handler = slog.NewTextHandler(os.Stderr, opts)
+	}
+
+	if telemetryEnabled {
+		handler = telemetry.NewSlogBridge(handler)
 	}
 
 	slog.SetDefault(slog.New(handler))

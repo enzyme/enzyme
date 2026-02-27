@@ -223,6 +223,98 @@ func TestValidate_TLSInvalidMode(t *testing.T) {
 	}
 }
 
+func TestValidate_TelemetryDefaults(t *testing.T) {
+	cfg := validConfig()
+	if err := Validate(cfg); err != nil {
+		t.Fatalf("defaults should be valid: %v", err)
+	}
+	if cfg.Telemetry.Enabled {
+		t.Fatal("telemetry should be disabled by default")
+	}
+}
+
+func TestValidate_TelemetryEnabled(t *testing.T) {
+	cfg := validConfig()
+	cfg.Telemetry.Enabled = true
+	cfg.Telemetry.Endpoint = "localhost:4317"
+	cfg.Telemetry.Protocol = "grpc"
+	cfg.Telemetry.SampleRate = 0.5
+	if err := Validate(cfg); err != nil {
+		t.Fatalf("valid telemetry config should pass: %v", err)
+	}
+}
+
+func TestValidate_TelemetryDisabledSkipsValidation(t *testing.T) {
+	cfg := validConfig()
+	cfg.Telemetry.Enabled = false
+	cfg.Telemetry.Endpoint = "" // invalid when enabled, but should not matter
+	cfg.Telemetry.Protocol = "invalid"
+	if err := Validate(cfg); err != nil {
+		t.Fatalf("disabled telemetry should skip endpoint/protocol validation: %v", err)
+	}
+}
+
+func TestValidate_TelemetryMissingEndpoint(t *testing.T) {
+	cfg := validConfig()
+	cfg.Telemetry.Enabled = true
+	cfg.Telemetry.Endpoint = ""
+	cfg.Telemetry.Protocol = "grpc"
+	err := Validate(cfg)
+	if err == nil {
+		t.Fatal("expected error for missing endpoint")
+	}
+	if !strings.Contains(err.Error(), "telemetry.endpoint") {
+		t.Fatalf("expected error about telemetry.endpoint, got: %v", err)
+	}
+}
+
+func TestValidate_TelemetryInvalidProtocol(t *testing.T) {
+	cfg := validConfig()
+	cfg.Telemetry.Enabled = true
+	cfg.Telemetry.Endpoint = "localhost:4317"
+	cfg.Telemetry.Protocol = "websocket"
+	err := Validate(cfg)
+	if err == nil {
+		t.Fatal("expected error for invalid protocol")
+	}
+	if !strings.Contains(err.Error(), "telemetry.protocol") {
+		t.Fatalf("expected error about telemetry.protocol, got: %v", err)
+	}
+}
+
+func TestValidate_TelemetrySampleRateOutOfRange(t *testing.T) {
+	tests := []struct {
+		name string
+		rate float64
+	}{
+		{"negative", -0.1},
+		{"over_one", 1.1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := validConfig()
+			cfg.Telemetry.SampleRate = tt.rate
+			err := Validate(cfg)
+			if err == nil {
+				t.Fatal("expected error for out-of-range sample_rate")
+			}
+			if !strings.Contains(err.Error(), "telemetry.sample_rate") {
+				t.Fatalf("expected error about telemetry.sample_rate, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidate_TelemetryHTTPProtocol(t *testing.T) {
+	cfg := validConfig()
+	cfg.Telemetry.Enabled = true
+	cfg.Telemetry.Endpoint = "localhost:4318"
+	cfg.Telemetry.Protocol = "http"
+	if err := Validate(cfg); err != nil {
+		t.Fatalf("http protocol should be valid: %v", err)
+	}
+}
+
 func TestValidate_RateLimitMultipleErrors(t *testing.T) {
 	cfg := validConfig()
 	cfg.RateLimit.Login.Limit = 0

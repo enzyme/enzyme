@@ -244,6 +244,26 @@ sudo journalctl -u enzyme -f
 
 The default configuration is tuned for a small server (2 GB RAM / 1 vCPU, ~100 users). If you're running on larger hardware or expect more users, see the [Scaling Guide](./scaling.md) for SQLite, HTTP, SSE, and OS-level tuning recommendations with example configs for small, medium, and large deployments.
 
+## Telemetry (Optional)
+
+Enzyme supports optional OpenTelemetry instrumentation for traces and metrics. When enabled, data is exported to any OTLP-compatible collector (Jaeger, Grafana Alloy, Datadog Agent, etc.). Disabled by default with zero overhead.
+
+```bash
+# Enable via environment variable
+ENZYME_TELEMETRY_ENABLED=true ./enzyme
+
+# Or in config.yaml
+telemetry:
+  enabled: true
+  endpoint: "localhost:4317"
+```
+
+Enzyme captures application-level telemetry: HTTP request traces, database query spans, SSE connection metrics, and log correlation.
+
+For **system-level metrics** (CPU, memory, disk, network), run an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) alongside Enzyme with the `hostmetrics` receiver. The Collector acts as a local agent that scrapes host metrics and forwards everything (both Enzyme's app telemetry and system metrics) to your backend.
+
+See the [Observability Guide](./observability.md) for full setup examples, what's captured, and sample Collector configs.
+
 ## Logs
 
 Enzyme logs to stdout. Where logs end up depends on how you run the server:

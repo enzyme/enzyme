@@ -41,7 +41,7 @@ func main() {
 	}
 
 	// Setup structured logging
-	logging.Setup(cfg.Log)
+	logging.Setup(cfg.Log, cfg.Telemetry.Enabled)
 
 	// Create application
 	application, err := app.New(cfg)
@@ -97,7 +97,7 @@ func runSeed(args []string) {
 		os.Exit(1)
 	}
 
-	logging.Setup(cfg.Log)
+	logging.Setup(cfg.Log, cfg.Telemetry.Enabled)
 
 	// Open database and run migrations (no full app startup)
 	db, err := database.Open(cfg.Database.Path, database.Options{
