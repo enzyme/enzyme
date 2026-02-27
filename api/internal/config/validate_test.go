@@ -293,6 +293,9 @@ func TestValidate_TelemetrySampleRateOutOfRange(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := validConfig()
+			cfg.Telemetry.Enabled = true
+			cfg.Telemetry.Endpoint = "localhost:4317"
+			cfg.Telemetry.Protocol = "grpc"
 			cfg.Telemetry.SampleRate = tt.rate
 			err := Validate(cfg)
 			if err == nil {

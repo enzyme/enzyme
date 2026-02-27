@@ -174,6 +174,7 @@ func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 			"enabled":      d.defaults.Telemetry.Enabled,
 			"endpoint":     d.defaults.Telemetry.Endpoint,
 			"protocol":     d.defaults.Telemetry.Protocol,
+			"insecure":     d.defaults.Telemetry.Insecure,
 			"sample_rate":  d.defaults.Telemetry.SampleRate,
 			"service_name": d.defaults.Telemetry.ServiceName,
 		},
@@ -203,6 +204,7 @@ func SetupFlags() *pflag.FlagSet {
 	flags.Bool("telemetry.enabled", false, "Enable OpenTelemetry instrumentation")
 	flags.String("telemetry.endpoint", "", "OTLP exporter endpoint")
 	flags.String("telemetry.protocol", "", "OTLP protocol: grpc or http")
+	flags.Bool("telemetry.insecure", false, "Use plaintext (no TLS) for OTLP export")
 	flags.Float64("telemetry.sample_rate", 0, "Trace sample rate (0.0 to 1.0)")
 	flags.String("telemetry.service_name", "", "Service name for telemetry")
 	return flags

@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -79,10 +80,7 @@ func Init(cfg config.TelemetryConfig, version string) (*Telemetry, error) {
 	// Register global providers
 	otel.SetTracerProvider(tp)
 	otel.SetMeterProvider(mp)
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-		propagation.TraceContext{},
-		propagation.Baggage{},
-	))
+	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return &Telemetry{
 		tracerProvider: tp,
@@ -109,7 +107,7 @@ func (t *Telemetry) Shutdown(ctx context.Context) error {
 		}
 	}
 	if len(errs) > 0 {
-		return fmt.Errorf("telemetry shutdown: %v", errs)
+		return fmt.Errorf("telemetry shutdown: %w", errors.Join(errs...))
 	}
 	return nil
 }
@@ -117,17 +115,33 @@ func (t *Telemetry) Shutdown(ctx context.Context) error {
 func newTraceExporter(ctx context.Context, cfg config.TelemetryConfig) (sdktrace.SpanExporter, error) {
 	switch cfg.Protocol {
 	case "http":
-		return otlptracehttp.New(ctx, otlptracehttp.WithEndpoint(cfg.Endpoint), otlptracehttp.WithInsecure())
+		opts := []otlptracehttp.Option{otlptracehttp.WithEndpoint(cfg.Endpoint)}
+		if cfg.Insecure {
+			opts = append(opts, otlptracehttp.WithInsecure())
+		}
+		return otlptracehttp.New(ctx, opts...)
 	default:
-		return otlptracegrpc.New(ctx, otlptracegrpc.WithEndpoint(cfg.Endpoint), otlptracegrpc.WithInsecure())
+		opts := []otlptracegrpc.Option{otlptracegrpc.WithEndpoint(cfg.Endpoint)}
+		if cfg.Insecure {
+			opts = append(opts, otlptracegrpc.WithInsecure())
+		}
+		return otlptracegrpc.New(ctx, opts...)
 	}
 }
 
 func newMetricExporter(ctx context.Context, cfg config.TelemetryConfig) (sdkmetric.Exporter, error) {
 	switch cfg.Protocol {
 	case "http":
-		return otlpmetrichttp.New(ctx, otlpmetrichttp.WithEndpoint(cfg.Endpoint), otlpmetrichttp.WithInsecure())
+		opts := []otlpmetrichttp.Option{otlpmetrichttp.WithEndpoint(cfg.Endpoint)}
+		if cfg.Insecure {
+			opts = append(opts, otlpmetrichttp.WithInsecure())
+		}
+		return otlpmetrichttp.New(ctx, opts...)
 	default:
-		return otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpoint(cfg.Endpoint), otlpmetricgrpc.WithInsecure())
+		opts := []otlpmetricgrpc.Option{otlpmetricgrpc.WithEndpoint(cfg.Endpoint)}
+		if cfg.Insecure {
+			opts = append(opts, otlpmetricgrpc.WithInsecure())
+		}
+		return otlpmetricgrpc.New(ctx, opts...)
 	}
 }

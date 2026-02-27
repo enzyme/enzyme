@@ -126,11 +126,16 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.S
 
 	// Mount generated API routes with /api base URL.
 	// Ban check is applied as a per-handler middleware (runs after route matching,
-	// so chi.URLParam is available).
+	// so chi.URLParam is available). SpanRenameMiddleware updates the OTel span name
+	// with the matched route pattern (e.g. "GET /api/workspaces/{wid}/channels").
+	routeMiddlewares := []openapi.MiddlewareFunc{banCheckMw}
+	if telemetryEnabled {
+		routeMiddlewares = append([]openapi.MiddlewareFunc{telemetry.SpanRenameMiddleware()}, routeMiddlewares...)
+	}
 	openapi.HandlerWithOptions(strictHandler, openapi.ChiServerOptions{
 		BaseURL:     "/api",
 		BaseRouter:  r,
-		Middlewares: []openapi.MiddlewareFunc{banCheckMw},
+		Middlewares: routeMiddlewares,
 	})
 
 	// Mount SSE routes separately (not generated - requires streaming)

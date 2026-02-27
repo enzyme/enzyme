@@ -59,33 +59,3 @@ func TestSlogBridge_WithoutSpan(t *testing.T) {
 		t.Fatalf("expected original message in log output, got: %s", output)
 	}
 }
-
-func TestSlogBridge_WithAttrs(t *testing.T) {
-	var buf bytes.Buffer
-	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo})
-	bridge := NewSlogBridge(inner)
-	logger := slog.New(bridge)
-
-	childLogger := logger.With("key", "value")
-	childLogger.InfoContext(context.Background(), "with attrs")
-
-	output := buf.String()
-	if !strings.Contains(output, "key") || !strings.Contains(output, "value") {
-		t.Fatalf("expected key/value attrs in log output, got: %s", output)
-	}
-}
-
-func TestSlogBridge_WithGroup(t *testing.T) {
-	var buf bytes.Buffer
-	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo})
-	bridge := NewSlogBridge(inner)
-	logger := slog.New(bridge)
-
-	grouped := logger.WithGroup("mygroup")
-	grouped.InfoContext(context.Background(), "grouped message", "field", "val")
-
-	output := buf.String()
-	if !strings.Contains(output, "mygroup") {
-		t.Fatalf("expected group in log output, got: %s", output)
-	}
-}

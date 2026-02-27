@@ -12,6 +12,19 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
+// saveGlobalProviders saves the current global OTel providers and returns a
+// restore function that resets them. Call defer restore() in every test that
+// calls Init (which sets the global providers).
+func saveGlobalProviders(t *testing.T) func() {
+	t.Helper()
+	origTP := otel.GetTracerProvider()
+	origMP := otel.GetMeterProvider()
+	return func() {
+		otel.SetTracerProvider(origTP)
+		otel.SetMeterProvider(origMP)
+	}
+}
+
 func TestNoop(t *testing.T) {
 	tel := Noop()
 	if tel == nil {
@@ -30,14 +43,15 @@ func TestNoop(t *testing.T) {
 	}
 }
 
-func TestInit_InvalidProtocol(t *testing.T) {
-	// Init should still work — the protocol validation is in config.Validate.
-	// But if we pass "grpc" with a bad endpoint, the exporter creation should
-	// still succeed (connection is lazy for gRPC).
+func TestInit_GRPC(t *testing.T) {
+	restore := saveGlobalProviders(t)
+	defer restore()
+
 	cfg := config.TelemetryConfig{
 		Enabled:     true,
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
+		Insecure:    true,
 		SampleRate:  1.0,
 		ServiceName: "test",
 	}
@@ -56,10 +70,14 @@ func TestInit_InvalidProtocol(t *testing.T) {
 }
 
 func TestInit_HTTP(t *testing.T) {
+	restore := saveGlobalProviders(t)
+	defer restore()
+
 	cfg := config.TelemetryConfig{
 		Enabled:     true,
 		Endpoint:    "localhost:4318",
 		Protocol:    "http",
+		Insecure:    true,
 		SampleRate:  0.5,
 		ServiceName: "test-http",
 	}
@@ -71,10 +89,14 @@ func TestInit_HTTP(t *testing.T) {
 }
 
 func TestInit_SamplerZero(t *testing.T) {
+	restore := saveGlobalProviders(t)
+	defer restore()
+
 	cfg := config.TelemetryConfig{
 		Enabled:     true,
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
+		Insecure:    true,
 		SampleRate:  0,
 		ServiceName: "test-zero",
 	}
@@ -93,7 +115,14 @@ func TestMiddleware_CreatesSpans(t *testing.T) {
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)
 	defer tp.Shutdown(context.Background())
+
+	origTP := otel.GetTracerProvider()
+	origMP := otel.GetMeterProvider()
 	otel.SetTracerProvider(tp)
+	defer func() {
+		otel.SetTracerProvider(origTP)
+		otel.SetMeterProvider(origMP)
+	}()
 
 	// Create a simple handler wrapped with our middleware
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

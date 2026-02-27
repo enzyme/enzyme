@@ -89,14 +89,14 @@ func (r *Repository) Update(ctx context.Context, workspace *Workspace) error {
 	return nil
 }
 
-func (r *Repository) GetMembership(ctx context.Context, userID, workspaceID string) (*Membership, error) {
-	ctx, end := telemetry.StartDBSpan(ctx, "workspace.GetMembership")
-	defer end()
+func (r *Repository) GetMembership(ctx context.Context, userID, workspaceID string) (_ *Membership, err error) {
+	ctx, endSpan := telemetry.StartDBSpan(ctx, "workspace.GetMembership")
+	defer func() { endSpan(err) }()
 	var m Membership
 	var displayNameOverride sql.NullString
 	var createdAt, updatedAt string
 
-	err := r.db.QueryRowContext(ctx, `
+	err = r.db.QueryRowContext(ctx, `
 		SELECT id, user_id, workspace_id, role, display_name_override, created_at, updated_at
 		FROM workspace_memberships WHERE user_id = ? AND workspace_id = ?
 	`, userID, workspaceID).Scan(&m.ID, &m.UserID, &m.WorkspaceID, &m.Role, &displayNameOverride, &createdAt, &updatedAt)

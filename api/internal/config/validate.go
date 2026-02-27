@@ -157,9 +157,9 @@ func Validate(cfg *Config) error {
 		default:
 			errs = append(errs, fmt.Errorf("telemetry.protocol must be one of: grpc, http"))
 		}
-	}
-	if cfg.Telemetry.SampleRate < 0 || cfg.Telemetry.SampleRate > 1 {
-		errs = append(errs, fmt.Errorf("telemetry.sample_rate must be between 0.0 and 1.0"))
+		if cfg.Telemetry.SampleRate < 0 || cfg.Telemetry.SampleRate > 1 {
+			errs = append(errs, fmt.Errorf("telemetry.sample_rate must be between 0.0 and 1.0"))
+		}
 	}
 
 	if len(errs) > 0 {

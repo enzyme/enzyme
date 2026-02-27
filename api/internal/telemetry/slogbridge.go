@@ -23,11 +23,11 @@ func (h *SlogBridge) Enabled(ctx context.Context, level slog.Level) bool {
 }
 
 func (h *SlogBridge) Handle(ctx context.Context, record slog.Record) error {
-	span := trace.SpanFromContext(ctx)
-	if span.SpanContext().IsValid() {
+	sc := trace.SpanFromContext(ctx).SpanContext()
+	if sc.IsValid() {
 		record.AddAttrs(
-			slog.String("trace_id", span.SpanContext().TraceID().String()),
-			slog.String("span_id", span.SpanContext().SpanID().String()),
+			slog.String("trace_id", sc.TraceID().String()),
+			slog.String("span_id", sc.SpanID().String()),
 		)
 	}
 	return h.inner.Handle(ctx, record)

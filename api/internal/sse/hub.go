@@ -44,14 +44,27 @@ type Hub struct {
 	eventsBroadcast   metric.Int64Counter
 }
 
+// Pre-computed metric attribute sets to avoid allocation per broadcast under lock.
+var (
+	broadcastAttrsWorkspace = metric.WithAttributes(attribute.String("scope", "workspace"))
+	broadcastAttrsChannel   = metric.WithAttributes(attribute.String("scope", "channel"))
+	broadcastAttrsUser      = metric.WithAttributes(attribute.String("scope", "user"))
+)
+
 func NewHub(db *sql.DB, retention, cleanupInterval time.Duration) *Hub {
 	meter := otel.Meter("enzyme.sse")
-	connectionsActive, _ := meter.Int64UpDownCounter("sse.connections.active",
+	connectionsActive, err := meter.Int64UpDownCounter("sse.connections.active",
 		metric.WithDescription("Number of active SSE connections"),
 	)
-	eventsBroadcast, _ := meter.Int64Counter("sse.events.broadcast",
+	if err != nil {
+		slog.Error("failed to create sse.connections.active metric", "error", err)
+	}
+	eventsBroadcast, err := meter.Int64Counter("sse.events.broadcast",
 		metric.WithDescription("Total SSE events broadcast"),
 	)
+	if err != nil {
+		slog.Error("failed to create sse.events.broadcast metric", "error", err)
+	}
 
 	return &Hub{
 		workspaces:        make(map[string]map[string][]*Client),
@@ -170,10 +183,7 @@ func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {
 		event.ID = ulid.Make().String()
 	}
 
-	h.eventsBroadcast.Add(context.Background(), 1, metric.WithAttributes(
-		attribute.String("event.type", event.Type),
-		attribute.String("scope", "workspace"),
-	))
+	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsWorkspace)
 
 	// Store event for replay
 	h.storeEvent(workspaceID, event)
@@ -199,10 +209,7 @@ func (h *Hub) BroadcastToChannel(workspaceID, channelID string, event Event) {
 		event.ID = ulid.Make().String()
 	}
 
-	h.eventsBroadcast.Add(context.Background(), 1, metric.WithAttributes(
-		attribute.String("event.type", event.Type),
-		attribute.String("scope", "channel"),
-	))
+	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsChannel)
 
 	// Store event for replay
 	h.storeEvent(workspaceID, event)
@@ -232,6 +239,8 @@ func (h *Hub) BroadcastToUser(workspaceID, userID string, event Event) {
 	if event.ID == "" {
 		event.ID = ulid.Make().String()
 	}
+
+	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsUser)
 
 	if workspace, ok := h.workspaces[workspaceID]; ok {
 		if clients, ok := workspace[userID]; ok {

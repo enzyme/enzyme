@@ -32,6 +32,7 @@ Enzyme pushes data to the configured OTLP endpoint. You need a collector or back
 | `telemetry.enabled`      | `ENZYME_TELEMETRY_ENABLED`      | `false`          | Enable OpenTelemetry instrumentation.                      |
 | `telemetry.endpoint`     | `ENZYME_TELEMETRY_ENDPOINT`     | `localhost:4317` | OTLP collector endpoint (host:port).                       |
 | `telemetry.protocol`     | `ENZYME_TELEMETRY_PROTOCOL`     | `grpc`           | Export protocol: `grpc` (port 4317) or `http` (port 4318). |
+| `telemetry.insecure`     | `ENZYME_TELEMETRY_INSECURE`     | `true`           | Use plaintext (no TLS) for OTLP export.                    |
 | `telemetry.sample_rate`  | `ENZYME_TELEMETRY_SAMPLE_RATE`  | `1.0`            | Trace sampling rate. `1.0` = all, `0.1` = 10%, `0` = none. |
 | `telemetry.service_name` | `ENZYME_TELEMETRY_SERVICE_NAME` | `enzyme`         | Service name reported to the collector.                    |
 
@@ -80,15 +81,14 @@ The CORS configuration automatically allows `traceparent` and `tracestate` heade
 
 Metrics are exported every 60 seconds via OTLP.
 
-| Metric                   | Type          | Attributes            | Description                              |
-| ------------------------ | ------------- | --------------------- | ---------------------------------------- |
-| `sse.connections.active` | UpDownCounter | —                     | Current number of active SSE connections |
-| `sse.events.broadcast`   | Counter       | `event.type`, `scope` | Total SSE events broadcast               |
+| Metric                   | Type          | Attributes | Description                              |
+| ------------------------ | ------------- | ---------- | ---------------------------------------- |
+| `sse.connections.active` | UpDownCounter | —          | Current number of active SSE connections |
+| `sse.events.broadcast`   | Counter       | `scope`    | Total SSE events broadcast               |
 
 **`sse.events.broadcast` attributes:**
 
-- `event.type`: The SSE event type (e.g., `message.new`, `typing.start`, `presence.changed`)
-- `scope`: Either `workspace` (broadcast to all members) or `channel` (broadcast to channel members only)
+- `scope`: `workspace` (broadcast to all members), `channel` (broadcast to channel members only), or `user` (targeted to a single user)
 
 ### Log Correlation
 
@@ -186,9 +186,9 @@ ENZYME_TELEMETRY_ENABLED=true ./enzyme
 
 Open `http://localhost:16686` and select the `enzyme` service to view traces.
 
-### Grafana + Tempo + OTel Collector
+### Grafana + Tempo (Production)
 
-For a production-grade setup with Grafana dashboards, Tempo for traces, and Prometheus for metrics:
+A production setup with Grafana for dashboards, Tempo for traces, and Prometheus for metrics:
 
 ```yaml
 # docker-compose.yml
@@ -230,7 +230,6 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
 
-  # System metrics from the host
   hostmetrics:
     collection_interval: 30s
     scrapers:
@@ -256,11 +255,13 @@ service:
       exporters: [prometheusremotewrite]
 ```
 
+The `hostmetrics` receiver adds system-level metrics (CPU, memory, disk, network) alongside Enzyme's application telemetry.
+
 ### Datadog
 
-Datadog Agent accepts OTLP natively:
+The Datadog Agent accepts OTLP natively:
 
-```bash
+```yaml
 # In your Datadog Agent config (datadog.yaml)
 otlp_config:
   receiver:
@@ -276,104 +277,9 @@ ENZYME_TELEMETRY_SERVICE_NAME=enzyme-production \
 ./enzyme
 ```
 
----
+### Other Backends
 
-## System Metrics with the OTel Collector
-
-Enzyme's built-in telemetry covers application-level signals (HTTP requests, database queries, SSE connections). For **system-level metrics** like CPU usage, memory, disk I/O, and network throughput, run an OpenTelemetry Collector alongside Enzyme with the `hostmetrics` receiver.
-
-### Why a Separate Collector?
-
-System metrics (CPU, memory, disk) are properties of the host, not the application. The OTel Collector's `hostmetrics` receiver is purpose-built for this and runs as a lightweight sidecar. This also gives you a single point to route, filter, and transform all telemetry data before it reaches your backend.
-
-### Minimal Collector Config
-
-```yaml
-# /etc/otelcol/config.yaml
-receivers:
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-
-  hostmetrics:
-    collection_interval: 30s
-    scrapers:
-      cpu:
-        metrics:
-          system.cpu.utilization:
-            enabled: true
-      memory:
-        metrics:
-          system.memory.utilization:
-            enabled: true
-      disk:
-      filesystem:
-      network:
-      load:
-
-processors:
-  batch:
-    timeout: 10s
-
-exporters:
-  # Replace with your backend
-  otlphttp:
-    endpoint: https://your-backend:4318
-
-service:
-  pipelines:
-    traces:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [otlphttp]
-    metrics:
-      receivers: [otlp, hostmetrics]
-      processors: [batch]
-      exporters: [otlphttp]
-```
-
-### Running the Collector
-
-**Docker:**
-
-```bash
-docker run -d --name otel-collector \
-  --network host \
-  -v /etc/otelcol/config.yaml:/etc/otelcol/config.yaml \
-  otel/opentelemetry-collector-contrib:latest
-```
-
-**systemd:**
-
-```bash
-# Download
-curl -LO https://github.com/open-telemetry/opentelemetry-collector-releases/releases/latest/download/otelcol-contrib_linux_amd64.deb
-dpkg -i otelcol-contrib_linux_amd64.deb
-
-# Config is at /etc/otelcol-contrib/config.yaml
-systemctl enable --now otelcol-contrib
-```
-
-### System Metrics Reference
-
-With the `hostmetrics` receiver, you get:
-
-| Metric                          | Description                                |
-| ------------------------------- | ------------------------------------------ |
-| `system.cpu.time`               | CPU time per state (user, system, idle)    |
-| `system.cpu.utilization`        | CPU utilization as a ratio (0.0-1.0)       |
-| `system.memory.usage`           | Memory usage by state (used, free, cached) |
-| `system.memory.utilization`     | Memory utilization as a ratio              |
-| `system.disk.io`                | Disk read/write bytes                      |
-| `system.disk.operations`        | Disk read/write operations count           |
-| `system.filesystem.usage`       | Filesystem usage (used, free)              |
-| `system.filesystem.utilization` | Filesystem utilization as a ratio          |
-| `system.network.io`             | Network bytes sent/received                |
-| `system.network.connections`    | Network connection count by state          |
-| `system.cpu.load_average.1m`    | 1-minute load average                      |
-| `system.cpu.load_average.5m`    | 5-minute load average                      |
-| `system.cpu.load_average.15m`   | 15-minute load average                     |
+Enzyme exports standard OTLP, so it works with any OTLP-compatible backend (Honeycomb, Axiom, Grafana Cloud, etc.). Point `telemetry.endpoint` at their OTLP receiver and set `telemetry.protocol` to match.
 
 ---
 

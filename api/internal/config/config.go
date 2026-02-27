@@ -95,6 +95,7 @@ type TelemetryConfig struct {
 	Enabled     bool    `koanf:"enabled"`
 	Endpoint    string  `koanf:"endpoint"`
 	Protocol    string  `koanf:"protocol"`     // "grpc" or "http"
+	Insecure    bool    `koanf:"insecure"`     // use plaintext (no TLS) for OTLP export
 	SampleRate  float64 `koanf:"sample_rate"`  // 0.0 to 1.0
 	ServiceName string  `koanf:"service_name"` // default "enzyme"
 }
@@ -155,6 +156,7 @@ func Defaults() *Config {
 			Enabled:     false,
 			Endpoint:    "localhost:4317",
 			Protocol:    "grpc",
+			Insecure:    true,
 			SampleRate:  1.0,
 			ServiceName: "enzyme",
 		},

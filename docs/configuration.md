@@ -140,23 +140,11 @@ Optional observability via OpenTelemetry. When enabled, Enzyme exports traces an
 | `telemetry.enabled`      | `ENZYME_TELEMETRY_ENABLED`      | `--telemetry.enabled`      | `false`          | Enable OpenTelemetry instrumentation.                                          |
 | `telemetry.endpoint`     | `ENZYME_TELEMETRY_ENDPOINT`     | `--telemetry.endpoint`     | `localhost:4317` | OTLP collector endpoint (host:port).                                           |
 | `telemetry.protocol`     | `ENZYME_TELEMETRY_PROTOCOL`     | `--telemetry.protocol`     | `grpc`           | Export protocol: `grpc` or `http`.                                             |
+| `telemetry.insecure`     | `ENZYME_TELEMETRY_INSECURE`     | `--telemetry.insecure`     | `true`           | Use plaintext (no TLS) for OTLP export.                                        |
 | `telemetry.sample_rate`  | `ENZYME_TELEMETRY_SAMPLE_RATE`  | `--telemetry.sample_rate`  | `1.0`            | Trace sampling rate. `1.0` = sample everything, `0.1` = sample 10%.            |
 | `telemetry.service_name` | `ENZYME_TELEMETRY_SERVICE_NAME` | `--telemetry.service_name` | `enzyme`         | Service name reported to the collector. Useful for multi-instance deployments. |
 
-### What's instrumented
-
-**Backend:**
-
-- HTTP request spans (method, route, status code, duration)
-- Database query spans for key operations (message create/list/search, channel lookups, workspace membership checks)
-- SSE metrics: active connections (`sse.connections.active`), events broadcast (`sse.events.broadcast`)
-- Log correlation: `trace_id` and `span_id` are injected into all slog output when telemetry is active
-
-**Frontend** (opt-in via env vars):
-
-- Fetch call instrumentation with W3C `traceparent` header propagation
-- Page load performance timing
-- Enable with `VITE_OTEL_ENABLED=true` and optionally `VITE_OTEL_ENDPOINT` (defaults to `/v1/traces`)
+See the [Observability Guide](observability.md) for details on what's captured (traces, metrics, log correlation) and setup examples.
 
 ### Example: Local development with Jaeger
 
