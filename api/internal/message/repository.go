@@ -168,7 +168,7 @@ func (r *Repository) CreateSystemMessage(ctx context.Context, channelID string, 
 
 func (r *Repository) GetByID(ctx context.Context, id string) (*Message, error) {
 	return r.scanMessage(r.db.QueryRowContext(ctx, `
-		SELECT id, channel_id, user_id, content, type, system_event, thread_parent_id, also_send_to_channel, reply_count, last_reply_at, edited_at, deleted_at, created_at, updated_at
+		SELECT id, channel_id, user_id, content, type, system_event, thread_parent_id, also_send_to_channel, reply_count, last_reply_at, edited_at, deleted_at, pinned_at, pinned_by, created_at, updated_at
 		FROM messages WHERE id = ?
 	`, id))
 }
@@ -747,10 +747,10 @@ func (r *Repository) getReactionsForMessages(ctx context.Context, messageIDs []s
 
 func (r *Repository) scanMessage(row *sql.Row) (*Message, error) {
 	var msg Message
-	var userID, threadParentID, lastReplyAt, editedAt, deletedAt, systemEventJSON sql.NullString
+	var userID, threadParentID, lastReplyAt, editedAt, deletedAt, pinnedAt, pinnedBy, systemEventJSON sql.NullString
 	var createdAt, updatedAt string
 
-	err := row.Scan(&msg.ID, &msg.ChannelID, &userID, &msg.Content, &msg.Type, &systemEventJSON, &threadParentID, &msg.AlsoSendToChannel, &msg.ReplyCount, &lastReplyAt, &editedAt, &deletedAt, &createdAt, &updatedAt)
+	err := row.Scan(&msg.ID, &msg.ChannelID, &userID, &msg.Content, &msg.Type, &systemEventJSON, &threadParentID, &msg.AlsoSendToChannel, &msg.ReplyCount, &lastReplyAt, &editedAt, &deletedAt, &pinnedAt, &pinnedBy, &createdAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		return nil, ErrMessageNotFound
 	}
@@ -786,6 +786,13 @@ func (r *Repository) scanMessage(row *sql.Row) (*Message, error) {
 	if deletedAt.Valid {
 		t, _ := time.Parse(time.RFC3339, deletedAt.String)
 		msg.DeletedAt = &t
+	}
+	if pinnedAt.Valid {
+		t, _ := time.Parse(time.RFC3339, pinnedAt.String)
+		msg.PinnedAt = &t
+	}
+	if pinnedBy.Valid {
+		msg.PinnedBy = &pinnedBy.String
 	}
 	msg.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 	msg.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)

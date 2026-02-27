@@ -1533,7 +1533,7 @@ func (h *Handler) PinMessage(ctx context.Context, request openapi.PinMessageRequ
 	}
 
 	// Create system message
-	_, _ = h.messageRepo.CreateSystemMessage(ctx, msg.ChannelID, &message.SystemEventData{
+	sysMsg, _ := h.messageRepo.CreateSystemMessage(ctx, msg.ChannelID, &message.SystemEventData{
 		EventType:       message.SystemEventMessagePinned,
 		UserID:          userID,
 		UserDisplayName: actorName,
@@ -1541,24 +1541,32 @@ func (h *Handler) PinMessage(ctx context.Context, request openapi.PinMessageRequ
 		MessageID:       &msg.ID,
 	})
 
-	// Broadcast SSE events
-	if h.hub != nil {
-		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
-			Type: sse.EventMessagePinned,
-			Data: map[string]string{
-				"message_id": msg.ID,
-				"channel_id": msg.ChannelID,
-				"pinned_by":  userID,
-			},
-		})
-	}
-
 	// Return updated message
 	updatedMsg, err := h.messageRepo.GetByIDWithUser(ctx, string(request.Id))
 	if err != nil {
 		return nil, err
 	}
 	apiMsg := messageWithUserToAPI(updatedMsg)
+
+	// Broadcast SSE events
+	if h.hub != nil {
+		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
+			Type: sse.EventMessagePinned,
+			Data: apiMsg,
+		})
+
+		// Broadcast system message
+		if sysMsg != nil {
+			sysMsgWithUser, _ := h.messageRepo.GetByIDWithUser(ctx, sysMsg.ID)
+			if sysMsgWithUser != nil {
+				h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
+					Type: sse.EventMessageNew,
+					Data: messageWithUserToAPI(sysMsgWithUser),
+				})
+			}
+		}
+	}
+
 	return openapi.PinMessage200JSONResponse{Message: &apiMsg}, nil
 }
 
@@ -1611,7 +1619,7 @@ func (h *Handler) UnpinMessage(ctx context.Context, request openapi.UnpinMessage
 	}
 
 	// Create system message
-	_, _ = h.messageRepo.CreateSystemMessage(ctx, msg.ChannelID, &message.SystemEventData{
+	sysMsg, _ := h.messageRepo.CreateSystemMessage(ctx, msg.ChannelID, &message.SystemEventData{
 		EventType:       message.SystemEventMessageUnpinned,
 		UserID:          userID,
 		UserDisplayName: actorName,
@@ -1619,23 +1627,32 @@ func (h *Handler) UnpinMessage(ctx context.Context, request openapi.UnpinMessage
 		MessageID:       &msg.ID,
 	})
 
-	// Broadcast SSE event
-	if h.hub != nil {
-		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
-			Type: sse.EventMessageUnpinned,
-			Data: map[string]string{
-				"message_id": msg.ID,
-				"channel_id": msg.ChannelID,
-			},
-		})
-	}
-
 	// Return updated message
 	updatedMsg, err := h.messageRepo.GetByIDWithUser(ctx, string(request.Id))
 	if err != nil {
 		return nil, err
 	}
 	apiMsg := messageWithUserToAPI(updatedMsg)
+
+	// Broadcast SSE event
+	if h.hub != nil {
+		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
+			Type: sse.EventMessageUnpinned,
+			Data: apiMsg,
+		})
+
+		// Broadcast system message
+		if sysMsg != nil {
+			sysMsgWithUser, _ := h.messageRepo.GetByIDWithUser(ctx, sysMsg.ID)
+			if sysMsgWithUser != nil {
+				h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
+					Type: sse.EventMessageNew,
+					Data: messageWithUserToAPI(sysMsgWithUser),
+				})
+			}
+		}
+	}
+
 	return openapi.UnpinMessage200JSONResponse{Message: &apiMsg}, nil
 }
 
