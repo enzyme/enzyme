@@ -179,9 +179,12 @@ func (r *Repository) UpdateMemberRole(ctx context.Context, userID, workspaceID, 
 func (r *Repository) ListMembers(ctx context.Context, workspaceID string) ([]MemberWithUser, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT wm.id, wm.user_id, wm.workspace_id, wm.role, wm.display_name_override, wm.created_at, wm.updated_at,
-		       u.email, u.display_name, u.avatar_url
+		       u.email, u.display_name, u.avatar_url,
+		       CASE WHEN wb.id IS NOT NULL THEN 1 ELSE 0 END as is_banned
 		FROM workspace_memberships wm
 		JOIN users u ON u.id = wm.user_id
+		LEFT JOIN workspace_bans wb ON wb.workspace_id = wm.workspace_id AND wb.user_id = wm.user_id
+			AND (wb.expires_at IS NULL OR wb.expires_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 		WHERE wm.workspace_id = ?
 		ORDER BY wm.created_at
 	`, workspaceID)
@@ -197,7 +200,7 @@ func (r *Repository) ListMembers(ctx context.Context, workspaceID string) ([]Mem
 		var createdAt, updatedAt string
 
 		err := rows.Scan(&m.ID, &m.UserID, &m.WorkspaceID, &m.Role, &displayNameOverride, &createdAt, &updatedAt,
-			&m.Email, &m.DisplayName, &avatarURL)
+			&m.Email, &m.DisplayName, &avatarURL, &m.IsBanned)
 		if err != nil {
 			return nil, err
 		}
@@ -402,6 +405,20 @@ func generateInviteCode() string {
 
 func isUniqueConstraintError(err error) bool {
 	return err != nil && (contains(err.Error(), "UNIQUE constraint failed") || contains(err.Error(), "duplicate key"))
+}
+
+// BeginTx starts a database transaction
+func (r *Repository) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	return r.db.BeginTx(ctx, nil)
+}
+
+// RemoveMemberTx removes a workspace membership within a transaction, skipping owner check
+// (used during banning where role hierarchy is already enforced)
+func (r *Repository) RemoveMemberTx(ctx context.Context, tx *sql.Tx, userID, workspaceID string) error {
+	_, err := tx.ExecContext(ctx, `
+		DELETE FROM workspace_memberships WHERE user_id = ? AND workspace_id = ?
+	`, userID, workspaceID)
+	return err
 }
 
 func contains(s, substr string) bool {

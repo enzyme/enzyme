@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useCallback, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useChannels } from '../../hooks';
+import { useAuth, useChannels } from '../../hooks';
 import { useVirtualMessages } from '../../hooks/useVirtualMessages';
 import { usePrewarmSignedUrls } from '../../hooks/usePrewarmSignedUrls';
 import { buildVirtualItems, type VirtualItem } from './virtualItems';
@@ -41,6 +41,9 @@ export function MessageList({
     onReachBottom,
   } = useVirtualMessages(channelId);
   const { data: channelsData } = useChannels(workspaceId);
+  const { workspaces } = useAuth();
+  const workspaceRole = workspaces?.find((w) => w.id === workspaceId)?.role;
+  const isAdmin = workspaceRole === 'owner' || workspaceRole === 'admin';
 
   usePrewarmSignedUrls(data?.pages);
 
@@ -625,7 +628,12 @@ export function MessageList({
                   transform: `translateY(${vRow.start}px)`,
                 }}
               >
-                <VirtualRow item={item} channelId={channelId} channels={channelsData?.channels} />
+                <VirtualRow
+                  item={item}
+                  channelId={channelId}
+                  channels={channelsData?.channels}
+                  isAdmin={isAdmin}
+                />
               </div>
             );
           })}
@@ -666,10 +674,12 @@ const VirtualRow = React.memo(function VirtualRow({
   item,
   channelId,
   channels,
+  isAdmin,
 }: {
   item: VirtualItem;
   channelId: string;
   channels?: ChannelWithMembership[];
+  isAdmin?: boolean;
 }) {
   switch (item.type) {
     case 'date-separator':
@@ -696,6 +706,13 @@ const VirtualRow = React.memo(function VirtualRow({
       if (item.message.type === 'system') {
         return <SystemMessage message={item.message} channelId={channelId} />;
       }
-      return <MessageItem message={item.message} channelId={channelId} channels={channels} />;
+      return (
+        <MessageItem
+          message={item.message}
+          channelId={channelId}
+          channels={channels}
+          isAdmin={isAdmin}
+        />
+      );
   }
 });

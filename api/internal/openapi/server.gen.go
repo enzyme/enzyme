@@ -75,6 +75,8 @@ const (
 	ChannelDescriptionUpdated SystemEventType = "channel_description_updated"
 	ChannelRenamed            SystemEventType = "channel_renamed"
 	ChannelVisibilityChanged  SystemEventType = "channel_visibility_changed"
+	MessagePinned             SystemEventType = "message_pinned"
+	MessageUnpinned           SystemEventType = "message_unpinned"
 	UserAdded                 SystemEventType = "user_added"
 	UserConvertedChannel      SystemEventType = "user_converted_channel"
 	UserJoined                SystemEventType = "user_joined"
@@ -134,6 +136,54 @@ type AuthResponse struct {
 // AvatarUploadResponse defines model for AvatarUploadResponse.
 type AvatarUploadResponse struct {
 	AvatarUrl string `json:"avatar_url"`
+}
+
+// Ban defines model for Ban.
+type Ban struct {
+	BannedBy     string     `json:"banned_by"`
+	CreatedAt    time.Time  `json:"created_at"`
+	ExpiresAt    *time.Time `json:"expires_at,omitempty"`
+	HideMessages bool       `json:"hide_messages"`
+	Id           string     `json:"id"`
+	Reason       *string    `json:"reason,omitempty"`
+	UserId       string     `json:"user_id"`
+	WorkspaceId  string     `json:"workspace_id"`
+}
+
+// BanUserInput defines model for BanUserInput.
+type BanUserInput struct {
+	// DurationHours Hours until ban expires. Omit for permanent.
+	DurationHours *int    `json:"duration_hours,omitempty"`
+	HideMessages  *bool   `json:"hide_messages,omitempty"`
+	Reason        *string `json:"reason,omitempty"`
+	UserId        string  `json:"user_id"`
+}
+
+// BanWithUser defines model for BanWithUser.
+type BanWithUser struct {
+	BannedBy        string     `json:"banned_by"`
+	BannedByName    *string    `json:"banned_by_name,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	ExpiresAt       *time.Time `json:"expires_at,omitempty"`
+	HideMessages    bool       `json:"hide_messages"`
+	Id              string     `json:"id"`
+	Reason          *string    `json:"reason,omitempty"`
+	UserAvatarUrl   *string    `json:"user_avatar_url,omitempty"`
+	UserDisplayName *string    `json:"user_display_name,omitempty"`
+	UserEmail       *string    `json:"user_email,omitempty"`
+	UserId          string     `json:"user_id"`
+	WorkspaceId     string     `json:"workspace_id"`
+}
+
+// BlockWithUser defines model for BlockWithUser.
+type BlockWithUser struct {
+	AvatarUrl   *string   `json:"avatar_url,omitempty"`
+	BlockedId   string    `json:"blocked_id"`
+	BlockerId   string    `json:"blocker_id"`
+	CreatedAt   time.Time `json:"created_at"`
+	DisplayName *string   `json:"display_name,omitempty"`
+	Email       *string   `json:"email,omitempty"`
+	WorkspaceId string    `json:"workspace_id"`
 }
 
 // Channel defines model for Channel.
@@ -300,6 +350,8 @@ type Message struct {
 	EditedAt          *time.Time       `json:"edited_at,omitempty"`
 	Id                string           `json:"id"`
 	LastReplyAt       *time.Time       `json:"last_reply_at,omitempty"`
+	PinnedAt          *time.Time       `json:"pinned_at,omitempty"`
+	PinnedBy          *string          `json:"pinned_by,omitempty"`
 	ReplyCount        int              `json:"reply_count"`
 	SystemEvent       *SystemEventData `json:"system_event,omitempty"`
 	ThreadParentId    *string          `json:"thread_parent_id,omitempty"`
@@ -331,6 +383,8 @@ type MessageWithUser struct {
 	Id                 string               `json:"id"`
 	LastReplyAt        *time.Time           `json:"last_reply_at,omitempty"`
 	LinkPreview        *LinkPreview         `json:"link_preview,omitempty"`
+	PinnedAt           *time.Time           `json:"pinned_at,omitempty"`
+	PinnedBy           *string              `json:"pinned_by,omitempty"`
 	Reactions          *[]Reaction          `json:"reactions,omitempty"`
 	ReplyCount         int                  `json:"reply_count"`
 	SystemEvent        *SystemEventData     `json:"system_event,omitempty"`
@@ -342,6 +396,21 @@ type MessageWithUser struct {
 	UserDisplayName    *string              `json:"user_display_name,omitempty"`
 	UserGravatarUrl    *string              `json:"user_gravatar_url,omitempty"`
 	UserId             *string              `json:"user_id,omitempty"`
+}
+
+// ModerationLogEntryWithActor defines model for ModerationLogEntryWithActor.
+type ModerationLogEntryWithActor struct {
+	Action            string                  `json:"action"`
+	ActorAvatarUrl    *string                 `json:"actor_avatar_url,omitempty"`
+	ActorDisplayName  *string                 `json:"actor_display_name,omitempty"`
+	ActorId           string                  `json:"actor_id"`
+	CreatedAt         time.Time               `json:"created_at"`
+	Id                string                  `json:"id"`
+	Metadata          *map[string]interface{} `json:"metadata,omitempty"`
+	TargetDisplayName *string                 `json:"target_display_name,omitempty"`
+	TargetId          string                  `json:"target_id"`
+	TargetType        string                  `json:"target_type"`
+	WorkspaceId       string                  `json:"workspace_id"`
 }
 
 // NotificationPreferences defines model for NotificationPreferences.
@@ -419,6 +488,8 @@ type SearchMessage struct {
 	Id                 string               `json:"id"`
 	LastReplyAt        *time.Time           `json:"last_reply_at,omitempty"`
 	LinkPreview        *LinkPreview         `json:"link_preview,omitempty"`
+	PinnedAt           *time.Time           `json:"pinned_at,omitempty"`
+	PinnedBy           *string              `json:"pinned_by,omitempty"`
 	Reactions          *[]Reaction          `json:"reactions,omitempty"`
 	ReplyCount         int                  `json:"reply_count"`
 	SystemEvent        *SystemEventData     `json:"system_event,omitempty"`
@@ -494,6 +565,9 @@ type SystemEventData struct {
 	ChannelType *string         `json:"channel_type,omitempty"`
 	EventType   SystemEventType `json:"event_type"`
 
+	// MessageId Referenced message ID (for pin/unpin events)
+	MessageId *string `json:"message_id,omitempty"`
+
 	// OldChannelName Previous channel name (for rename events)
 	OldChannelName *string `json:"old_channel_name,omitempty"`
 
@@ -530,6 +604,8 @@ type ThreadMessage struct {
 	Id                 string               `json:"id"`
 	LastReplyAt        *time.Time           `json:"last_reply_at,omitempty"`
 	LinkPreview        *LinkPreview         `json:"link_preview,omitempty"`
+	PinnedAt           *time.Time           `json:"pinned_at,omitempty"`
+	PinnedBy           *string              `json:"pinned_by,omitempty"`
 	Reactions          *[]Reaction          `json:"reactions,omitempty"`
 	ReplyCount         int                  `json:"reply_count"`
 	SystemEvent        *SystemEventData     `json:"system_event,omitempty"`
@@ -568,6 +644,8 @@ type UnreadMessage struct {
 	Id                 string               `json:"id"`
 	LastReplyAt        *time.Time           `json:"last_reply_at,omitempty"`
 	LinkPreview        *LinkPreview         `json:"link_preview,omitempty"`
+	PinnedAt           *time.Time           `json:"pinned_at,omitempty"`
+	PinnedBy           *string              `json:"pinned_by,omitempty"`
 	Reactions          *[]Reaction          `json:"reactions,omitempty"`
 	ReplyCount         int                  `json:"reply_count"`
 	SystemEvent        *SystemEventData     `json:"system_event,omitempty"`
@@ -663,10 +741,13 @@ type WorkspaceMemberWithUser struct {
 	Email               openapi_types.Email `json:"email"`
 	GravatarUrl         *string             `json:"gravatar_url,omitempty"`
 	Id                  string              `json:"id"`
-	Role                WorkspaceRole       `json:"role"`
-	UpdatedAt           time.Time           `json:"updated_at"`
-	UserId              string              `json:"user_id"`
-	WorkspaceId         string              `json:"workspace_id"`
+
+	// IsBanned Whether the user is currently banned from the workspace
+	IsBanned    *bool         `json:"is_banned,omitempty"`
+	Role        WorkspaceRole `json:"role"`
+	UpdatedAt   time.Time     `json:"updated_at"`
+	UserId      string        `json:"user_id"`
+	WorkspaceId string        `json:"workspace_id"`
 }
 
 // WorkspaceMembership defines model for WorkspaceMembership.
@@ -698,6 +779,11 @@ type WorkspaceSettings struct {
 
 // WorkspaceSummary defines model for WorkspaceSummary.
 type WorkspaceSummary struct {
+	// Ban Present when the user is banned from this workspace
+	Ban *struct {
+		ExpiresAt *time.Time `json:"expires_at,omitempty"`
+		Reason    *string    `json:"reason,omitempty"`
+	} `json:"ban,omitempty"`
 	IconUrl *string       `json:"icon_url,omitempty"`
 	Id      string        `json:"id"`
 	Name    string        `json:"name"`
@@ -769,6 +855,12 @@ type AddChannelMemberJSONBody struct {
 	UserId string       `json:"user_id"`
 }
 
+// ListPinnedMessagesJSONBody defines parameters for ListPinnedMessages.
+type ListPinnedMessagesJSONBody struct {
+	Cursor *string `json:"cursor,omitempty"`
+	Limit  *int    `json:"limit,omitempty"`
+}
+
 // SignFileUrlsJSONBody defines parameters for SignFileUrls.
 type SignFileUrlsJSONBody struct {
 	FileIds []string `json:"file_ids"`
@@ -812,6 +904,27 @@ type UploadAvatarMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// ListBansJSONBody defines parameters for ListBans.
+type ListBansJSONBody struct {
+	Cursor *string `json:"cursor,omitempty"`
+	Limit  *int    `json:"limit,omitempty"`
+}
+
+// UnbanUserJSONBody defines parameters for UnbanUser.
+type UnbanUserJSONBody struct {
+	UserId string `json:"user_id"`
+}
+
+// BlockUserJSONBody defines parameters for BlockUser.
+type BlockUserJSONBody struct {
+	UserId string `json:"user_id"`
+}
+
+// UnblockUserJSONBody defines parameters for UnblockUser.
+type UnblockUserJSONBody struct {
+	UserId string `json:"user_id"`
+}
+
 // CreateDMJSONBody defines parameters for CreateDM.
 type CreateDMJSONBody struct {
 	UserIds []string `json:"user_ids"`
@@ -837,6 +950,12 @@ type RemoveWorkspaceMemberJSONBody struct {
 type UpdateWorkspaceMemberRoleJSONBody struct {
 	Role   WorkspaceRole `json:"role"`
 	UserId string        `json:"user_id"`
+}
+
+// ListModerationLogJSONBody defines parameters for ListModerationLog.
+type ListModerationLogJSONBody struct {
+	Cursor *string `json:"cursor,omitempty"`
+	Limit  *int    `json:"limit,omitempty"`
 }
 
 // ListUserThreadsJSONBody defines parameters for ListUserThreads.
@@ -887,6 +1006,9 @@ type SendMessageJSONRequestBody = SendMessageInput
 // UpdateChannelNotificationsJSONRequestBody defines body for UpdateChannelNotifications for application/json ContentType.
 type UpdateChannelNotificationsJSONRequestBody = NotificationPreferences
 
+// ListPinnedMessagesJSONRequestBody defines body for ListPinnedMessages for application/json ContentType.
+type ListPinnedMessagesJSONRequestBody ListPinnedMessagesJSONBody
+
 // UpdateChannelJSONRequestBody defines body for UpdateChannel for application/json ContentType.
 type UpdateChannelJSONRequestBody = UpdateChannelInput
 
@@ -923,6 +1045,21 @@ type CreateWorkspaceJSONRequestBody = CreateWorkspaceInput
 // ReorderWorkspacesJSONRequestBody defines body for ReorderWorkspaces for application/json ContentType.
 type ReorderWorkspacesJSONRequestBody = ReorderWorkspacesInput
 
+// BanUserJSONRequestBody defines body for BanUser for application/json ContentType.
+type BanUserJSONRequestBody = BanUserInput
+
+// ListBansJSONRequestBody defines body for ListBans for application/json ContentType.
+type ListBansJSONRequestBody ListBansJSONBody
+
+// UnbanUserJSONRequestBody defines body for UnbanUser for application/json ContentType.
+type UnbanUserJSONRequestBody UnbanUserJSONBody
+
+// BlockUserJSONRequestBody defines body for BlockUser for application/json ContentType.
+type BlockUserJSONRequestBody BlockUserJSONBody
+
+// UnblockUserJSONRequestBody defines body for UnblockUser for application/json ContentType.
+type UnblockUserJSONRequestBody UnblockUserJSONBody
+
 // CreateChannelJSONRequestBody defines body for CreateChannel for application/json ContentType.
 type CreateChannelJSONRequestBody = CreateChannelInput
 
@@ -946,6 +1083,9 @@ type UpdateWorkspaceMemberRoleJSONRequestBody UpdateWorkspaceMemberRoleJSONBody
 
 // SearchMessagesJSONRequestBody defines body for SearchMessages for application/json ContentType.
 type SearchMessagesJSONRequestBody = SearchMessagesInput
+
+// ListModerationLogJSONRequestBody defines body for ListModerationLog for application/json ContentType.
+type ListModerationLogJSONRequestBody ListModerationLogJSONBody
 
 // ListUserThreadsJSONRequestBody defines body for ListUserThreads for application/json ContentType.
 type ListUserThreadsJSONRequestBody ListUserThreadsJSONBody
@@ -1015,6 +1155,9 @@ type ServerInterface interface {
 	// Update channel notification preferences
 	// (POST /channels/{id}/notifications)
 	UpdateChannelNotifications(w http.ResponseWriter, r *http.Request, id ChannelId)
+	// List pinned messages in channel
+	// (POST /channels/{id}/pins/list)
+	ListPinnedMessages(w http.ResponseWriter, r *http.Request, id ChannelId)
 	// Unstar a channel
 	// (DELETE /channels/{id}/star)
 	UnstarChannel(w http.ResponseWriter, r *http.Request, id ChannelId)
@@ -1054,6 +1197,9 @@ type ServerInterface interface {
 	// Mark message as unread
 	// (POST /messages/{id}/mark-unread)
 	MarkMessageUnread(w http.ResponseWriter, r *http.Request, id MessageId)
+	// Pin a message
+	// (POST /messages/{id}/pin)
+	PinMessage(w http.ResponseWriter, r *http.Request, id MessageId)
 	// Add reaction to message
 	// (POST /messages/{id}/reactions/add)
 	AddReaction(w http.ResponseWriter, r *http.Request, id MessageId)
@@ -1072,6 +1218,9 @@ type ServerInterface interface {
 	// Mark thread as read
 	// (POST /messages/{id}/thread/mark-read)
 	MarkThreadRead(w http.ResponseWriter, r *http.Request, id MessageId)
+	// Unpin a message
+	// (POST /messages/{id}/unpin)
+	UnpinMessage(w http.ResponseWriter, r *http.Request, id MessageId)
 	// Unsubscribe from thread
 	// (POST /messages/{id}/unsubscribe)
 	UnsubscribeFromThread(w http.ResponseWriter, r *http.Request, id MessageId)
@@ -1117,6 +1266,24 @@ type ServerInterface interface {
 	// Get workspace details
 	// (GET /workspaces/{wid})
 	GetWorkspace(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// Ban a user from workspace
+	// (POST /workspaces/{wid}/bans/create)
+	BanUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// List active bans in workspace
+	// (POST /workspaces/{wid}/bans/list)
+	ListBans(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// Unban a user from workspace
+	// (POST /workspaces/{wid}/bans/remove)
+	UnbanUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// Block a user in workspace
+	// (POST /workspaces/{wid}/blocks/create)
+	BlockUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// List blocked users in workspace
+	// (GET /workspaces/{wid}/blocks/list)
+	ListBlocks(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// Unblock a user in workspace
+	// (POST /workspaces/{wid}/blocks/remove)
+	UnblockUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
 	// Create a channel
 	// (POST /workspaces/{wid}/channels/create)
 	CreateChannel(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
@@ -1156,6 +1323,9 @@ type ServerInterface interface {
 	// Search messages in workspace
 	// (POST /workspaces/{wid}/messages/search)
 	SearchMessages(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
+	// List moderation audit log
+	// (POST /workspaces/{wid}/moderation-log/list)
+	ListModerationLog(w http.ResponseWriter, r *http.Request, wid WorkspaceId)
 	// List user's scheduled messages in a workspace
 	// (POST /workspaces/{wid}/scheduled-messages)
 	ListScheduledMessages(w http.ResponseWriter, r *http.Request, wid string)
@@ -1288,6 +1458,12 @@ func (_ Unimplemented) UpdateChannelNotifications(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List pinned messages in channel
+// (POST /channels/{id}/pins/list)
+func (_ Unimplemented) ListPinnedMessages(w http.ResponseWriter, r *http.Request, id ChannelId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Unstar a channel
 // (DELETE /channels/{id}/star)
 func (_ Unimplemented) UnstarChannel(w http.ResponseWriter, r *http.Request, id ChannelId) {
@@ -1366,6 +1542,12 @@ func (_ Unimplemented) MarkMessageUnread(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Pin a message
+// (POST /messages/{id}/pin)
+func (_ Unimplemented) PinMessage(w http.ResponseWriter, r *http.Request, id MessageId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Add reaction to message
 // (POST /messages/{id}/reactions/add)
 func (_ Unimplemented) AddReaction(w http.ResponseWriter, r *http.Request, id MessageId) {
@@ -1399,6 +1581,12 @@ func (_ Unimplemented) ListThread(w http.ResponseWriter, r *http.Request, id Mes
 // Mark thread as read
 // (POST /messages/{id}/thread/mark-read)
 func (_ Unimplemented) MarkThreadRead(w http.ResponseWriter, r *http.Request, id MessageId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Unpin a message
+// (POST /messages/{id}/unpin)
+func (_ Unimplemented) UnpinMessage(w http.ResponseWriter, r *http.Request, id MessageId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1492,6 +1680,42 @@ func (_ Unimplemented) GetWorkspace(w http.ResponseWriter, r *http.Request, wid 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Ban a user from workspace
+// (POST /workspaces/{wid}/bans/create)
+func (_ Unimplemented) BanUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List active bans in workspace
+// (POST /workspaces/{wid}/bans/list)
+func (_ Unimplemented) ListBans(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Unban a user from workspace
+// (POST /workspaces/{wid}/bans/remove)
+func (_ Unimplemented) UnbanUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Block a user in workspace
+// (POST /workspaces/{wid}/blocks/create)
+func (_ Unimplemented) BlockUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List blocked users in workspace
+// (GET /workspaces/{wid}/blocks/list)
+func (_ Unimplemented) ListBlocks(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Unblock a user in workspace
+// (POST /workspaces/{wid}/blocks/remove)
+func (_ Unimplemented) UnblockUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Create a channel
 // (POST /workspaces/{wid}/channels/create)
 func (_ Unimplemented) CreateChannel(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
@@ -1567,6 +1791,12 @@ func (_ Unimplemented) UpdateWorkspaceMemberRole(w http.ResponseWriter, r *http.
 // Search messages in workspace
 // (POST /workspaces/{wid}/messages/search)
 func (_ Unimplemented) SearchMessages(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List moderation audit log
+// (POST /workspaces/{wid}/moderation-log/list)
+func (_ Unimplemented) ListModerationLog(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2090,6 +2320,37 @@ func (siw *ServerInterfaceWrapper) UpdateChannelNotifications(w http.ResponseWri
 	handler.ServeHTTP(w, r)
 }
 
+// ListPinnedMessages operation middleware
+func (siw *ServerInterfaceWrapper) ListPinnedMessages(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id ChannelId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPinnedMessages(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UnstarChannel operation middleware
 func (siw *ServerInterfaceWrapper) UnstarChannel(w http.ResponseWriter, r *http.Request) {
 
@@ -2503,6 +2764,37 @@ func (siw *ServerInterfaceWrapper) MarkMessageUnread(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// PinMessage operation middleware
+func (siw *ServerInterfaceWrapper) PinMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id MessageId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PinMessage(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AddReaction operation middleware
 func (siw *ServerInterfaceWrapper) AddReaction(w http.ResponseWriter, r *http.Request) {
 
@@ -2680,6 +2972,37 @@ func (siw *ServerInterfaceWrapper) MarkThreadRead(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.MarkThreadRead(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnpinMessage operation middleware
+func (siw *ServerInterfaceWrapper) UnpinMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id MessageId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnpinMessage(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3062,6 +3385,192 @@ func (siw *ServerInterfaceWrapper) GetWorkspace(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetWorkspace(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BanUser operation middleware
+func (siw *ServerInterfaceWrapper) BanUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BanUser(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListBans operation middleware
+func (siw *ServerInterfaceWrapper) ListBans(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBans(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnbanUser operation middleware
+func (siw *ServerInterfaceWrapper) UnbanUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnbanUser(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BlockUser operation middleware
+func (siw *ServerInterfaceWrapper) BlockUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BlockUser(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListBlocks operation middleware
+func (siw *ServerInterfaceWrapper) ListBlocks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBlocks(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnblockUser operation middleware
+func (siw *ServerInterfaceWrapper) UnblockUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnblockUser(w, r, wid)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3474,6 +3983,37 @@ func (siw *ServerInterfaceWrapper) SearchMessages(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListModerationLog operation middleware
+func (siw *ServerInterfaceWrapper) ListModerationLog(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wid" -------------
+	var wid WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wid", chi.URLParam(r, "wid"), &wid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wid", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListModerationLog(w, r, wid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListScheduledMessages operation middleware
 func (siw *ServerInterfaceWrapper) ListScheduledMessages(w http.ResponseWriter, r *http.Request) {
 
@@ -3769,6 +4309,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/channels/{id}/notifications", wrapper.UpdateChannelNotifications)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channels/{id}/pins/list", wrapper.ListPinnedMessages)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channels/{id}/star", wrapper.UnstarChannel)
 	})
 	r.Group(func(r chi.Router) {
@@ -3808,6 +4351,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/messages/{id}/mark-unread", wrapper.MarkMessageUnread)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/messages/{id}/pin", wrapper.PinMessage)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/messages/{id}/reactions/add", wrapper.AddReaction)
 	})
 	r.Group(func(r chi.Router) {
@@ -3824,6 +4370,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/messages/{id}/thread/mark-read", wrapper.MarkThreadRead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/messages/{id}/unpin", wrapper.UnpinMessage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/messages/{id}/unsubscribe", wrapper.UnsubscribeFromThread)
@@ -3871,6 +4420,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/workspaces/{wid}", wrapper.GetWorkspace)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/bans/create", wrapper.BanUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/bans/list", wrapper.ListBans)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/bans/remove", wrapper.UnbanUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/blocks/create", wrapper.BlockUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/workspaces/{wid}/blocks/list", wrapper.ListBlocks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/blocks/remove", wrapper.UnblockUser)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/{wid}/channels/create", wrapper.CreateChannel)
 	})
 	r.Group(func(r chi.Router) {
@@ -3908,6 +4475,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/{wid}/messages/search", wrapper.SearchMessages)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspaces/{wid}/moderation-log/list", wrapper.ListModerationLog)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspaces/{wid}/scheduled-messages", wrapper.ListScheduledMessages)
@@ -4682,6 +5252,55 @@ func (response UpdateChannelNotifications404JSONResponse) VisitUpdateChannelNoti
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListPinnedMessagesRequestObject struct {
+	Id   ChannelId `json:"id"`
+	Body *ListPinnedMessagesJSONRequestBody
+}
+
+type ListPinnedMessagesResponseObject interface {
+	VisitListPinnedMessagesResponse(w http.ResponseWriter) error
+}
+
+type ListPinnedMessages200JSONResponse struct {
+	HasMore    *bool              `json:"has_more,omitempty"`
+	Messages   *[]MessageWithUser `json:"messages,omitempty"`
+	NextCursor *string            `json:"next_cursor,omitempty"`
+}
+
+func (response ListPinnedMessages200JSONResponse) VisitListPinnedMessagesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPinnedMessages401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListPinnedMessages401JSONResponse) VisitListPinnedMessagesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPinnedMessages403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListPinnedMessages403JSONResponse) VisitListPinnedMessagesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPinnedMessages404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListPinnedMessages404JSONResponse) VisitListPinnedMessagesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type UnstarChannelRequestObject struct {
 	Id ChannelId `json:"id"`
 }
@@ -5051,6 +5670,15 @@ func (response AcceptInvite401JSONResponse) VisitAcceptInviteResponse(w http.Res
 	return json.NewEncoder(w).Encode(response)
 }
 
+type AcceptInvite403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AcceptInvite403JSONResponse) VisitAcceptInviteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type AcceptInvite404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response AcceptInvite404JSONResponse) VisitAcceptInviteResponse(w http.ResponseWriter) error {
@@ -5223,6 +5851,61 @@ func (response MarkMessageUnread403JSONResponse) VisitMarkMessageUnreadResponse(
 type MarkMessageUnread404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response MarkMessageUnread404JSONResponse) VisitMarkMessageUnreadResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PinMessageRequestObject struct {
+	Id MessageId `json:"id"`
+}
+
+type PinMessageResponseObject interface {
+	VisitPinMessageResponse(w http.ResponseWriter) error
+}
+
+type PinMessage200JSONResponse struct {
+	Message *MessageWithUser `json:"message,omitempty"`
+}
+
+func (response PinMessage200JSONResponse) VisitPinMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PinMessage400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response PinMessage400JSONResponse) VisitPinMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PinMessage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PinMessage401JSONResponse) VisitPinMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PinMessage403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PinMessage403JSONResponse) VisitPinMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PinMessage404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PinMessage404JSONResponse) VisitPinMessageResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
 
@@ -5470,6 +6153,52 @@ func (response MarkThreadRead401JSONResponse) VisitMarkThreadReadResponse(w http
 type MarkThreadRead404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response MarkThreadRead404JSONResponse) VisitMarkThreadReadResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnpinMessageRequestObject struct {
+	Id MessageId `json:"id"`
+}
+
+type UnpinMessageResponseObject interface {
+	VisitUnpinMessageResponse(w http.ResponseWriter) error
+}
+
+type UnpinMessage200JSONResponse struct {
+	Message *MessageWithUser `json:"message,omitempty"`
+}
+
+func (response UnpinMessage200JSONResponse) VisitUnpinMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnpinMessage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnpinMessage401JSONResponse) VisitUnpinMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnpinMessage403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UnpinMessage403JSONResponse) VisitUnpinMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnpinMessage404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UnpinMessage404JSONResponse) VisitUnpinMessageResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
 
@@ -6074,6 +6803,283 @@ func (response GetWorkspace404JSONResponse) VisitGetWorkspaceResponse(w http.Res
 	return json.NewEncoder(w).Encode(response)
 }
 
+type BanUserRequestObject struct {
+	Wid  WorkspaceId `json:"wid"`
+	Body *BanUserJSONRequestBody
+}
+
+type BanUserResponseObject interface {
+	VisitBanUserResponse(w http.ResponseWriter) error
+}
+
+type BanUser200JSONResponse struct {
+	Ban *Ban `json:"ban,omitempty"`
+}
+
+func (response BanUser200JSONResponse) VisitBanUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BanUser400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response BanUser400JSONResponse) VisitBanUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BanUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response BanUser401JSONResponse) VisitBanUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BanUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response BanUser403JSONResponse) VisitBanUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BanUser404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response BanUser404JSONResponse) VisitBanUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BanUser409JSONResponse ApiErrorResponse
+
+func (response BanUser409JSONResponse) VisitBanUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListBansRequestObject struct {
+	Wid  WorkspaceId `json:"wid"`
+	Body *ListBansJSONRequestBody
+}
+
+type ListBansResponseObject interface {
+	VisitListBansResponse(w http.ResponseWriter) error
+}
+
+type ListBans200JSONResponse struct {
+	Bans       *[]BanWithUser `json:"bans,omitempty"`
+	HasMore    *bool          `json:"has_more,omitempty"`
+	NextCursor *string        `json:"next_cursor,omitempty"`
+}
+
+func (response ListBans200JSONResponse) VisitListBansResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListBans401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListBans401JSONResponse) VisitListBansResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListBans403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListBans403JSONResponse) VisitListBansResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnbanUserRequestObject struct {
+	Wid  WorkspaceId `json:"wid"`
+	Body *UnbanUserJSONRequestBody
+}
+
+type UnbanUserResponseObject interface {
+	VisitUnbanUserResponse(w http.ResponseWriter) error
+}
+
+type UnbanUser200JSONResponse SuccessResponse
+
+func (response UnbanUser200JSONResponse) VisitUnbanUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnbanUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnbanUser401JSONResponse) VisitUnbanUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnbanUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UnbanUser403JSONResponse) VisitUnbanUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnbanUser404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UnbanUser404JSONResponse) VisitUnbanUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BlockUserRequestObject struct {
+	Wid  WorkspaceId `json:"wid"`
+	Body *BlockUserJSONRequestBody
+}
+
+type BlockUserResponseObject interface {
+	VisitBlockUserResponse(w http.ResponseWriter) error
+}
+
+type BlockUser200JSONResponse SuccessResponse
+
+func (response BlockUser200JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BlockUser400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response BlockUser400JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BlockUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response BlockUser401JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BlockUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response BlockUser403JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BlockUser404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response BlockUser404JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListBlocksRequestObject struct {
+	Wid WorkspaceId `json:"wid"`
+}
+
+type ListBlocksResponseObject interface {
+	VisitListBlocksResponse(w http.ResponseWriter) error
+}
+
+type ListBlocks200JSONResponse struct {
+	Blocks *[]BlockWithUser `json:"blocks,omitempty"`
+}
+
+func (response ListBlocks200JSONResponse) VisitListBlocksResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListBlocks401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListBlocks401JSONResponse) VisitListBlocksResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListBlocks403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListBlocks403JSONResponse) VisitListBlocksResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnblockUserRequestObject struct {
+	Wid  WorkspaceId `json:"wid"`
+	Body *UnblockUserJSONRequestBody
+}
+
+type UnblockUserResponseObject interface {
+	VisitUnblockUserResponse(w http.ResponseWriter) error
+}
+
+type UnblockUser200JSONResponse SuccessResponse
+
+func (response UnblockUser200JSONResponse) VisitUnblockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnblockUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnblockUser401JSONResponse) VisitUnblockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnblockUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UnblockUser403JSONResponse) VisitUnblockUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type CreateChannelRequestObject struct {
 	Wid  WorkspaceId `json:"wid"`
 	Body *CreateChannelJSONRequestBody
@@ -6596,6 +7602,46 @@ func (response SearchMessages403JSONResponse) VisitSearchMessagesResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListModerationLogRequestObject struct {
+	Wid  WorkspaceId `json:"wid"`
+	Body *ListModerationLogJSONRequestBody
+}
+
+type ListModerationLogResponseObject interface {
+	VisitListModerationLogResponse(w http.ResponseWriter) error
+}
+
+type ListModerationLog200JSONResponse struct {
+	Entries    *[]ModerationLogEntryWithActor `json:"entries,omitempty"`
+	HasMore    *bool                          `json:"has_more,omitempty"`
+	NextCursor *string                        `json:"next_cursor,omitempty"`
+}
+
+func (response ListModerationLog200JSONResponse) VisitListModerationLogResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListModerationLog401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListModerationLog401JSONResponse) VisitListModerationLogResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListModerationLog403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListModerationLog403JSONResponse) VisitListModerationLogResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListScheduledMessagesRequestObject struct {
 	Wid string `json:"wid"`
 }
@@ -6794,6 +7840,9 @@ type StrictServerInterface interface {
 	// Update channel notification preferences
 	// (POST /channels/{id}/notifications)
 	UpdateChannelNotifications(ctx context.Context, request UpdateChannelNotificationsRequestObject) (UpdateChannelNotificationsResponseObject, error)
+	// List pinned messages in channel
+	// (POST /channels/{id}/pins/list)
+	ListPinnedMessages(ctx context.Context, request ListPinnedMessagesRequestObject) (ListPinnedMessagesResponseObject, error)
 	// Unstar a channel
 	// (DELETE /channels/{id}/star)
 	UnstarChannel(ctx context.Context, request UnstarChannelRequestObject) (UnstarChannelResponseObject, error)
@@ -6833,6 +7882,9 @@ type StrictServerInterface interface {
 	// Mark message as unread
 	// (POST /messages/{id}/mark-unread)
 	MarkMessageUnread(ctx context.Context, request MarkMessageUnreadRequestObject) (MarkMessageUnreadResponseObject, error)
+	// Pin a message
+	// (POST /messages/{id}/pin)
+	PinMessage(ctx context.Context, request PinMessageRequestObject) (PinMessageResponseObject, error)
 	// Add reaction to message
 	// (POST /messages/{id}/reactions/add)
 	AddReaction(ctx context.Context, request AddReactionRequestObject) (AddReactionResponseObject, error)
@@ -6851,6 +7903,9 @@ type StrictServerInterface interface {
 	// Mark thread as read
 	// (POST /messages/{id}/thread/mark-read)
 	MarkThreadRead(ctx context.Context, request MarkThreadReadRequestObject) (MarkThreadReadResponseObject, error)
+	// Unpin a message
+	// (POST /messages/{id}/unpin)
+	UnpinMessage(ctx context.Context, request UnpinMessageRequestObject) (UnpinMessageResponseObject, error)
 	// Unsubscribe from thread
 	// (POST /messages/{id}/unsubscribe)
 	UnsubscribeFromThread(ctx context.Context, request UnsubscribeFromThreadRequestObject) (UnsubscribeFromThreadResponseObject, error)
@@ -6896,6 +7951,24 @@ type StrictServerInterface interface {
 	// Get workspace details
 	// (GET /workspaces/{wid})
 	GetWorkspace(ctx context.Context, request GetWorkspaceRequestObject) (GetWorkspaceResponseObject, error)
+	// Ban a user from workspace
+	// (POST /workspaces/{wid}/bans/create)
+	BanUser(ctx context.Context, request BanUserRequestObject) (BanUserResponseObject, error)
+	// List active bans in workspace
+	// (POST /workspaces/{wid}/bans/list)
+	ListBans(ctx context.Context, request ListBansRequestObject) (ListBansResponseObject, error)
+	// Unban a user from workspace
+	// (POST /workspaces/{wid}/bans/remove)
+	UnbanUser(ctx context.Context, request UnbanUserRequestObject) (UnbanUserResponseObject, error)
+	// Block a user in workspace
+	// (POST /workspaces/{wid}/blocks/create)
+	BlockUser(ctx context.Context, request BlockUserRequestObject) (BlockUserResponseObject, error)
+	// List blocked users in workspace
+	// (GET /workspaces/{wid}/blocks/list)
+	ListBlocks(ctx context.Context, request ListBlocksRequestObject) (ListBlocksResponseObject, error)
+	// Unblock a user in workspace
+	// (POST /workspaces/{wid}/blocks/remove)
+	UnblockUser(ctx context.Context, request UnblockUserRequestObject) (UnblockUserResponseObject, error)
 	// Create a channel
 	// (POST /workspaces/{wid}/channels/create)
 	CreateChannel(ctx context.Context, request CreateChannelRequestObject) (CreateChannelResponseObject, error)
@@ -6935,6 +8008,9 @@ type StrictServerInterface interface {
 	// Search messages in workspace
 	// (POST /workspaces/{wid}/messages/search)
 	SearchMessages(ctx context.Context, request SearchMessagesRequestObject) (SearchMessagesResponseObject, error)
+	// List moderation audit log
+	// (POST /workspaces/{wid}/moderation-log/list)
+	ListModerationLog(ctx context.Context, request ListModerationLogRequestObject) (ListModerationLogResponseObject, error)
 	// List user's scheduled messages in a workspace
 	// (POST /workspaces/{wid}/scheduled-messages)
 	ListScheduledMessages(ctx context.Context, request ListScheduledMessagesRequestObject) (ListScheduledMessagesResponseObject, error)
@@ -7544,6 +8620,39 @@ func (sh *strictHandler) UpdateChannelNotifications(w http.ResponseWriter, r *ht
 	}
 }
 
+// ListPinnedMessages operation middleware
+func (sh *strictHandler) ListPinnedMessages(w http.ResponseWriter, r *http.Request, id ChannelId) {
+	var request ListPinnedMessagesRequestObject
+
+	request.Id = id
+
+	var body ListPinnedMessagesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPinnedMessages(ctx, request.(ListPinnedMessagesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPinnedMessages")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPinnedMessagesResponseObject); ok {
+		if err := validResponse.VisitListPinnedMessagesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // UnstarChannel operation middleware
 func (sh *strictHandler) UnstarChannel(w http.ResponseWriter, r *http.Request, id ChannelId) {
 	var request UnstarChannelRequestObject
@@ -7895,6 +9004,32 @@ func (sh *strictHandler) MarkMessageUnread(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// PinMessage operation middleware
+func (sh *strictHandler) PinMessage(w http.ResponseWriter, r *http.Request, id MessageId) {
+	var request PinMessageRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PinMessage(ctx, request.(PinMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PinMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PinMessageResponseObject); ok {
+		if err := validResponse.VisitPinMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // AddReaction operation middleware
 func (sh *strictHandler) AddReaction(w http.ResponseWriter, r *http.Request, id MessageId) {
 	var request AddReactionRequestObject
@@ -8072,6 +9207,32 @@ func (sh *strictHandler) MarkThreadRead(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(MarkThreadReadResponseObject); ok {
 		if err := validResponse.VisitMarkThreadReadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnpinMessage operation middleware
+func (sh *strictHandler) UnpinMessage(w http.ResponseWriter, r *http.Request, id MessageId) {
+	var request UnpinMessageRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnpinMessage(ctx, request.(UnpinMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnpinMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnpinMessageResponseObject); ok {
+		if err := validResponse.VisitUnpinMessageResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -8497,6 +9658,197 @@ func (sh *strictHandler) GetWorkspace(w http.ResponseWriter, r *http.Request, wi
 	}
 }
 
+// BanUser operation middleware
+func (sh *strictHandler) BanUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request BanUserRequestObject
+
+	request.Wid = wid
+
+	var body BanUserJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BanUser(ctx, request.(BanUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BanUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BanUserResponseObject); ok {
+		if err := validResponse.VisitBanUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListBans operation middleware
+func (sh *strictHandler) ListBans(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request ListBansRequestObject
+
+	request.Wid = wid
+
+	var body ListBansJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBans(ctx, request.(ListBansRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBans")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListBansResponseObject); ok {
+		if err := validResponse.VisitListBansResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnbanUser operation middleware
+func (sh *strictHandler) UnbanUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request UnbanUserRequestObject
+
+	request.Wid = wid
+
+	var body UnbanUserJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnbanUser(ctx, request.(UnbanUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnbanUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnbanUserResponseObject); ok {
+		if err := validResponse.VisitUnbanUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BlockUser operation middleware
+func (sh *strictHandler) BlockUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request BlockUserRequestObject
+
+	request.Wid = wid
+
+	var body BlockUserJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BlockUser(ctx, request.(BlockUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BlockUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BlockUserResponseObject); ok {
+		if err := validResponse.VisitBlockUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListBlocks operation middleware
+func (sh *strictHandler) ListBlocks(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request ListBlocksRequestObject
+
+	request.Wid = wid
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBlocks(ctx, request.(ListBlocksRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBlocks")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListBlocksResponseObject); ok {
+		if err := validResponse.VisitListBlocksResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnblockUser operation middleware
+func (sh *strictHandler) UnblockUser(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request UnblockUserRequestObject
+
+	request.Wid = wid
+
+	var body UnblockUserJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnblockUser(ctx, request.(UnblockUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnblockUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnblockUserResponseObject); ok {
+		if err := validResponse.VisitUnblockUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateChannel operation middleware
 func (sh *strictHandler) CreateChannel(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
 	var request CreateChannelRequestObject
@@ -8884,6 +10236,39 @@ func (sh *strictHandler) SearchMessages(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchMessagesResponseObject); ok {
 		if err := validResponse.VisitSearchMessagesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListModerationLog operation middleware
+func (sh *strictHandler) ListModerationLog(w http.ResponseWriter, r *http.Request, wid WorkspaceId) {
+	var request ListModerationLogRequestObject
+
+	request.Wid = wid
+
+	var body ListModerationLogJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListModerationLog(ctx, request.(ListModerationLogRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListModerationLog")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListModerationLogResponseObject); ok {
+		if err := validResponse.VisitListModerationLogResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

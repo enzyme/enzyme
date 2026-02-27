@@ -822,6 +822,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/messages/{id}/pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pin a message
+         * @description Pin a message to its channel. Any workspace member with access to the channel can pin messages. A channel can have at most 50 pinned messages. Already-pinned messages cannot be pinned again. The pinned message is returned with updated metadata including the pinned_by user and pinned_at timestamp.
+         *
+         *     Errors:
+         *     - 400: Message is already pinned, or the channel has reached the 50-pin limit.
+         *     - 401: Not authenticated.
+         *     - 403: Caller does not have access to the channel.
+         *     - 404: Message not found.
+         */
+        post: operations["pinMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messages/{id}/unpin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unpin a message
+         * @description Unpin a previously pinned message from its channel. Any workspace member with access to the channel can unpin messages (not restricted to the user who originally pinned it). The message is returned with its pin metadata cleared.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller does not have access to the channel.
+         *     - 404: Message not found or message is not currently pinned.
+         */
+        post: operations["unpinMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channels/{id}/pins/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List pinned messages in channel
+         * @description List all pinned messages in a channel with cursor-based pagination. Returns messages in reverse chronological order of when they were pinned. Only workspace members with access to the channel can list its pins.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller does not have access to the channel.
+         *     - 404: Channel not found.
+         */
+        post: operations["listPinnedMessages"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channels/{id}/files/upload": {
         parameters: {
             query?: never;
@@ -1130,6 +1206,179 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{wid}/bans/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ban a user from workspace
+         * @description Ban a user from the workspace. Only admins and owners can ban. Cannot ban users with equal or higher role rank (admins cannot ban other admins or the owner). Self-banning is prohibited. Specify duration_hours for a temporary ban (1-8760 hours), or omit for a permanent ban. Set hide_messages to true to hide the banned user's messages from all queries.
+         *
+         *     Errors:
+         *     - 400: Self-ban attempted, or target user is not a workspace member.
+         *     - 403: Caller lacks admin/owner role, or target has equal or higher role rank.
+         *     - 404: Workspace not found.
+         *     - 409: User is already banned in this workspace.
+         */
+        post: operations["banUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{wid}/bans/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unban a user from workspace
+         * @description Remove an active ban for a user in the workspace, restoring their access. Only admins and owners can unban users. The user's membership is not automatically restored; they must rejoin or be re-invited.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller lacks admin/owner role.
+         *     - 404: Workspace not found or no active ban exists for the specified user.
+         */
+        post: operations["unbanUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{wid}/bans/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List active bans in workspace
+         * @description List all currently active bans in the workspace with cursor-based pagination. Only admins and owners can view the ban list. Each ban includes the banned user's display name and email. Expired temporary bans are excluded from results.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller lacks admin/owner role.
+         */
+        post: operations["listBans"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{wid}/blocks/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Block a user in workspace
+         * @description Block a user within the workspace scope. Blocking is workspace-scoped, meaning the block only applies within this workspace. Blocked users' messages are hidden from the blocker in message queries. Any authenticated workspace member can block another member. Self-blocking is not allowed.
+         *
+         *     Errors:
+         *     - 400: Self-block attempted, or target user is not a workspace member.
+         *     - 401: Not authenticated.
+         *     - 403: Caller is not a member of the workspace.
+         *     - 404: Workspace or target user not found.
+         */
+        post: operations["blockUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{wid}/blocks/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unblock a user in workspace
+         * @description Remove a block on a user within the workspace scope. Only the user who created the block can remove it. After unblocking, the previously blocked user's messages will be visible again in message queries.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller is not a member of the workspace.
+         */
+        post: operations["unblockUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{wid}/blocks/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List blocked users in workspace
+         * @description List all users the caller has blocked within this workspace. Returns only the caller's own blocks (users cannot see other members' block lists). Each entry includes the blocked user's display name and email.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller is not a member of the workspace.
+         */
+        get: operations["listBlocks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{wid}/moderation-log/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List moderation audit log
+         * @description List the moderation audit log for the workspace with cursor-based pagination. Records all moderation actions including bans, unbans, and role changes. Only admins and owners can view the audit log. Each entry includes the acting user's display name and email for accountability.
+         *
+         *     Errors:
+         *     - 401: Not authenticated.
+         *     - 403: Caller lacks admin/owner role.
+         */
+        post: operations["listModerationLog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{wid}/events": {
         parameters: {
             query?: never;
@@ -1244,6 +1493,12 @@ export interface components {
             role: components["schemas"]["WorkspaceRole"];
             /** @description User's custom sort order for this workspace */
             sort_order?: number;
+            /** @description Present when the user is banned from this workspace */
+            ban?: {
+                reason?: string;
+                /** Format: date-time */
+                expires_at?: string;
+            };
         };
         WorkspaceNotificationSummary: {
             workspace_id: string;
@@ -1267,6 +1522,8 @@ export interface components {
             display_name: string;
             avatar_url?: string;
             gravatar_url?: string;
+            /** @description Whether the user is currently banned from the workspace */
+            is_banned?: boolean;
         };
         /** @enum {string} */
         WorkspaceRole: "owner" | "admin" | "member" | "guest";
@@ -1327,7 +1584,7 @@ export interface components {
         /** @enum {string} */
         MessageType: "user" | "system";
         /** @enum {string} */
-        SystemEventType: "user_joined" | "user_left" | "user_added" | "user_converted_channel" | "channel_renamed" | "channel_visibility_changed" | "channel_description_updated";
+        SystemEventType: "user_joined" | "user_left" | "user_added" | "user_converted_channel" | "channel_renamed" | "channel_visibility_changed" | "channel_description_updated" | "message_pinned" | "message_unpinned";
         SystemEventData: {
             event_type: components["schemas"]["SystemEventType"];
             /** @description The user who joined/left/was added */
@@ -1344,6 +1601,8 @@ export interface components {
             old_channel_name?: string;
             /** @description New channel type (for visibility change events) */
             channel_type?: string;
+            /** @description Referenced message ID (for pin/unpin events) */
+            message_id?: string;
         };
         Message: {
             id: string;
@@ -1365,6 +1624,9 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
             also_send_to_channel?: boolean;
+            /** Format: date-time */
+            pinned_at?: string;
+            pinned_by?: string;
         };
         MessageWithUser: components["schemas"]["Message"] & {
             user_display_name?: string;
@@ -1516,8 +1778,8 @@ export interface components {
             last_read_message_id: string;
         };
         /** @enum {string} */
-        SSEEventType: "connected" | "heartbeat" | "message.new" | "message.updated" | "message.deleted" | "reaction.added" | "reaction.removed" | "channel.created" | "channel.updated" | "channel.archived" | "channel.member_added" | "channel.member_removed" | "channel.read" | "typing.start" | "typing.stop" | "presence.changed" | "presence.initial" | "notification" | "emoji.created" | "emoji.deleted" | "scheduled_message.created" | "scheduled_message.updated" | "scheduled_message.deleted" | "scheduled_message.sent" | "scheduled_message.failed";
-        SSEEvent: components["schemas"]["SSEEventConnected"] | components["schemas"]["SSEEventHeartbeat"] | components["schemas"]["SSEEventMessageNew"] | components["schemas"]["SSEEventMessageUpdated"] | components["schemas"]["SSEEventMessageDeleted"] | components["schemas"]["SSEEventReactionAdded"] | components["schemas"]["SSEEventReactionRemoved"] | components["schemas"]["SSEEventChannelCreated"] | components["schemas"]["SSEEventChannelUpdated"] | components["schemas"]["SSEEventChannelArchived"] | components["schemas"]["SSEEventChannelMemberAdded"] | components["schemas"]["SSEEventChannelMemberRemoved"] | components["schemas"]["SSEEventChannelRead"] | components["schemas"]["SSEEventTypingStart"] | components["schemas"]["SSEEventTypingStop"] | components["schemas"]["SSEEventPresenceChanged"] | components["schemas"]["SSEEventPresenceInitial"] | components["schemas"]["SSEEventNotification"] | components["schemas"]["SSEEventEmojiCreated"] | components["schemas"]["SSEEventEmojiDeleted"] | components["schemas"]["SSEEventScheduledMessageCreated"] | components["schemas"]["SSEEventScheduledMessageUpdated"] | components["schemas"]["SSEEventScheduledMessageDeleted"] | components["schemas"]["SSEEventScheduledMessageSent"];
+        SSEEventType: "connected" | "heartbeat" | "message.new" | "message.updated" | "message.deleted" | "reaction.added" | "reaction.removed" | "channel.created" | "channel.updated" | "channel.archived" | "channel.member_added" | "channel.member_removed" | "channel.read" | "typing.start" | "typing.stop" | "presence.changed" | "presence.initial" | "notification" | "emoji.created" | "emoji.deleted" | "message.pinned" | "message.unpinned" | "member.banned" | "member.unbanned" | "scheduled_message.created" | "scheduled_message.updated" | "scheduled_message.deleted" | "scheduled_message.sent" | "scheduled_message.failed";
+        SSEEvent: components["schemas"]["SSEEventConnected"] | components["schemas"]["SSEEventHeartbeat"] | components["schemas"]["SSEEventMessageNew"] | components["schemas"]["SSEEventMessageUpdated"] | components["schemas"]["SSEEventMessageDeleted"] | components["schemas"]["SSEEventReactionAdded"] | components["schemas"]["SSEEventReactionRemoved"] | components["schemas"]["SSEEventChannelCreated"] | components["schemas"]["SSEEventChannelUpdated"] | components["schemas"]["SSEEventChannelArchived"] | components["schemas"]["SSEEventChannelMemberAdded"] | components["schemas"]["SSEEventChannelMemberRemoved"] | components["schemas"]["SSEEventChannelRead"] | components["schemas"]["SSEEventTypingStart"] | components["schemas"]["SSEEventTypingStop"] | components["schemas"]["SSEEventPresenceChanged"] | components["schemas"]["SSEEventPresenceInitial"] | components["schemas"]["SSEEventNotification"] | components["schemas"]["SSEEventEmojiCreated"] | components["schemas"]["SSEEventEmojiDeleted"] | components["schemas"]["SSEEventScheduledMessageCreated"] | components["schemas"]["SSEEventScheduledMessageUpdated"] | components["schemas"]["SSEEventScheduledMessageDeleted"] | components["schemas"]["SSEEventScheduledMessageSent"] | components["schemas"]["SSEEventMessagePinned"] | components["schemas"]["SSEEventMessageUnpinned"] | components["schemas"]["SSEEventMemberBanned"] | components["schemas"]["SSEEventMemberUnbanned"];
         SSEEventConnected: {
             id?: string;
             /**
@@ -1756,6 +2018,53 @@ export interface components {
                 message_id: string;
             };
         };
+        SSEEventMessagePinned: {
+            id?: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "message.pinned";
+            data: components["schemas"]["MessageWithUser"];
+        };
+        SSEEventMessageUnpinned: {
+            id?: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "message.unpinned";
+            data: components["schemas"]["MessageWithUser"];
+        };
+        SSEEventMemberBanned: {
+            id?: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "member.banned";
+            data: {
+                user_id: string;
+                workspace_id: string;
+                banned_by?: string;
+                reason?: string;
+                /** Format: date-time */
+                expires_at?: string;
+                workspace_name?: string;
+            };
+        };
+        SSEEventMemberUnbanned: {
+            id?: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "member.unbanned";
+            data: {
+                user_id: string;
+                workspace_id: string;
+            };
+        };
         NotificationData: {
             /** @enum {string} */
             type: "mention" | "dm" | "channel" | "here" | "everyone" | "thread_reply";
@@ -1879,6 +2188,58 @@ export interface components {
             /** Format: date-time */
             scheduled_for?: string;
             attachment_ids?: string[];
+        };
+        BanUserInput: {
+            user_id: string;
+            reason?: string;
+            /** @default false */
+            hide_messages: boolean;
+            /** @description Hours until ban expires. Omit for permanent. */
+            duration_hours?: number;
+        };
+        Ban: {
+            id: string;
+            workspace_id: string;
+            user_id: string;
+            banned_by: string;
+            reason?: string;
+            hide_messages: boolean;
+            /** Format: date-time */
+            expires_at?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        BanWithUser: components["schemas"]["Ban"] & {
+            user_display_name?: string;
+            user_email?: string;
+            user_avatar_url?: string;
+            banned_by_name?: string;
+        };
+        BlockWithUser: {
+            workspace_id: string;
+            blocker_id: string;
+            blocked_id: string;
+            /** Format: date-time */
+            created_at: string;
+            display_name?: string;
+            email?: string;
+            avatar_url?: string;
+        };
+        ModerationLogEntryWithActor: {
+            id: string;
+            workspace_id: string;
+            actor_id: string;
+            action: string;
+            target_type: string;
+            target_id: string;
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            created_at: string;
+            actor_display_name?: string;
+            actor_avatar_url?: string;
+            target_display_name?: string;
         };
     };
     responses: {
@@ -2395,6 +2756,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -3373,6 +3735,101 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    pinMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Message ID */
+                id: components["parameters"]["messageId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Message pinned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message?: components["schemas"]["MessageWithUser"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unpinMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Message ID */
+                id: components["parameters"]["messageId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Message unpinned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message?: components["schemas"]["MessageWithUser"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPinnedMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Channel ID */
+                id: components["parameters"]["channelId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    cursor?: string;
+                    /** @default 50 */
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description List of pinned messages */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        messages?: components["schemas"]["MessageWithUser"][];
+                        has_more?: boolean;
+                        next_cursor?: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     uploadFile: {
         parameters: {
             query?: never;
@@ -3941,6 +4398,245 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SuccessResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    banUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                wid: components["parameters"]["workspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BanUserInput"];
+            };
+        };
+        responses: {
+            /** @description User banned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ban?: components["schemas"]["Ban"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description User already banned */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    unbanUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                wid: components["parameters"]["workspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    user_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description User unbanned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listBans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                wid: components["parameters"]["workspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    cursor?: string;
+                    /** @default 50 */
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description List of active bans */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        bans?: components["schemas"]["BanWithUser"][];
+                        has_more?: boolean;
+                        next_cursor?: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    blockUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                wid: components["parameters"]["workspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    user_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description User blocked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unblockUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                wid: components["parameters"]["workspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    user_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description User unblocked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listBlocks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                wid: components["parameters"]["workspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of blocked users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        blocks?: components["schemas"]["BlockWithUser"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listModerationLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                wid: components["parameters"]["workspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    cursor?: string;
+                    /** @default 50 */
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description List of moderation log entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        entries?: components["schemas"]["ModerationLogEntryWithActor"][];
+                        has_more?: boolean;
+                        next_cursor?: string;
+                    };
                 };
             };
             401: components["responses"]["Unauthorized"];

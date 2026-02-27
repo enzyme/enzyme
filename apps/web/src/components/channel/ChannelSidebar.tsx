@@ -14,6 +14,7 @@ import {
   UserPlusIcon,
   FaceSmileIcon,
   EnvelopeOpenIcon,
+  ShieldExclamationIcon,
   InformationCircleIcon,
   XMarkIcon,
   CheckIcon,
@@ -291,6 +292,14 @@ export function ChannelSidebar({
                 >
                   Custom Emoji
                 </MenuItem>
+                {canInvite && (
+                  <MenuItem
+                    onAction={() => onOpenWorkspaceSettings(workspaceId, 'moderation')}
+                    icon={<ShieldExclamationIcon className="h-4 w-4" />}
+                  >
+                    Moderation
+                  </MenuItem>
+                )}
                 <MenuSeparator />
               </>
             )}

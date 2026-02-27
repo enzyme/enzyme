@@ -25,6 +25,8 @@ tags:
     description: File uploads and downloads
   - name: emojis
     description: Custom emoji management
+  - name: moderation
+    description: Moderation tools including bans, blocks, and audit logging. Most endpoints require admin or owner role.
   - name: sse
     description: Server-Sent Events
 
@@ -456,6 +458,8 @@ paths:
                     $ref: '#/components/schemas/Workspace'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -1391,6 +1395,126 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # Message pinning endpoints
+  /messages/{id}/pin:
+    post:
+      tags: [messages]
+      summary: Pin a message
+      description: |
+        Pin a message to its channel. Any workspace member with access to the channel can pin messages. A channel can have at most 50 pinned messages. Already-pinned messages cannot be pinned again. The pinned message is returned with updated metadata including the pinned_by user and pinned_at timestamp.
+
+        Errors:
+        - 400: Message is already pinned, or the channel has reached the 50-pin limit.
+        - 401: Not authenticated.
+        - 403: Caller does not have access to the channel.
+        - 404: Message not found.
+      operationId: pinMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      responses:
+        '200':
+          description: Message pinned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: '#/components/schemas/MessageWithUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /messages/{id}/unpin:
+    post:
+      tags: [messages]
+      summary: Unpin a message
+      description: |
+        Unpin a previously pinned message from its channel. Any workspace member with access to the channel can unpin messages (not restricted to the user who originally pinned it). The message is returned with its pin metadata cleared.
+
+        Errors:
+        - 401: Not authenticated.
+        - 403: Caller does not have access to the channel.
+        - 404: Message not found or message is not currently pinned.
+      operationId: unpinMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/messageId'
+      responses:
+        '200':
+          description: Message unpinned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: '#/components/schemas/MessageWithUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /channels/{id}/pins/list:
+    post:
+      tags: [messages]
+      summary: List pinned messages in channel
+      description: |
+        List all pinned messages in a channel with cursor-based pagination. Returns messages in reverse chronological order of when they were pinned. Only workspace members with access to the channel can list its pins.
+
+        Errors:
+        - 401: Not authenticated.
+        - 403: Caller does not have access to the channel.
+        - 404: Channel not found.
+      operationId: listPinnedMessages
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/channelId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cursor:
+                  type: string
+                limit:
+                  type: integer
+                  default: 50
+      responses:
+        '200':
+          description: List of pinned messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MessageWithUser'
+                  has_more:
+                    type: boolean
+                  next_cursor:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # File endpoints
   /channels/{id}/files/upload:
     post:
@@ -2030,6 +2154,301 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  # Moderation endpoints
+  /workspaces/{wid}/bans/create:
+    post:
+      tags: [moderation]
+      summary: Ban a user from workspace
+      description: |
+        Ban a user from the workspace. Only admins and owners can ban. Cannot ban users with equal or higher role rank (admins cannot ban other admins or the owner). Self-banning is prohibited. Specify duration_hours for a temporary ban (1-8760 hours), or omit for a permanent ban. Set hide_messages to true to hide the banned user's messages from all queries.
+
+        Errors:
+        - 400: Self-ban attempted, or target user is not a workspace member.
+        - 403: Caller lacks admin/owner role, or target has equal or higher role rank.
+        - 404: Workspace not found.
+        - 409: User is already banned in this workspace.
+      operationId: banUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BanUserInput'
+      responses:
+        '200':
+          description: User banned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ban:
+                    $ref: '#/components/schemas/Ban'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: User already banned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /workspaces/{wid}/bans/remove:
+    post:
+      tags: [moderation]
+      summary: Unban a user from workspace
+      description: |
+        Remove an active ban for a user in the workspace, restoring their access. Only admins and owners can unban users. The user's membership is not automatically restored; they must rejoin or be re-invited.
+
+        Errors:
+        - 401: Not authenticated.
+        - 403: Caller lacks admin/owner role.
+        - 404: Workspace not found or no active ban exists for the specified user.
+      operationId: unbanUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: User unbanned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workspaces/{wid}/bans/list:
+    post:
+      tags: [moderation]
+      summary: List active bans in workspace
+      description: |
+        List all currently active bans in the workspace with cursor-based pagination. Only admins and owners can view the ban list. Each ban includes the banned user's display name and email. Expired temporary bans are excluded from results.
+
+        Errors:
+        - 401: Not authenticated.
+        - 403: Caller lacks admin/owner role.
+      operationId: listBans
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cursor:
+                  type: string
+                limit:
+                  type: integer
+                  default: 50
+      responses:
+        '200':
+          description: List of active bans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bans:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BanWithUser'
+                  has_more:
+                    type: boolean
+                  next_cursor:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /workspaces/{wid}/blocks/create:
+    post:
+      tags: [moderation]
+      summary: Block a user in workspace
+      description: |
+        Block a user within the workspace scope. Blocking is workspace-scoped, meaning the block only applies within this workspace. Blocked users' messages are hidden from the blocker in message queries. Any authenticated workspace member can block another member. Self-blocking is not allowed.
+
+        Errors:
+        - 400: Self-block attempted, or target user is not a workspace member.
+        - 401: Not authenticated.
+        - 403: Caller is not a member of the workspace.
+        - 404: Workspace or target user not found.
+      operationId: blockUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: User blocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workspaces/{wid}/blocks/remove:
+    post:
+      tags: [moderation]
+      summary: Unblock a user in workspace
+      description: |
+        Remove a block on a user within the workspace scope. Only the user who created the block can remove it. After unblocking, the previously blocked user's messages will be visible again in message queries.
+
+        Errors:
+        - 401: Not authenticated.
+        - 403: Caller is not a member of the workspace.
+      operationId: unblockUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: User unblocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /workspaces/{wid}/blocks/list:
+    get:
+      tags: [moderation]
+      summary: List blocked users in workspace
+      description: |
+        List all users the caller has blocked within this workspace. Returns only the caller's own blocks (users cannot see other members' block lists). Each entry includes the blocked user's display name and email.
+
+        Errors:
+        - 401: Not authenticated.
+        - 403: Caller is not a member of the workspace.
+      operationId: listBlocks
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      responses:
+        '200':
+          description: List of blocked users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  blocks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BlockWithUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /workspaces/{wid}/moderation-log/list:
+    post:
+      tags: [moderation]
+      summary: List moderation audit log
+      description: |
+        List the moderation audit log for the workspace with cursor-based pagination. Records all moderation actions including bans, unbans, and role changes. Only admins and owners can view the audit log. Each entry includes the acting user's display name and email for accountability.
+
+        Errors:
+        - 401: Not authenticated.
+        - 403: Caller lacks admin/owner role.
+      operationId: listModerationLog
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cursor:
+                  type: string
+                limit:
+                  type: integer
+                  default: 50
+      responses:
+        '200':
+          description: List of moderation log entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModerationLogEntryWithActor'
+                  has_more:
+                    type: boolean
+                  next_cursor:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   # SSE endpoints
   /workspaces/{wid}/events:
     get:
@@ -2276,6 +2695,15 @@ components:
         sort_order:
           type: integer
           description: User's custom sort order for this workspace
+        ban:
+          type: object
+          description: Present when the user is banned from this workspace
+          properties:
+            reason:
+              type: string
+            expires_at:
+              type: string
+              format: date-time
 
     WorkspaceNotificationSummary:
       type: object
@@ -2324,6 +2752,9 @@ components:
               type: string
             gravatar_url:
               type: string
+            is_banned:
+              type: boolean
+              description: Whether the user is currently banned from the workspace
 
     WorkspaceRole:
       type: string
@@ -2444,7 +2875,7 @@ components:
 
     SystemEventType:
       type: string
-      enum: [user_joined, user_left, user_added, user_converted_channel, channel_renamed, channel_visibility_changed, channel_description_updated]
+      enum: [user_joined, user_left, user_added, user_converted_channel, channel_renamed, channel_visibility_changed, channel_description_updated, message_pinned, message_unpinned]
 
     SystemEventData:
       type: object
@@ -2473,6 +2904,9 @@ components:
         channel_type:
           type: string
           description: New channel type (for visibility change events)
+        message_id:
+          type: string
+          description: Referenced message ID (for pin/unpin events)
 
     Message:
       type: object
@@ -2511,6 +2945,11 @@ components:
           format: date-time
         also_send_to_channel:
           type: boolean
+        pinned_at:
+          type: string
+          format: date-time
+        pinned_by:
+          type: string
 
     MessageWithUser:
       allOf:
@@ -2862,6 +3301,10 @@ components:
         - notification
         - emoji.created
         - emoji.deleted
+        - message.pinned
+        - message.unpinned
+        - member.banned
+        - member.unbanned
         - scheduled_message.created
         - scheduled_message.updated
         - scheduled_message.deleted
@@ -2894,6 +3337,10 @@ components:
         - $ref: '#/components/schemas/SSEEventScheduledMessageUpdated'
         - $ref: '#/components/schemas/SSEEventScheduledMessageDeleted'
         - $ref: '#/components/schemas/SSEEventScheduledMessageSent'
+        - $ref: '#/components/schemas/SSEEventMessagePinned'
+        - $ref: '#/components/schemas/SSEEventMessageUnpinned'
+        - $ref: '#/components/schemas/SSEEventMemberBanned'
+        - $ref: '#/components/schemas/SSEEventMemberUnbanned'
       discriminator:
         propertyName: type
         mapping:
@@ -2921,6 +3368,10 @@ components:
           scheduled_message.updated: '#/components/schemas/SSEEventScheduledMessageUpdated'
           scheduled_message.deleted: '#/components/schemas/SSEEventScheduledMessageDeleted'
           scheduled_message.sent: '#/components/schemas/SSEEventScheduledMessageSent'
+          message.pinned: '#/components/schemas/SSEEventMessagePinned'
+          message.unpinned: '#/components/schemas/SSEEventMessageUnpinned'
+          member.banned: '#/components/schemas/SSEEventMemberBanned'
+          member.unbanned: '#/components/schemas/SSEEventMemberUnbanned'
 
     SSEEventConnected:
       type: object
@@ -3256,6 +3707,75 @@ components:
             message_id:
               type: string
 
+    SSEEventMessagePinned:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [message.pinned]
+        data:
+          $ref: '#/components/schemas/MessageWithUser'
+
+    SSEEventMessageUnpinned:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [message.unpinned]
+        data:
+          $ref: '#/components/schemas/MessageWithUser'
+
+    SSEEventMemberBanned:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [member.banned]
+        data:
+          type: object
+          required: [user_id, workspace_id]
+          properties:
+            user_id:
+              type: string
+            workspace_id:
+              type: string
+            banned_by:
+              type: string
+            reason:
+              type: string
+            expires_at:
+              type: string
+              format: date-time
+            workspace_name:
+              type: string
+
+    SSEEventMemberUnbanned:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [member.unbanned]
+        data:
+          type: object
+          required: [user_id, workspace_id]
+          properties:
+            user_id:
+              type: string
+            workspace_id:
+              type: string
+
     NotificationData:
       type: object
       required: [type, channel_id, message_id]
@@ -3519,3 +4039,108 @@ components:
           type: array
           items:
             type: string
+
+    # Moderation schemas
+    BanUserInput:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: string
+        reason:
+          type: string
+          maxLength: 500
+        hide_messages:
+          type: boolean
+          default: false
+        duration_hours:
+          type: integer
+          description: Hours until ban expires. Omit for permanent.
+          minimum: 1
+          maximum: 8760
+
+    Ban:
+      type: object
+      required: [id, workspace_id, user_id, banned_by, hide_messages, created_at]
+      properties:
+        id:
+          type: string
+        workspace_id:
+          type: string
+        user_id:
+          type: string
+        banned_by:
+          type: string
+        reason:
+          type: string
+        hide_messages:
+          type: boolean
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    BanWithUser:
+      allOf:
+        - $ref: '#/components/schemas/Ban'
+        - type: object
+          properties:
+            user_display_name:
+              type: string
+            user_email:
+              type: string
+            user_avatar_url:
+              type: string
+            banned_by_name:
+              type: string
+
+    BlockWithUser:
+      type: object
+      required: [workspace_id, blocker_id, blocked_id, created_at]
+      properties:
+        workspace_id:
+          type: string
+        blocker_id:
+          type: string
+        blocked_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        display_name:
+          type: string
+        email:
+          type: string
+        avatar_url:
+          type: string
+
+    ModerationLogEntryWithActor:
+      type: object
+      required: [id, workspace_id, actor_id, action, target_type, target_id, created_at]
+      properties:
+        id:
+          type: string
+        workspace_id:
+          type: string
+        actor_id:
+          type: string
+        action:
+          type: string
+        target_type:
+          type: string
+        target_id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        actor_display_name:
+          type: string
+        actor_avatar_url:
+          type: string
+        target_display_name:
+          type: string

@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Avatar, toast } from '../ui';
 import { ThreadRepliesIndicator } from './ThreadRepliesIndicator';
 import { MessageActionBar } from './MessageActionBar';
 import { ReactionsDisplay } from './ReactionsDisplay';
+import { MessageContent } from './MessageContent';
 import { groupReactionsByEmoji, createMemberNamesMap } from './reactionUtils';
 import { useAuth, useAddReaction, useRemoveReaction, useWorkspaceMembers } from '../../hooks';
-import { useMarkMessageUnread } from '../../hooks/useMessages';
+import { useMessage, useMarkMessageUnread } from '../../hooks/useMessages';
 import { useCustomEmojiMap, useCustomEmojis } from '../../hooks/useCustomEmojis';
+import { useChannels } from '../../hooks/useChannels';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { cn, formatTime } from '../../lib/utils';
 import type { MessageWithUser } from '@enzyme/api-client';
@@ -18,6 +20,7 @@ interface SystemMessageProps {
 }
 
 export function SystemMessage({ message, channelId }: SystemMessageProps) {
+  const navigate = useNavigate();
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const customEmojiMap = useCustomEmojiMap(workspaceId);
   const { data: customEmojis } = useCustomEmojis(workspaceId);
@@ -31,6 +34,15 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
   const removeReaction = useRemoveReaction(channelId);
   const markUnread = useMarkMessageUnread(workspaceId || '');
   const { data: membersData } = useWorkspaceMembers(workspaceId);
+  const { data: channels } = useChannels(workspaceId);
+
+  // Fetch the referenced message for pin/unpin events
+  const systemEvent = message.system_event;
+  const referencedMessageId =
+    systemEvent?.event_type === 'message_pinned' || systemEvent?.event_type === 'message_unpinned'
+      ? systemEvent.message_id
+      : undefined;
+  const { data: referencedMessage } = useMessage(referencedMessageId);
 
   const memberNames = createMemberNamesMap(membersData?.members);
   const reactionGroups = groupReactionsByEmoji(message.reactions, user?.id);
@@ -55,7 +67,6 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
   };
 
   // Build the system message content
-  const systemEvent = message.system_event;
   let contentText = message.content;
 
   if (systemEvent) {
@@ -84,6 +95,12 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
         break;
       case 'channel_description_updated':
         contentText = `updated the channel description`;
+        break;
+      case 'message_pinned':
+        contentText = 'pinned a message to this channel';
+        break;
+      case 'message_unpinned':
+        contentText = 'unpinned a message from this channel';
         break;
     }
   }
@@ -134,6 +151,47 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
 
           {/* System message content - styled differently */}
           <div className="text-sm text-gray-600 italic dark:text-gray-400">{contentText}</div>
+
+          {/* Inline preview of pinned/unpinned message */}
+          {referencedMessage?.message && (
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  `/workspaces/${workspaceId}/channels/${channelId}?msg=${referencedMessage.message.id}`,
+                )
+              }
+              className="mt-1.5 block max-w-lg cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-white text-left dark:border-gray-700 dark:bg-gray-900"
+            >
+              <div className="flex">
+                <div className="w-1 flex-shrink-0 bg-blue-500" />
+                <div className="min-w-0 flex-1 px-3 py-2">
+                  <div className="flex items-center gap-1.5">
+                    <Avatar
+                      src={referencedMessage.message.user_avatar_url}
+                      gravatarSrc={referencedMessage.message.user_gravatar_url}
+                      name={referencedMessage.message.user_display_name || 'Unknown'}
+                      id={referencedMessage.message.user_id}
+                      size="xs"
+                    />
+                    <span className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                      {referencedMessage.message.user_display_name || 'Unknown'}
+                    </span>
+                  </div>
+                  {referencedMessage.message.content && (
+                    <div className="mt-1 line-clamp-3 text-sm break-words text-gray-700 dark:text-gray-300">
+                      <MessageContent
+                        content={referencedMessage.message.content}
+                        members={membersData?.members}
+                        channels={channels?.channels}
+                        customEmojiMap={customEmojiMap}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </button>
+          )}
 
           {/* Reactions */}
           <ReactionsDisplay

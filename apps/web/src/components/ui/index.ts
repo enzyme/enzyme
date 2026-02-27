@@ -31,3 +31,4 @@ export { AuthImage } from './AuthImage';
 export { DatePicker } from './DatePicker';
 export { TimeField } from './TimeField';
 export { DisclosureCaret } from './DisclosureCaret';
+export { PinOutlineIcon, PinSolidIcon } from './icons';

@@ -6,6 +6,7 @@ import {
   LinkIcon,
   EyeSlashIcon,
   PencilSquareIcon,
+  NoSymbolIcon,
 } from '@heroicons/react/24/outline';
 import { UserIcon, ChatBubbleLeftIcon } from '@heroicons/react/24/outline';
 import {
@@ -37,9 +38,11 @@ import {
   useDeleteMessage,
   useDeleteLinkPreview,
 } from '../../hooks/useMessages';
+import { usePinMessage, useUnpinMessage, useBlockUser } from '../../hooks/useModeration';
 import { useCustomEmojiMap, useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { cn, formatTime } from '../../lib/utils';
+import { PinSolidIcon } from '../ui';
 import type { MessageWithUser, ChannelWithMembership } from '@enzyme/api-client';
 
 function ClickableName({
@@ -73,9 +76,10 @@ interface MessageItemProps {
   message: MessageWithUser;
   channelId: string;
   channels?: ChannelWithMembership[];
+  isAdmin?: boolean;
 }
 
-export function MessageItem({ message, channelId, channels }: MessageItemProps) {
+export function MessageItem({ message, channelId, channels, isAdmin }: MessageItemProps) {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const customEmojiMap = useCustomEmojiMap(workspaceId);
   const { data: customEmojis } = useCustomEmojis(workspaceId);
@@ -96,6 +100,9 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
   const updateMessage = useUpdateMessage();
   const deleteMessage = useDeleteMessage();
   const deleteLinkPreview = useDeleteLinkPreview();
+  const pinMessage = usePinMessage(channelId);
+  const unpinMessage = useUnpinMessage(channelId);
+  const blockUser = useBlockUser(workspaceId || '');
   const { data: membersData } = useWorkspaceMembers(workspaceId);
   const navigate = useNavigate();
   const createDM = useCreateDM(workspaceId || '');
@@ -114,6 +121,9 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
   const isDeleted = !!message.deleted_at;
   const isEdited = !!message.edited_at;
   const isOwnMessage = user?.id === message.user_id;
+  const isPinned = !!message.pinned_at;
+  const canPin = !!isAdmin;
+  const canDelete = isOwnMessage || !!isAdmin;
 
   const handleReactionClick = (emoji: string, hasOwn: boolean) => {
     if (hasOwn) {
@@ -156,6 +166,29 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
     navigator.clipboard.writeText(url);
     toast('Link copied to clipboard', 'success');
     setShowDropdown(false);
+  };
+
+  const handleTogglePin = () => {
+    setShowDropdown(false);
+    if (isPinned) {
+      unpinMessage.mutate(message.id, {
+        onError: () => toast('Failed to unpin message', 'error'),
+      });
+    } else {
+      pinMessage.mutate(message.id, {
+        onError: () => toast('Failed to pin message', 'error'),
+      });
+    }
+  };
+
+  const handleBlockUser = async () => {
+    if (!message.user_id) return;
+    try {
+      await blockUser.mutateAsync(message.user_id);
+      toast('User blocked', 'success');
+    } catch {
+      toast('Failed to block user', 'error');
+    }
   };
 
   const handleDeleteConfirm = () => {
@@ -235,10 +268,13 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
           ? '!max-h-0 overflow-hidden bg-red-400 !py-0 opacity-0 transition-all duration-500 dark:bg-red-700'
           : isEditing
             ? 'bg-yellow-50 dark:bg-yellow-900/10'
-            : 'hover:bg-gray-100 dark:hover:bg-gray-800',
+            : isPinned
+              ? 'bg-amber-50/60 hover:bg-amber-50 dark:bg-amber-900/10 dark:hover:bg-amber-900/20'
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800',
         (showDropdown || msgCtx.isOpen) &&
           !isDeleting &&
           !isEditing &&
+          !isPinned &&
           'bg-gray-100 dark:bg-gray-800',
       )}
       style={isDeleting ? { marginTop: 0, marginBottom: 0 } : undefined}
@@ -264,6 +300,18 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
 
         {/* Content */}
         <div className="min-w-0 flex-1">
+          {/* Pinned by indicator */}
+          {isPinned && (
+            <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+              <PinSolidIcon className="h-3 w-3" />
+              <span>
+                Pinned by{' '}
+                {membersData?.members?.find((m) => m.user_id === message.pinned_by)?.display_name ??
+                  'a member'}
+              </span>
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-baseline gap-2">
             <ClickableName
@@ -373,7 +421,9 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
           showDropdown={showDropdown}
           onDropdownChange={setShowDropdown}
           onEdit={isOwnMessage ? handleStartEdit : undefined}
-          onDelete={isOwnMessage ? handleDeleteClick : undefined}
+          onDelete={canDelete ? handleDeleteClick : undefined}
+          onPin={canPin ? handleTogglePin : undefined}
+          isPinned={isPinned}
           customEmojis={customEmojis}
         />
       )}
@@ -399,12 +449,22 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
         >
           Mark Unread
         </MenuItem>
-        {isOwnMessage && (
+        {canPin && (
           <>
             <MenuSeparator />
-            <MenuItem onAction={handleStartEdit} icon={<PencilSquareIcon className="h-4 w-4" />}>
-              Edit Message
+            <MenuItem onAction={handleTogglePin} icon={<PinSolidIcon className="h-4 w-4" />}>
+              {isPinned ? 'Unpin Message' : 'Pin Message'}
             </MenuItem>
+          </>
+        )}
+        {(isOwnMessage || canDelete) && (
+          <>
+            <MenuSeparator />
+            {isOwnMessage && (
+              <MenuItem onAction={handleStartEdit} icon={<PencilSquareIcon className="h-4 w-4" />}>
+                Edit Message
+              </MenuItem>
+            )}
             <MenuItem
               onAction={handleDeleteClick}
               variant="danger"
@@ -443,6 +503,18 @@ export function MessageItem({ message, channelId, channels }: MessageItemProps) 
           >
             Send Message
           </MenuItem>
+          {!isOwnMessage && (
+            <>
+              <MenuSeparator />
+              <MenuItem
+                onAction={handleBlockUser}
+                variant="danger"
+                icon={<NoSymbolIcon className="h-4 w-4" />}
+              >
+                Block User
+              </MenuItem>
+            </>
+          )}
         </ContextMenu>
       )}
 

@@ -1,5 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
-import { PencilIcon, PhotoIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import {
+  Cog6ToothIcon,
+  UsersIcon,
+  FaceSmileIcon,
+  UserPlusIcon,
+  ShieldExclamationIcon,
+  PencilIcon,
+  PhotoIcon,
+  TrashIcon,
+  XMarkIcon,
+  NoSymbolIcon,
+} from '@heroicons/react/24/outline';
 import {
   useWorkspace,
   useWorkspaceMembers,
@@ -11,23 +22,29 @@ import {
   useCreateInvite,
 } from '../../hooks/useWorkspaces';
 import { useAuth } from '../../hooks';
-import {
-  Modal,
-  Avatar,
-  Button,
-  IconButton,
-  Spinner,
-  Tabs,
-  TabList,
-  Tab,
-  TabPanel,
-  toast,
-} from '../ui';
+import { Modal, Avatar, Button, IconButton, Spinner, toast } from '../ui';
+import { useBlocks, useBlockUser, useUnblockUser } from '../../hooks/useModeration';
 import { CustomEmojiManager } from './CustomEmojiManager';
+import { ModerationPanel } from './ModerationPanel';
 import { cn, getAvatarColor } from '../../lib/utils';
 import type { WorkspaceRole } from '@enzyme/api-client';
 
-export type WorkspaceSettingsTab = 'general' | 'members' | 'emoji' | 'invite';
+export type WorkspaceSettingsTab = 'general' | 'members' | 'emoji' | 'invite' | 'moderation';
+
+interface NavItem {
+  id: WorkspaceSettingsTab;
+  label: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  adminOnly?: boolean;
+}
+
+const navItems: NavItem[] = [
+  { id: 'general', label: 'Workspace Settings', icon: Cog6ToothIcon },
+  { id: 'members', label: 'Manage Members', icon: UsersIcon },
+  { id: 'emoji', label: 'Custom Emoji', icon: FaceSmileIcon },
+  { id: 'invite', label: 'Invite People', icon: UserPlusIcon, adminOnly: true },
+  { id: 'moderation', label: 'Moderation', icon: ShieldExclamationIcon, adminOnly: true },
+];
 
 interface WorkspaceSettingsModalProps {
   isOpen: boolean;
@@ -54,6 +71,9 @@ export function WorkspaceSettingsModal({
   const uploadIcon = useUploadWorkspaceIcon(workspaceId);
   const deleteIcon = useDeleteWorkspaceIcon(workspaceId);
   const createInvite = useCreateInvite(workspaceId);
+  const { data: blocksData } = useBlocks(workspaceId);
+  const blockUser = useBlockUser(workspaceId);
+  const unblockUser = useUnblockUser(workspaceId);
 
   const [selectedTab, setSelectedTab] = useState<WorkspaceSettingsTab>(defaultTab);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -67,6 +87,8 @@ export function WorkspaceSettingsModal({
 
   const members = membersData?.members ?? [];
   const isLoading = workspaceLoading || membersLoading;
+  const isBlockedUser = (userId: string) =>
+    blocksData?.blocks?.some((b) => b.blocked_id === userId) ?? false;
 
   // Reset state when modal opens (React-recommended "adjust state during render" pattern)
   const [prevOpen, setPrevOpen] = useState(false);
@@ -204,258 +226,330 @@ export function WorkspaceSettingsModal({
     }
   };
 
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || canManage);
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Workspace Settings" size="xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={workspace?.workspace.name || 'Workspace Settings'}
+      size="settings"
+    >
       {isLoading ? (
-        <div className="flex items-center justify-center py-8">
+        <div className="flex h-full items-center justify-center">
           <Spinner size="lg" />
         </div>
       ) : (
-        <Tabs
-          selectedKey={selectedTab}
-          onSelectionChange={(key) => setSelectedTab(key as WorkspaceSettingsTab)}
-        >
-          <TabList>
-            <Tab id="general">General</Tab>
-            <Tab id="members">Members ({members.length})</Tab>
-            <Tab id="emoji">Emoji</Tab>
-            {canManage && <Tab id="invite">Invite</Tab>}
-          </TabList>
+        <div className="flex h-full">
+          {/* Left sidebar nav */}
+          <nav className="flex w-56 flex-shrink-0 flex-col gap-1 border-r border-gray-200 p-2 dark:border-gray-700 dark:bg-gray-900">
+            {visibleNavItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setSelectedTab(item.id)}
+                className={cn(
+                  'flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-left transition-colors',
+                  selectedTab === item.id
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
+                )}
+              >
+                <item.icon className="h-4 w-4 flex-shrink-0" />
+                {item.label}
+                {item.id === 'members' && (
+                  <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">
+                    {members.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
 
-          <TabPanel id="general" className="max-h-[60vh] overflow-y-auto pt-4">
-            <div className="space-y-6">
-              {/* Workspace Icon */}
-              <div>
-                <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Workspace Icon
-                </label>
-                <div className="flex items-start gap-4">
-                  <div
-                    className={cn(
-                      'flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl',
-                      !previewUrl && !workspace?.workspace.icon_url && getAvatarColor(workspaceId),
-                    )}
-                  >
-                    {previewUrl || workspace?.workspace.icon_url ? (
-                      <img
-                        src={previewUrl || workspace?.workspace.icon_url}
-                        alt={workspace?.workspace.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-2xl font-bold text-white">
-                        {workspace?.workspace.name?.slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
+          {/* Right content area */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {selectedTab === 'general' && (
+              <div className="space-y-6">
+                {/* Workspace Icon */}
+                <div>
+                  <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Workspace Icon
+                  </label>
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={cn(
+                        'flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl',
+                        !previewUrl &&
+                          !workspace?.workspace.icon_url &&
+                          getAvatarColor(workspaceId),
+                      )}
+                    >
+                      {previewUrl || workspace?.workspace.icon_url ? (
+                        <img
+                          src={previewUrl || workspace?.workspace.icon_url}
+                          alt={workspace?.workspace.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-2xl font-bold text-white">
+                          {workspace?.workspace.name?.slice(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
 
-                  {canManage && (
-                    <div className="flex flex-col gap-2">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/gif,image/webp"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
+                    {canManage && (
+                      <div className="flex flex-col gap-2">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
 
-                      {selectedFile ? (
-                        <>
-                          <p className="mb-1 text-sm text-gray-500 dark:text-gray-400">
-                            Selected: {selectedFile.name}
-                          </p>
+                        {selectedFile ? (
+                          <>
+                            <p className="mb-1 text-sm text-gray-500 dark:text-gray-400">
+                              Selected: {selectedFile.name}
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onPress={handleUploadIcon}
+                                isLoading={uploadIcon.isPending}
+                              >
+                                <PhotoIcon className="mr-1 h-4 w-4" />
+                                Save Icon
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onPress={handleClearSelection}
+                                isDisabled={uploadIcon.isPending}
+                              >
+                                <XMarkIcon className="mr-1 h-4 w-4" />
+                                Cancel
+                              </Button>
+                            </div>
+                          </>
+                        ) : (
                           <div className="flex gap-2">
                             <Button
+                              variant="secondary"
                               size="sm"
-                              onPress={handleUploadIcon}
-                              isLoading={uploadIcon.isPending}
+                              onPress={() => fileInputRef.current?.click()}
                             >
                               <PhotoIcon className="mr-1 h-4 w-4" />
-                              Save Icon
+                              Upload Icon
                             </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onPress={handleClearSelection}
-                              isDisabled={uploadIcon.isPending}
-                            >
-                              <XMarkIcon className="mr-1 h-4 w-4" />
-                              Cancel
-                            </Button>
+                            {workspace?.workspace.icon_url && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onPress={handleRemoveIcon}
+                                isLoading={deleteIcon.isPending}
+                              >
+                                <TrashIcon className="mr-1 h-4 w-4" />
+                                Remove
+                              </Button>
+                            )}
                           </div>
-                        </>
-                      ) : (
-                        <div className="flex gap-2">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onPress={() => fileInputRef.current?.click()}
-                          >
-                            <PhotoIcon className="mr-1 h-4 w-4" />
-                            Upload Icon
-                          </Button>
-                          {workspace?.workspace.icon_url && (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onPress={handleRemoveIcon}
-                              isLoading={deleteIcon.isPending}
-                            >
-                              <TrashIcon className="mr-1 h-4 w-4" />
-                              Remove
-                            </Button>
-                          )}
-                        </div>
-                      )}
+                        )}
 
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        JPEG, PNG, GIF, or WebP. Max 5MB.
-                      </p>
-                    </div>
-                  )}
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          JPEG, PNG, GIF, or WebP. Max 5MB.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Workspace Name
-                </label>
-                {canManage && isEditingName ? (
-                  <form
-                    className="flex items-center gap-2"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleUpdateName();
-                    }}
-                  >
-                    <input
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      autoFocus
-                      className="rounded-md border border-gray-300 bg-white px-2 py-1 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    />
-                    <Button size="sm" type="submit" isLoading={updateWorkspace.isPending}>
-                      Save
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      type="button"
-                      onPress={() => setIsEditingName(false)}
-                      isDisabled={updateWorkspace.isPending}
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Workspace Name
+                  </label>
+                  {canManage && isEditingName ? (
+                    <form
+                      className="flex items-center gap-2"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleUpdateName();
+                      }}
                     >
-                      Cancel
-                    </Button>
-                  </form>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <p className="text-gray-900 dark:text-white">{workspace?.workspace.name}</p>
-                    {canManage && (
-                      <IconButton
-                        aria-label="Edit workspace name"
-                        size="xs"
-                        onPress={() => {
-                          setEditName(workspace?.workspace.name || '');
-                          setIsEditingName(true);
-                        }}
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </IconButton>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Workspace ID
-                </label>
-                <p className="text-gray-900 dark:text-white">{workspace?.workspace.id}</p>
-              </div>
-            </div>
-          </TabPanel>
-
-          <TabPanel id="members" className="max-h-[60vh] overflow-y-auto pt-4">
-            <div className="space-y-4">
-              {members.map((member) => (
-                <div
-                  key={member.user_id}
-                  className="flex items-center justify-between rounded-lg bg-gray-50 p-4 dark:bg-gray-800"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar
-                      src={member.avatar_url}
-                      gravatarSrc={member.gravatar_url}
-                      name={member.display_name || 'User'}
-                      id={member.user_id}
-                      size="md"
-                    />
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {member.display_name}
-                        {member.user_id === user?.id && (
-                          <span className="ml-2 text-xs text-gray-500">(you)</span>
-                        )}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{member.email}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    {canManage ? (
-                      member.role === 'owner' ? (
-                        <span className="rounded bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 capitalize dark:bg-yellow-900/30 dark:text-yellow-400">
-                          Owner
-                        </span>
-                      ) : (
-                        <select
-                          value={member.role}
-                          onChange={(e) =>
-                            handleRoleChange(member.user_id, e.target.value as WorkspaceRole)
-                          }
-                          disabled={member.user_id === user?.id}
-                          className="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        >
-                          <option value="admin">Admin</option>
-                          <option value="member">Member</option>
-                        </select>
-                      )
-                    ) : (
-                      <span
-                        className={cn(
-                          'rounded px-2 py-0.5 text-xs font-medium capitalize',
-                          member.role === 'owner'
-                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                            : member.role === 'admin'
-                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
-                        )}
-                      >
-                        {member.role}
-                      </span>
-                    )}
-
-                    {canManage && member.user_id !== user?.id && (
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        autoFocus
+                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      />
+                      <Button size="sm" type="submit" isLoading={updateWorkspace.isPending}>
+                        Save
+                      </Button>
                       <Button
                         variant="secondary"
                         size="sm"
-                        onPress={() => handleRemoveMember(member.user_id)}
+                        type="button"
+                        onPress={() => setIsEditingName(false)}
+                        isDisabled={updateWorkspace.isPending}
                       >
-                        Remove
+                        Cancel
                       </Button>
-                    )}
-                  </div>
+                    </form>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-gray-900 dark:text-white">{workspace?.workspace.name}</p>
+                      {canManage && (
+                        <IconButton
+                          aria-label="Edit workspace name"
+                          size="xs"
+                          onPress={() => {
+                            setEditName(workspace?.workspace.name || '');
+                            setIsEditingName(true);
+                          }}
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </IconButton>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          </TabPanel>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Workspace ID
+                  </label>
+                  <p className="text-gray-900 dark:text-white">{workspace?.workspace.id}</p>
+                </div>
+              </div>
+            )}
 
-          <TabPanel id="emoji" className="max-h-[60vh] overflow-y-auto pt-4">
-            <CustomEmojiManager workspaceId={workspaceId} />
-          </TabPanel>
+            {selectedTab === 'members' && (
+              <div className="space-y-4">
+                {members.map((member) => (
+                  <div
+                    key={member.user_id}
+                    className="flex items-center justify-between rounded-lg bg-gray-50 p-4 dark:bg-gray-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        src={member.avatar_url}
+                        gravatarSrc={member.gravatar_url}
+                        name={member.display_name || 'User'}
+                        id={member.user_id}
+                        size="md"
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {member.display_name}
+                          {member.user_id === user?.id && (
+                            <span className="ml-2 text-xs text-gray-500">(you)</span>
+                          )}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{member.email}</p>
+                      </div>
+                    </div>
 
-          {canManage && (
-            <TabPanel id="invite" className="max-h-[60vh] overflow-y-auto pt-4">
+                    <div className="flex items-center gap-3">
+                      {member.is_banned ? (
+                        canManage ? (
+                          <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                            Banned
+                          </span>
+                        ) : (
+                          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                            Deactivated
+                          </span>
+                        )
+                      ) : (
+                        <>
+                          {canManage ? (
+                            member.role === 'owner' ? (
+                              <span className="rounded bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 capitalize dark:bg-yellow-900/30 dark:text-yellow-400">
+                                Owner
+                              </span>
+                            ) : (
+                              <select
+                                value={member.role}
+                                onChange={(e) =>
+                                  handleRoleChange(member.user_id, e.target.value as WorkspaceRole)
+                                }
+                                disabled={member.user_id === user?.id}
+                                className="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                              >
+                                <option value="admin">Admin</option>
+                                <option value="member">Member</option>
+                              </select>
+                            )
+                          ) : (
+                            <span
+                              className={cn(
+                                'rounded px-2 py-0.5 text-xs font-medium capitalize',
+                                member.role === 'owner'
+                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                  : member.role === 'admin'
+                                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+                              )}
+                            >
+                              {member.role}
+                            </span>
+                          )}
+
+                          {canManage && member.user_id !== user?.id && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onPress={() => handleRemoveMember(member.user_id)}
+                            >
+                              Remove
+                            </Button>
+                          )}
+
+                          {member.user_id !== user?.id &&
+                            (isBlockedUser(member.user_id) ? (
+                              <>
+                                <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                  Blocked
+                                </span>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onPress={() =>
+                                    unblockUser.mutate(member.user_id, {
+                                      onError: () => toast('Failed to unblock user', 'error'),
+                                    })
+                                  }
+                                >
+                                  Unblock
+                                </Button>
+                              </>
+                            ) : (
+                              member.role !== 'owner' &&
+                              member.role !== 'admin' && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onPress={() =>
+                                    blockUser.mutate(member.user_id, {
+                                      onError: () => toast('Failed to block user', 'error'),
+                                    })
+                                  }
+                                >
+                                  <NoSymbolIcon className="mr-1 h-4 w-4" />
+                                  Block
+                                </Button>
+                              )
+                            ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedTab === 'emoji' && <CustomEmojiManager workspaceId={workspaceId} />}
+
+            {selectedTab === 'invite' && canManage && (
               <div className="space-y-6 rounded-lg bg-gray-50 p-6 dark:bg-gray-800">
                 <p className="text-gray-600 dark:text-gray-300">
                   Create an invite link to share with people you want to join this workspace.
@@ -516,9 +610,13 @@ export function WorkspaceSettingsModal({
                   </div>
                 )}
               </div>
-            </TabPanel>
-          )}
-        </Tabs>
+            )}
+
+            {selectedTab === 'moderation' && canManage && (
+              <ModerationPanel workspaceId={workspaceId} />
+            )}
+          </div>
+        </div>
       )}
     </Modal>
   );

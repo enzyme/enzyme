@@ -889,3 +889,43 @@ func ComputeDMHash(userIDs []string) string {
 func isUniqueConstraintError(err error) bool {
 	return err != nil && (strings.Contains(err.Error(), "UNIQUE constraint failed") || strings.Contains(err.Error(), "duplicate key"))
 }
+
+// RemoveAllNonDMMemberships removes all channel memberships for a user in a workspace,
+// except DM and group DM channels. Returns the list of channel IDs removed from.
+// Used during ban to revoke all channel access while preserving DM history.
+func (r *Repository) RemoveAllNonDMMemberships(ctx context.Context, tx *sql.Tx, userID, workspaceID string) ([]string, error) {
+	// Find all non-DM channel memberships for this user in this workspace
+	rows, err := tx.QueryContext(ctx, `
+		SELECT cm.channel_id FROM channel_memberships cm
+		JOIN channels c ON c.id = cm.channel_id
+		WHERE cm.user_id = ? AND c.workspace_id = ? AND c.type NOT IN ('dm', 'group_dm')
+	`, userID, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var channelIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		channelIDs = append(channelIDs, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Delete the memberships
+	_, err = tx.ExecContext(ctx, `
+		DELETE FROM channel_memberships WHERE user_id = ? AND channel_id IN (
+			SELECT c.id FROM channels c WHERE c.workspace_id = ? AND c.type NOT IN ('dm', 'group_dm')
+		)
+	`, userID, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	return channelIDs, nil
+}

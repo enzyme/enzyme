@@ -107,6 +107,8 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { closeThread } = useThreadPanel();
+  const { workspaces } = useAuth();
+  const isBanned = !!workspaces?.find((w) => w.id === workspaceId)?.ban;
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useThreadMessages(messageId);
   const { data: membersData } = useWorkspaceMembers(workspaceId);
@@ -305,7 +307,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
         )}
 
         {/* Reply composer - flows after thread messages */}
-        {parentMessage && workspaceId && (
+        {!isBanned && parentMessage && workspaceId && (
           <MessageComposer
             ref={composerRef}
             channelId={parentMessage.channel_id}

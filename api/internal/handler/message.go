@@ -16,6 +16,7 @@ import (
 	"github.com/enzyme/api/internal/gravatar"
 	"github.com/enzyme/api/internal/linkpreview"
 	"github.com/enzyme/api/internal/message"
+	"github.com/enzyme/api/internal/moderation"
 	"github.com/enzyme/api/internal/notification"
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/sse"
@@ -34,6 +35,13 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 	ch, err := h.channelRepo.GetByID(ctx, string(request.Id))
 	if err != nil {
 		return nil, err
+	}
+
+	// Ban check required here because this route uses channel ID, not workspace ID,
+	// so the ban middleware cannot intercept it.
+	ban, _ := h.moderationRepo.GetActiveBan(ctx, ch.WorkspaceID, userID)
+	if ban != nil {
+		return openapi.SendMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("You are banned from this workspace")}, nil
 	}
 
 	// Check channel is not archived
@@ -134,6 +142,33 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 	var originalMentions []string
 	if h.notificationService != nil && content != "" {
 		mentions, _ = notification.ParseMentions(ctx, h.userRepo, ch.WorkspaceID, content)
+
+		// Strip mentions of blocked users in either direction (workspace-scoped)
+		if len(mentions) > 0 {
+			// Batch-fetch block relationships to avoid N+1 queries
+			blockedByMe, err := h.moderationRepo.GetBlockedUserIDs(ctx, ch.WorkspaceID, userID)
+			if err != nil {
+				slog.Error("failed to get blocked user IDs for mention filtering", "error", err)
+				blockedByMe = nil
+			}
+			blockingMe, err := h.moderationRepo.GetUsersWhoBlocked(ctx, ch.WorkspaceID, userID)
+			if err != nil {
+				slog.Error("failed to get users who blocked sender for mention filtering", "error", err)
+				blockingMe = nil
+			}
+			var filtered []string
+			for _, mentionID := range mentions {
+				if notification.IsSpecialMention(mentionID) {
+					filtered = append(filtered, mentionID)
+					continue
+				}
+				if !blockedByMe[mentionID] && !blockingMe[mentionID] {
+					filtered = append(filtered, mentionID)
+				}
+			}
+			mentions = filtered
+		}
+
 		originalMentions = mentions
 
 		// Resolve @here to online user IDs for storage (badge count accuracy)
@@ -211,10 +246,29 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 
 	// Broadcast message via SSE (use API type to include attachment URLs)
 	if h.hub != nil {
-		h.hub.BroadcastToChannel(ch.WorkspaceID, string(request.Id), sse.Event{
-			Type: sse.EventMessageNew,
-			Data: apiMsg,
-		})
+		if ch.Type == channel.TypeDM || ch.Type == channel.TypeGroupDM {
+			// For DM channels, skip delivery to users who have blocked the sender (batch lookup)
+			memberIDs, _ := h.channelRepo.GetMemberUserIDs(ctx, string(request.Id))
+			usersWhoBlockedSender, err := h.moderationRepo.GetUsersWhoBlocked(ctx, ch.WorkspaceID, userID)
+			if err != nil {
+				slog.Error("failed to get block list for SSE filtering", "error", err)
+				usersWhoBlockedSender = nil
+			}
+			for _, memberID := range memberIDs {
+				if memberID != userID && usersWhoBlockedSender[memberID] {
+					continue
+				}
+				h.hub.BroadcastToUser(ch.WorkspaceID, memberID, sse.Event{
+					Type: sse.EventMessageNew,
+					Data: apiMsg,
+				})
+			}
+		} else {
+			h.hub.BroadcastToChannel(ch.WorkspaceID, string(request.Id), sse.Event{
+				Type: sse.EventMessageNew,
+				Data: apiMsg,
+			})
+		}
 	}
 
 	// Trigger notifications
@@ -293,7 +347,8 @@ func (h *Handler) ListMessages(ctx context.Context, request openapi.ListMessages
 		}
 	}
 
-	result, err := h.messageRepo.List(ctx, string(request.Id), opts)
+	filter := &moderation.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
+	result, err := h.messageRepo.List(ctx, string(request.Id), opts, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -317,6 +372,18 @@ func (h *Handler) UpdateMessage(ctx context.Context, request openapi.UpdateMessa
 	msg, err := h.messageRepo.GetByID(ctx, string(request.Id))
 	if err != nil {
 		return nil, err
+	}
+
+	// Ban check required here because this route uses channel ID, not workspace ID,
+	// so the ban middleware cannot intercept it.
+	{
+		ch, err := h.channelRepo.GetByID(ctx, msg.ChannelID)
+		if err == nil {
+			ban, _ := h.moderationRepo.GetActiveBan(ctx, ch.WorkspaceID, userID)
+			if ban != nil {
+				return openapi.UpdateMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("You are banned from this workspace")}, nil
+			}
+		}
 	}
 
 	// Can't edit system messages
@@ -449,8 +516,19 @@ func (h *Handler) DeleteMessage(ctx context.Context, request openapi.DeleteMessa
 		return openapi.DeleteMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Permission denied")}, nil
 	}
 
+	// Capture content before deletion for audit log (only for admin delete)
+	isAdminDelete := msg.UserID == nil || *msg.UserID != userID
+
 	if err := h.messageRepo.Delete(ctx, string(request.Id)); err != nil {
 		return nil, err
+	}
+
+	// Audit log: admin message delete (when actor != author)
+	if isAdminDelete {
+		_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, ch.WorkspaceID, userID, "message.deleted", "message", string(request.Id), map[string]interface{}{
+			"channel_id":       msg.ChannelID,
+			"original_content": msg.Content,
+		})
 	}
 
 	// Broadcast delete via SSE
@@ -527,6 +605,12 @@ func (h *Handler) AddReaction(ctx context.Context, request openapi.AddReactionRe
 	ch, err := h.channelRepo.GetByID(ctx, msg.ChannelID)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if user is banned from the workspace
+	ban, _ := h.moderationRepo.GetActiveBan(ctx, ch.WorkspaceID, userID)
+	if ban != nil {
+		return openapi.AddReaction403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("You are banned from this workspace")}, nil
 	}
 
 	_, err = h.channelRepo.GetMembership(ctx, userID, msg.ChannelID)
@@ -644,7 +728,8 @@ func (h *Handler) ListThread(ctx context.Context, request openapi.ListThreadRequ
 		}
 	}
 
-	result, err := h.messageRepo.ListThread(ctx, string(request.Id), opts)
+	filter := &moderation.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
+	result, err := h.messageRepo.ListThread(ctx, string(request.Id), opts, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -697,7 +782,8 @@ func (h *Handler) SearchMessages(ctx context.Context, request openapi.SearchMess
 		opts.Offset = *request.Body.Offset
 	}
 
-	result, err := h.messageRepo.Search(ctx, string(request.Wid), userID, opts)
+	filter := &moderation.FilterOptions{WorkspaceID: string(request.Wid), RequestingUserID: userID}
+	result, err := h.messageRepo.Search(ctx, string(request.Wid), userID, opts, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -764,6 +850,8 @@ func messageWithUserToAPI(m *message.MessageWithUser) openapi.MessageWithUser {
 		LastReplyAt:    m.LastReplyAt,
 		EditedAt:       m.EditedAt,
 		DeletedAt:      m.DeletedAt,
+		PinnedAt:       m.PinnedAt,
+		PinnedBy:       m.PinnedBy,
 		CreatedAt:      m.CreatedAt,
 		UpdatedAt:      m.UpdatedAt,
 	}
@@ -795,6 +883,9 @@ func messageWithUserToAPI(m *message.MessageWithUser) openapi.MessageWithUser {
 		}
 		if m.SystemEvent.ChannelType != nil {
 			apiMsg.SystemEvent.ChannelType = m.SystemEvent.ChannelType
+		}
+		if m.SystemEvent.MessageID != nil {
+			apiMsg.SystemEvent.MessageId = m.SystemEvent.MessageID
 		}
 	}
 	if m.UserDisplayName != "" {
@@ -1286,7 +1377,8 @@ func (h *Handler) GetMessage(ctx context.Context, request openapi.GetMessageRequ
 	}
 
 	// Load reactions for the message
-	reactions, err := h.messageRepo.GetReactionsForMessage(ctx, msgWithUser.ID)
+	filter := &moderation.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
+	reactions, err := h.messageRepo.GetReactionsForMessage(ctx, msgWithUser.ID, filter)
 	if err == nil {
 		msgWithUser.Reactions = reactions
 	}
@@ -1305,7 +1397,7 @@ func (h *Handler) GetMessage(ctx context.Context, request openapi.GetMessageRequ
 
 	// Load thread participants if this is a parent message with replies
 	if msgWithUser.ReplyCount > 0 {
-		participants, err := h.messageRepo.GetThreadParticipants(ctx, msgWithUser.ID)
+		participants, err := h.messageRepo.GetThreadParticipants(ctx, msgWithUser.ID, filter)
 		if err == nil {
 			msgWithUser.ThreadParticipants = participants
 		}
@@ -1378,5 +1470,242 @@ func (h *Handler) MarkMessageUnread(ctx context.Context, request openapi.MarkMes
 
 	return openapi.MarkMessageUnread200JSONResponse{
 		Success: true,
+	}, nil
+}
+
+// PinMessage pins a message in its channel
+func (h *Handler) PinMessage(ctx context.Context, request openapi.PinMessageRequestObject) (openapi.PinMessageResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.PinMessage401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+	}
+
+	msg, err := h.messageRepo.GetByID(ctx, string(request.Id))
+	if err != nil {
+		return openapi.PinMessage404JSONResponse{NotFoundJSONResponse: notFoundResponse("Message not found")}, nil
+	}
+
+	// Reject if message is deleted
+	if msg.DeletedAt != nil {
+		return openapi.PinMessage400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Cannot pin a deleted message")}, nil
+	}
+
+	// Already pinned
+	if msg.PinnedAt != nil {
+		return openapi.PinMessage400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Message is already pinned")}, nil
+	}
+
+	ch, err := h.channelRepo.GetByID(ctx, msg.ChannelID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check permission: channel member who can post, or workspace admin for public channels
+	membership, memberErr := h.channelRepo.GetMembership(ctx, userID, msg.ChannelID)
+	if memberErr != nil {
+		// Not a channel member — check if workspace admin for public channels
+		if ch.Type == channel.TypePublic {
+			wsMembership, wsErr := h.workspaceRepo.GetMembership(ctx, userID, ch.WorkspaceID)
+			if wsErr != nil || !workspace.CanManageMembers(wsMembership.Role) {
+				return openapi.PinMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Permission denied")}, nil
+			}
+		} else {
+			return openapi.PinMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Permission denied")}, nil
+		}
+	} else if !channel.CanPost(membership.ChannelRole) {
+		return openapi.PinMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Permission denied")}, nil
+	}
+
+	// Pin (enforces 50-pin limit in transaction)
+	if err := h.messageRepo.PinMessage(ctx, string(request.Id), userID); err != nil {
+		if err.Error() == "maximum of 50 pinned messages per channel" {
+			return openapi.PinMessage400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, err.Error())}, nil
+		}
+		return nil, err
+	}
+
+	// Get the user info for system message
+	actor, _ := h.userRepo.GetByID(ctx, userID)
+	actorName := "Someone"
+	if actor != nil {
+		actorName = actor.DisplayName
+	}
+
+	// Create system message
+	sysMsg, _ := h.messageRepo.CreateSystemMessage(ctx, msg.ChannelID, &message.SystemEventData{
+		EventType:       message.SystemEventMessagePinned,
+		UserID:          userID,
+		UserDisplayName: actorName,
+		ChannelName:     ch.Name,
+		MessageID:       &msg.ID,
+	})
+
+	// Return updated message
+	updatedMsg, err := h.messageRepo.GetByIDWithUser(ctx, string(request.Id))
+	if err != nil {
+		return nil, err
+	}
+	apiMsg := messageWithUserToAPI(updatedMsg)
+
+	// Broadcast SSE events
+	if h.hub != nil {
+		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
+			Type: sse.EventMessagePinned,
+			Data: apiMsg,
+		})
+
+		// Broadcast system message
+		if sysMsg != nil {
+			sysMsgWithUser, _ := h.messageRepo.GetByIDWithUser(ctx, sysMsg.ID)
+			if sysMsgWithUser != nil {
+				h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
+					Type: sse.EventMessageNew,
+					Data: messageWithUserToAPI(sysMsgWithUser),
+				})
+			}
+		}
+	}
+
+	return openapi.PinMessage200JSONResponse{Message: &apiMsg}, nil
+}
+
+// UnpinMessage unpins a message
+func (h *Handler) UnpinMessage(ctx context.Context, request openapi.UnpinMessageRequestObject) (openapi.UnpinMessageResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.UnpinMessage401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+	}
+
+	msg, err := h.messageRepo.GetByID(ctx, string(request.Id))
+	if err != nil {
+		return openapi.UnpinMessage404JSONResponse{NotFoundJSONResponse: notFoundResponse("Message not found")}, nil
+	}
+
+	// Not pinned
+	if msg.PinnedAt == nil {
+		return openapi.UnpinMessage404JSONResponse{NotFoundJSONResponse: notFoundResponse("Message is not pinned")}, nil
+	}
+
+	ch, err := h.channelRepo.GetByID(ctx, msg.ChannelID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check permission: same as pin
+	membership, memberErr := h.channelRepo.GetMembership(ctx, userID, msg.ChannelID)
+	if memberErr != nil {
+		if ch.Type == channel.TypePublic {
+			wsMembership, wsErr := h.workspaceRepo.GetMembership(ctx, userID, ch.WorkspaceID)
+			if wsErr != nil || !workspace.CanManageMembers(wsMembership.Role) {
+				return openapi.UnpinMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Permission denied")}, nil
+			}
+		} else {
+			return openapi.UnpinMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Permission denied")}, nil
+		}
+	} else if !channel.CanPost(membership.ChannelRole) {
+		return openapi.UnpinMessage403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Permission denied")}, nil
+	}
+
+	if err := h.messageRepo.UnpinMessage(ctx, string(request.Id)); err != nil {
+		return nil, err
+	}
+
+	// Get the user info for system message
+	actor, _ := h.userRepo.GetByID(ctx, userID)
+	actorName := "Someone"
+	if actor != nil {
+		actorName = actor.DisplayName
+	}
+
+	// Create system message
+	sysMsg, _ := h.messageRepo.CreateSystemMessage(ctx, msg.ChannelID, &message.SystemEventData{
+		EventType:       message.SystemEventMessageUnpinned,
+		UserID:          userID,
+		UserDisplayName: actorName,
+		ChannelName:     ch.Name,
+		MessageID:       &msg.ID,
+	})
+
+	// Return updated message
+	updatedMsg, err := h.messageRepo.GetByIDWithUser(ctx, string(request.Id))
+	if err != nil {
+		return nil, err
+	}
+	apiMsg := messageWithUserToAPI(updatedMsg)
+
+	// Broadcast SSE event
+	if h.hub != nil {
+		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
+			Type: sse.EventMessageUnpinned,
+			Data: apiMsg,
+		})
+
+		// Broadcast system message
+		if sysMsg != nil {
+			sysMsgWithUser, _ := h.messageRepo.GetByIDWithUser(ctx, sysMsg.ID)
+			if sysMsgWithUser != nil {
+				h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
+					Type: sse.EventMessageNew,
+					Data: messageWithUserToAPI(sysMsgWithUser),
+				})
+			}
+		}
+	}
+
+	return openapi.UnpinMessage200JSONResponse{Message: &apiMsg}, nil
+}
+
+// ListPinnedMessages lists pinned messages in a channel
+func (h *Handler) ListPinnedMessages(ctx context.Context, request openapi.ListPinnedMessagesRequestObject) (openapi.ListPinnedMessagesResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.ListPinnedMessages401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
+	}
+
+	ch, err := h.channelRepo.GetByID(ctx, string(request.Id))
+	if err != nil {
+		return openapi.ListPinnedMessages404JSONResponse{NotFoundJSONResponse: notFoundResponse("Channel not found")}, nil
+	}
+
+	// Check channel membership
+	_, memberErr := h.channelRepo.GetMembership(ctx, userID, string(request.Id))
+	if memberErr != nil {
+		// For public channels, check workspace membership
+		if ch.Type == channel.TypePublic {
+			_, wsErr := h.workspaceRepo.GetMembership(ctx, userID, ch.WorkspaceID)
+			if wsErr != nil {
+				return openapi.ListPinnedMessages403JSONResponse{ForbiddenJSONResponse: notAMemberResponse("Not a member")}, nil
+			}
+		} else {
+			return openapi.ListPinnedMessages403JSONResponse{ForbiddenJSONResponse: notAMemberResponse("Not a member")}, nil
+		}
+	}
+
+	cursor := ""
+	limit := 50
+	if request.Body != nil {
+		if request.Body.Cursor != nil {
+			cursor = *request.Body.Cursor
+		}
+		if request.Body.Limit != nil {
+			limit = *request.Body.Limit
+		}
+	}
+
+	filter := &moderation.FilterOptions{WorkspaceID: ch.WorkspaceID, RequestingUserID: userID}
+	messages, hasMore, nextCursor, err := h.messageRepo.ListPinnedMessages(ctx, string(request.Id), cursor, limit, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	apiMessages := make([]openapi.MessageWithUser, len(messages))
+	for i, m := range messages {
+		apiMessages[i] = messageWithUserToAPI(&m)
+	}
+
+	return openapi.ListPinnedMessages200JSONResponse{
+		Messages:   &apiMessages,
+		HasMore:    &hasMore,
+		NextCursor: &nextCursor,
 	}, nil
 }

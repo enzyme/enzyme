@@ -16,6 +16,7 @@ import (
 	"github.com/enzyme/api/internal/file"
 	"github.com/enzyme/api/internal/linkpreview"
 	"github.com/enzyme/api/internal/message"
+	"github.com/enzyme/api/internal/moderation"
 	"github.com/enzyme/api/internal/notification"
 	"github.com/enzyme/api/internal/signing"
 	"github.com/enzyme/api/internal/sse"
@@ -50,6 +51,8 @@ func testHandler(t *testing.T) (*Handler, *sql.DB) {
 	notifPendingRepo := notification.NewPendingRepository(db)
 	notifService := notification.NewService(notifPrefsRepo, notifPendingRepo, channelRepo, hub)
 
+	moderationRepo := moderation.NewRepository(db)
+
 	h := New(Dependencies{
 		AuthService:         authService,
 		SessionStore:        sessionStore,
@@ -60,6 +63,7 @@ func testHandler(t *testing.T) (*Handler, *sql.DB) {
 		FileRepo:            fileRepo,
 		ThreadRepo:          threadRepo,
 		EmojiRepo:           emojiRepo,
+		ModerationRepo:      moderationRepo,
 		NotificationService: notifService,
 		Hub:                 hub,
 		Signer:              signing.NewSigner("test-signing-secret"),
@@ -171,6 +175,7 @@ func testHandlerWithLinkPreviews(t *testing.T, httpClient *http.Client) (*Handle
 
 	lpRepo := linkpreview.NewRepository(db)
 	lpFetcher := linkpreview.NewFetcherWithClient(lpRepo, httpClient)
+	moderationRepo := moderation.NewRepository(db)
 
 	h := New(Dependencies{
 		AuthService:         authService,
@@ -184,6 +189,7 @@ func testHandlerWithLinkPreviews(t *testing.T, httpClient *http.Client) (*Handle
 		LinkPreviewFetcher:  lpFetcher,
 		ThreadRepo:          threadRepo,
 		EmojiRepo:           emojiRepo,
+		ModerationRepo:      moderationRepo,
 		NotificationService: notifService,
 		Hub:                 hub,
 		Signer:              signing.NewSigner("test-signing-secret"),

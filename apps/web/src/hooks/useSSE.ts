@@ -43,6 +43,11 @@ export function useSSE(workspaceId: string | undefined) {
       setIsConnected(false);
     });
 
+    // Handle 403 — stop reconnecting and refresh auth state
+    connection.setOnForbidden(() => {
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+    });
+
     // Handle connected event
     connection.on('connected', () => {
       setHasBeenConnected(true);
@@ -485,6 +490,81 @@ export function useSSE(workspaceId: string | undefined) {
     connection.on('scheduled_message.failed', () => {
       queryClient.invalidateQueries({ queryKey: ['scheduled-messages', workspaceId] });
       toast('A scheduled message failed to send', 'error');
+    });
+
+    // Handle message pinned
+    connection.on('message.pinned', (event) => {
+      const message = event.data;
+      queryClient.setQueriesData(
+        { queryKey: ['messages'] },
+        (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
+          if (!old) return old;
+          let changed = false;
+          const pages = old.pages.map((page) => {
+            if (!page.messages.some((m) => m.id === message.id)) return page;
+            changed = true;
+            return {
+              ...page,
+              messages: page.messages.map((m) =>
+                m.id === message.id
+                  ? { ...m, pinned_at: message.pinned_at, pinned_by: message.pinned_by }
+                  : m,
+              ),
+            };
+          });
+          return changed ? { ...old, pages } : old;
+        },
+      );
+      queryClient.invalidateQueries({ queryKey: ['pinned-messages'] });
+    });
+
+    // Handle message unpinned
+    connection.on('message.unpinned', (event) => {
+      const message = event.data;
+      queryClient.setQueriesData(
+        { queryKey: ['messages'] },
+        (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
+          if (!old) return old;
+          let changed = false;
+          const pages = old.pages.map((page) => {
+            if (!page.messages.some((m) => m.id === message.id)) return page;
+            changed = true;
+            return {
+              ...page,
+              messages: page.messages.map((m) =>
+                m.id === message.id ? { ...m, pinned_at: undefined, pinned_by: undefined } : m,
+              ),
+            };
+          });
+          return changed ? { ...old, pages } : old;
+        },
+      );
+      queryClient.invalidateQueries({ queryKey: ['pinned-messages'] });
+    });
+
+    // Handle member banned
+    connection.on('member.banned', (event) => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'bans'] });
+
+      // If the current user was banned, refresh auth state to pick up the ban field
+      const authData = queryClient.getQueryData<{ user?: { id: string } }>(['auth', 'me']);
+      if (authData?.user?.id === event.data.user_id) {
+        queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+      }
+    });
+
+    // Handle member unbanned
+    connection.on('member.unbanned', (event) => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'bans'] });
+
+      // If the current user was unbanned, refresh auth state to clear the ban field
+      const authData = queryClient.getQueryData<{ user?: { id: string } }>(['auth', 'me']);
+      if (authData?.user?.id === event.data.user_id) {
+        queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+        toast('You have been unbanned', 'success');
+      }
     });
 
     // Handle typing events

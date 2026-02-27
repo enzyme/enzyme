@@ -10,7 +10,8 @@ import {
   WorkspaceSettingsModal,
   type WorkspaceSettingsTab,
 } from '../settings/WorkspaceSettingsModal';
-import { useSSE } from '../../hooks';
+import { BanScreen } from '../moderation/BanModal';
+import { useSSE, useAuth } from '../../hooks';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { useSidebar } from '../../hooks/useSidebar';
 import { cn } from '../../lib/utils';
@@ -19,6 +20,8 @@ import { recordChannelVisit } from '../../lib/recentChannels';
 export function AppLayout() {
   const { workspaceId, channelId } = useParams<{ workspaceId: string; channelId: string }>();
   const { isReconnecting } = useSSE(workspaceId);
+  const { workspaces } = useAuth();
+  const currentWorkspace = workspaces?.find((ws) => ws.id === workspaceId);
   const { threadId } = useThreadPanel();
   const { profileUserId } = useProfilePanel();
   const { collapsed: sidebarCollapsed } = useSidebar();
@@ -90,64 +93,74 @@ export function AppLayout() {
         {/* Workspace Switcher */}
         <WorkspaceSwitcher onOpenWorkspaceSettings={handleOpenWorkspaceSettings} />
 
-        {/* Channel Sidebar */}
-        <div
-          className={cn(
-            'flex-shrink-0 border-r border-gray-200 transition-all dark:border-gray-700',
-            sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-64',
-          )}
-        >
-          <ChannelSidebar
-            workspaceId={workspaceId}
-            onSearchClick={() => setIsCommandPaletteOpen(true)}
-            onOpenWorkspaceSettings={handleOpenWorkspaceSettings}
-            onCreateChannel={handleCreateChannel}
-            onNewDM={handleNewDM}
-            isCreateModalOpen={isCreateModalOpen}
-            onCloseCreateModal={() => setIsCreateModalOpen(false)}
-            isNewDMModalOpen={isNewDMModalOpen}
-            onCloseNewDMModal={() => setIsNewDMModalOpen(false)}
-          />
-        </div>
+        {currentWorkspace?.ban ? (
+          <BanScreen workspace={currentWorkspace} />
+        ) : (
+          <>
+            {/* Channel Sidebar */}
+            <div
+              className={cn(
+                'flex-shrink-0 border-r border-gray-200 transition-all dark:border-gray-700',
+                sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-64',
+              )}
+            >
+              <ChannelSidebar
+                workspaceId={workspaceId}
+                onSearchClick={() => setIsCommandPaletteOpen(true)}
+                onOpenWorkspaceSettings={handleOpenWorkspaceSettings}
+                onCreateChannel={handleCreateChannel}
+                onNewDM={handleNewDM}
+                isCreateModalOpen={isCreateModalOpen}
+                onCloseCreateModal={() => setIsCreateModalOpen(false)}
+                isNewDMModalOpen={isNewDMModalOpen}
+                onCloseNewDMModal={() => setIsNewDMModalOpen(false)}
+              />
+            </div>
 
-        {/* Main Content */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Outlet />
-        </div>
+            {/* Main Content */}
+            <div className="flex min-w-0 flex-1 flex-col">
+              <Outlet />
+            </div>
 
-        {/* Thread Panel */}
-        {threadId && !profileUserId && <ThreadPanel messageId={threadId} />}
+            {/* Thread Panel */}
+            {threadId && !profileUserId && <ThreadPanel messageId={threadId} />}
 
-        {/* Profile Pane */}
-        {profileUserId && <ProfilePane userId={profileUserId} />}
+            {/* Profile Pane */}
+            {profileUserId && <ProfilePane userId={profileUserId} />}
+          </>
+        )}
       </div>
 
-      {/* Command Palette */}
-      <CommandPalette
-        isOpen={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
-        onOpenSearch={handleOpenSearch}
-        onCreateChannel={handleCreateChannel}
-        onNewDM={handleNewDM}
-        onOpenWorkspaceSettings={handleOpenWorkspaceSettings}
-      />
+      {!currentWorkspace?.ban && (
+        <>
+          {/* Command Palette */}
+          <CommandPalette
+            isOpen={isCommandPaletteOpen}
+            onClose={() => setIsCommandPaletteOpen(false)}
+            onOpenSearch={handleOpenSearch}
+            onCreateChannel={handleCreateChannel}
+            onNewDM={handleNewDM}
+            onOpenWorkspaceSettings={handleOpenWorkspaceSettings}
+          />
 
-      {/* Search Modal */}
-      <SearchModal
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        initialChannelId={channelId}
-        initialQuery={searchInitialQuery}
-      />
+          {/* Search Modal */}
+          <SearchModal
+            isOpen={isSearchOpen}
+            onClose={() => setIsSearchOpen(false)}
+            initialChannelId={channelId}
+            initialQuery={searchInitialQuery}
+          />
 
-      {/* Workspace Settings Modal */}
-      {settingsWorkspaceId && (
-        <WorkspaceSettingsModal
-          isOpen={isWorkspaceSettingsOpen}
-          onClose={() => setIsWorkspaceSettingsOpen(false)}
-          workspaceId={settingsWorkspaceId}
-          defaultTab={workspaceSettingsTab}
-        />
+          {/* Workspace Settings Modal */}
+          {settingsWorkspaceId && (
+            <WorkspaceSettingsModal
+              isOpen={isWorkspaceSettingsOpen}
+              onClose={() => setIsWorkspaceSettingsOpen(false)}
+              workspaceId={settingsWorkspaceId}
+              defaultTab={workspaceSettingsTab}
+            />
+          )}
+        </>
       )}
     </div>
   );

@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
-import { XMarkIcon, PhotoIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { useParams } from 'react-router-dom';
+import { Button as AriaButton } from 'react-aria-components';
+import { XMarkIcon, PhotoIcon, TrashIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
 import {
   useUserProfile,
   useUpdateProfile,
@@ -8,7 +10,9 @@ import {
   useAuth,
 } from '../../hooks';
 import { useProfilePanel } from '../../hooks/usePanel';
-import { Button, IconButton, Input, Spinner, toast } from '../ui';
+import { useBlocks, useBlockUser, useUnblockUser } from '../../hooks/useModeration';
+import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
+import { Button, IconButton, Input, Modal, Spinner, Tooltip, toast } from '../ui';
 import { cn, getInitials, getAvatarColor } from '../../lib/utils';
 import { useUserPresence } from '../../lib/presenceStore';
 
@@ -79,8 +83,36 @@ interface ViewProfileProps {
 }
 
 function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
   const [gravatarFailed, setGravatarFailed] = useState(false);
   const presence = useUserPresence(profile.id);
+  const { workspaces } = useAuth();
+  const { data: blocksData } = useBlocks(workspaceId);
+  const { data: membersData } = useWorkspaceMembers(workspaceId || '');
+  const blockUserMutation = useBlockUser(workspaceId || '');
+  const unblockUserMutation = useUnblockUser(workspaceId || '');
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const isBlocked = blocksData?.blocks?.some((b) => b.blocked_id === profile.id) ?? false;
+  const targetMember = membersData?.members?.find((m) => m.user_id === profile.id);
+  const targetRole = targetMember?.role;
+  const targetIsBanned = targetMember?.is_banned ?? false;
+  const canBlock = targetRole !== 'owner' && targetRole !== 'admin';
+  const viewerRole = workspaces?.find((w) => w.id === workspaceId)?.role;
+  const viewerIsAdmin = viewerRole === 'owner' || viewerRole === 'admin';
+
+  const handleToggleBlock = async () => {
+    try {
+      if (isBlocked) {
+        await unblockUserMutation.mutateAsync(profile.id);
+        toast('User unblocked', 'success');
+      } else {
+        await blockUserMutation.mutateAsync(profile.id);
+        toast('User blocked', 'success');
+      }
+    } catch {
+      toast(isBlocked ? 'Failed to unblock user' : 'Failed to block user', 'error');
+    }
+  };
   const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -122,10 +154,24 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
         <h4 className="text-xl font-semibold text-gray-900 dark:text-white">
           {profile.display_name}
         </h4>
-        <span className={cn('mt-1 inline-flex items-center gap-1.5 text-sm', status.color)}>
-          <span className={cn('h-2 w-2 rounded-full', status.dot)} />
-          {status.label}
-        </span>
+        {targetIsBanned ? (
+          viewerIsAdmin ? (
+            <span className="mt-1 inline-flex items-center gap-1.5 text-sm text-red-600 dark:text-red-400">
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+              Banned
+            </span>
+          ) : (
+            <span className="mt-1 inline-flex items-center gap-1.5 text-sm text-gray-500">
+              <span className="h-2 w-2 rounded-full bg-gray-400" />
+              Deactivated
+            </span>
+          )
+        ) : (
+          <span className={cn('mt-1 inline-flex items-center gap-1.5 text-sm', status.color)}>
+            <span className={cn('h-2 w-2 rounded-full', status.dot)} />
+            {status.label}
+          </span>
+        )}
       </div>
 
       {/* Details */}
@@ -144,6 +190,78 @@ function ViewProfile({ profile, isOwnProfile, onEdit }: ViewProfileProps) {
           Edit Profile
         </Button>
       )}
+
+      {/* Block button (only for other profiles, hidden for banned users) */}
+      {(() => {
+        if (isOwnProfile || targetIsBanned) return null;
+
+        if (!canBlock && !isBlocked) {
+          return (
+            <Tooltip content="Cannot block users with admin or owner role">
+              <AriaButton className="flex w-full cursor-default items-center justify-center gap-1 rounded-lg border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500">
+                <NoSymbolIcon className="mr-1 h-4 w-4" />
+                Block User
+              </AriaButton>
+            </Tooltip>
+          );
+        }
+
+        if (isBlocked) {
+          return (
+            <Button
+              variant="secondary"
+              className="w-full"
+              onPress={handleToggleBlock}
+              isLoading={unblockUserMutation.isPending}
+            >
+              <NoSymbolIcon className="mr-1 h-4 w-4" />
+              Unblock User
+            </Button>
+          );
+        }
+
+        return (
+          <Button
+            variant="danger"
+            className="w-full"
+            onPress={() => setShowBlockConfirm(true)}
+            isLoading={blockUserMutation.isPending}
+          >
+            <NoSymbolIcon className="mr-1 h-4 w-4" />
+            Block User
+          </Button>
+        );
+      })()}
+
+      <Modal
+        isOpen={showBlockConfirm}
+        onClose={() => setShowBlockConfirm(false)}
+        title={`Block ${profile.display_name}?`}
+        size="sm"
+      >
+        <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">Blocking this user will:</p>
+        <ul className="mb-5 list-disc space-y-1 pl-5 text-sm text-gray-600 dark:text-gray-300">
+          <li>Hide your messages from each other in channels</li>
+          <li>Prevent either of you from sending DMs to the other</li>
+          <li>Prevent you from mentioning each other</li>
+          <li>Prevent you from being placed in the same group DMs</li>
+        </ul>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onPress={() => setShowBlockConfirm(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onPress={async () => {
+              await handleToggleBlock();
+              setShowBlockConfirm(false);
+            }}
+            isLoading={blockUserMutation.isPending}
+          >
+            Block
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -10,11 +10,18 @@ interface TooltipProps {
   content: ReactNode;
   placement?: AriaTooltipProps['placement'];
   delay?: number;
+  isDisabled?: boolean;
 }
 
-export function Tooltip({ children, content, placement = 'top', delay = 300 }: TooltipProps) {
+export function Tooltip({
+  children,
+  content,
+  placement = 'top',
+  delay = 300,
+  isDisabled,
+}: TooltipProps) {
   return (
-    <TooltipTrigger delay={delay}>
+    <TooltipTrigger delay={delay} isDisabled={isDisabled}>
       {children}
       <AriaTooltip
         placement={placement}

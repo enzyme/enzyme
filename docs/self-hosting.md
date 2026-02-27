@@ -10,12 +10,12 @@ This guide covers everything you need to deploy Enzyme on your own server.
 
 ## Quick Start
 
-1. Download the latest release for your platform from the [releases page](https://github.com/bradsimantel/enzyme/releases)
+1. Download the latest release for your platform from the [releases page](https://github.com/enzyme/enzyme/releases)
 2. Start the server
 
 ```bash
 # Download the binary (includes the web client)
-curl -LO https://github.com/bradsimantel/enzyme/releases/latest/download/enzyme-linux-amd64
+curl -LO https://github.com/enzyme/enzyme/releases/latest/download/enzyme-linux-amd64
 chmod +x enzyme-linux-amd64
 
 # Start the server
@@ -318,7 +318,7 @@ Database migrations run automatically on startup. There is no manual migration s
 ## Building from Source
 
 ```bash
-git clone https://github.com/bradsimantel/enzyme.git
+git clone https://github.com/enzyme/enzyme.git
 cd enzyme
 make install
 make build

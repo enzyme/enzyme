@@ -15,6 +15,7 @@ export class SSEConnection {
   private isConnecting = false;
   private workspaceId: string;
   private onDisconnect?: () => void;
+  private onForbidden?: () => void;
 
   constructor(workspaceId: string) {
     this.workspaceId = workspaceId;
@@ -22,6 +23,10 @@ export class SSEConnection {
 
   setOnDisconnect(callback: () => void): void {
     this.onDisconnect = callback;
+  }
+
+  setOnForbidden(callback: () => void): void {
+    this.onForbidden = callback;
   }
 
   connect(): void {
@@ -53,7 +58,15 @@ export class SSEConnection {
       }
     };
 
-    this.eventSource.onerror = () => {
+    this.eventSource.onerror = (err) => {
+      const code = (err as ErrorEvent & { code?: number }).code;
+      if (code === 403) {
+        console.error('[SSE] 403 Forbidden — stopping reconnection');
+        this.onDisconnect?.();
+        this.disconnect();
+        this.onForbidden?.();
+        return;
+      }
       console.error('[SSE] Connection error, reconnecting...');
       this.onDisconnect?.();
       this.disconnect();

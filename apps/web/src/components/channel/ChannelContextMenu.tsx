@@ -5,6 +5,7 @@ import {
   BellIcon,
   LinkIcon,
   ArrowRightStartOnRectangleIcon,
+  UserCircleIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
 import { ContextMenu, useContextMenu, MenuItem, MenuSeparator, toast } from '../ui';
@@ -18,6 +19,7 @@ import {
   useChannelNotifications,
   useUpdateChannelNotifications,
 } from '../../hooks/useChannelNotifications';
+import { useProfilePanel } from '../../hooks/usePanel';
 import type { ChannelWithMembership } from '@enzyme/api-client';
 
 interface ChannelContextMenuProps {
@@ -28,6 +30,7 @@ interface ChannelContextMenuProps {
 
 export function ChannelContextMenu({ channel, workspaceId, children }: ChannelContextMenuProps) {
   const { isOpen, setIsOpen, position, onContextMenu } = useContextMenu();
+  const { openProfile } = useProfilePanel();
   const starChannel = useStarChannel(workspaceId);
   const unstarChannel = useUnstarChannel(workspaceId);
   const markAsRead = useMarkChannelAsRead(workspaceId);
@@ -87,6 +90,15 @@ export function ChannelContextMenu({ channel, workspaceId, children }: ChannelCo
         >
           {channel.is_starred ? 'Unstar' : 'Star'}
         </MenuItem>
+
+        {channel.type === 'dm' && channel.dm_participants?.[0] && (
+          <MenuItem
+            onAction={() => openProfile(channel.dm_participants![0].user_id)}
+            icon={<UserCircleIcon className="h-4 w-4" />}
+          >
+            View Profile
+          </MenuItem>
+        )}
 
         {hasUnread && (
           <MenuItem onAction={handleMarkAsRead} icon={<EnvelopeOpenIcon className="h-4 w-4" />}>

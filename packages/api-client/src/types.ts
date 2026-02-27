@@ -73,3 +73,10 @@ export type UpdateScheduledMessageInput = components['schemas']['UpdateScheduled
 
 // File signing types
 export type SignedUrl = components['schemas']['SignedUrl'];
+
+// Moderation types
+export type Ban = components['schemas']['Ban'];
+export type BanWithUser = components['schemas']['BanWithUser'];
+export type BanUserInput = components['schemas']['BanUserInput'];
+export type BlockWithUser = components['schemas']['BlockWithUser'];
+export type ModerationLogEntryWithActor = components['schemas']['ModerationLogEntryWithActor'];
