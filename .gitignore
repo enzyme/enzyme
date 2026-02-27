@@ -68,10 +68,3 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/
-
-# Compound Engineering skill outputs
-compound-engineering.local.md
-todos/
-docs/brainstorms/
-docs/plans/
-docs/solutions/
