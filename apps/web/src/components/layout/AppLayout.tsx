@@ -14,8 +14,17 @@ import { BanScreen } from '../moderation/BanModal';
 import { useSSE, useAuth } from '../../hooks';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { useSidebar } from '../../hooks/useSidebar';
-import { cn } from '../../lib/utils';
+import { useResizableWidth } from '../../hooks/useResizableWidth';
 import { recordChannelVisit } from '../../lib/recentChannels';
+
+function Divider(props: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className="relative z-10 -mx-0.5 w-1 flex-shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-blue-200 active:bg-blue-300 dark:hover:bg-blue-800 dark:active:bg-blue-700"
+      {...props}
+    />
+  );
+}
 
 export function AppLayout() {
   const { workspaceId, channelId } = useParams<{ workspaceId: string; channelId: string }>();
@@ -25,6 +34,23 @@ export function AppLayout() {
   const { threadId } = useThreadPanel();
   const { profileUserId } = useProfilePanel();
   const { collapsed: sidebarCollapsed } = useSidebar();
+  const rightPanelOpen = Boolean(threadId || profileUserId);
+
+  const { width: sidebarWidth, dividerProps: sidebarDividerProps } = useResizableWidth(
+    'enzyme:sidebar-width',
+    256,
+    180,
+    400,
+  );
+
+  const { width: rightPanelWidth, dividerProps: rightPanelDividerProps } = useResizableWidth(
+    'enzyme:right-panel-width',
+    384,
+    300,
+    600,
+    'left',
+  );
+
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchInitialQuery, setSearchInitialQuery] = useState('');
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -99,34 +125,44 @@ export function AppLayout() {
           <>
             {/* Channel Sidebar */}
             <div
-              className={cn(
-                'flex-shrink-0 border-r border-gray-200 transition-all dark:border-gray-700',
-                sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-64',
-              )}
+              className="flex-shrink-0 overflow-hidden"
+              style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
             >
-              <ChannelSidebar
-                workspaceId={workspaceId}
-                onSearchClick={() => setIsCommandPaletteOpen(true)}
-                onOpenWorkspaceSettings={handleOpenWorkspaceSettings}
-                onCreateChannel={handleCreateChannel}
-                onNewDM={handleNewDM}
-                isCreateModalOpen={isCreateModalOpen}
-                onCloseCreateModal={() => setIsCreateModalOpen(false)}
-                isNewDMModalOpen={isNewDMModalOpen}
-                onCloseNewDMModal={() => setIsNewDMModalOpen(false)}
-              />
+              <div
+                className="h-full border-r border-gray-200 dark:border-gray-700"
+                style={{ width: sidebarWidth }}
+              >
+                <ChannelSidebar
+                  workspaceId={workspaceId}
+                  onSearchClick={() => setIsCommandPaletteOpen(true)}
+                  onOpenWorkspaceSettings={handleOpenWorkspaceSettings}
+                  onCreateChannel={handleCreateChannel}
+                  onNewDM={handleNewDM}
+                  isCreateModalOpen={isCreateModalOpen}
+                  onCloseCreateModal={() => setIsCreateModalOpen(false)}
+                  isNewDMModalOpen={isNewDMModalOpen}
+                  onCloseNewDMModal={() => setIsNewDMModalOpen(false)}
+                />
+              </div>
             </div>
+
+            {!sidebarCollapsed && <Divider {...sidebarDividerProps} />}
 
             {/* Main Content */}
             <div className="flex min-w-0 flex-1 flex-col">
               <Outlet />
             </div>
 
-            {/* Thread Panel */}
-            {threadId && !profileUserId && <ThreadPanel messageId={threadId} />}
-
-            {/* Profile Pane */}
-            {profileUserId && <ProfilePane userId={profileUserId} />}
+            {/* Right Panel (Thread / Profile) */}
+            {rightPanelOpen && (
+              <>
+                <Divider {...rightPanelDividerProps} />
+                <div className="flex-shrink-0" style={{ width: rightPanelWidth }}>
+                  {threadId && !profileUserId && <ThreadPanel messageId={threadId} />}
+                  {profileUserId && <ProfilePane userId={profileUserId} />}
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
