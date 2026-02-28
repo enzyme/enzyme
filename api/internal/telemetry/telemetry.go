@@ -119,11 +119,17 @@ func newTraceExporter(ctx context.Context, cfg config.TelemetryConfig) (sdktrace
 		if cfg.Insecure {
 			opts = append(opts, otlptracehttp.WithInsecure())
 		}
+		if len(cfg.Headers) > 0 {
+			opts = append(opts, otlptracehttp.WithHeaders(cfg.Headers))
+		}
 		return otlptracehttp.New(ctx, opts...)
 	default:
 		opts := []otlptracegrpc.Option{otlptracegrpc.WithEndpoint(cfg.Endpoint)}
 		if cfg.Insecure {
 			opts = append(opts, otlptracegrpc.WithInsecure())
+		}
+		if len(cfg.Headers) > 0 {
+			opts = append(opts, otlptracegrpc.WithHeaders(cfg.Headers))
 		}
 		return otlptracegrpc.New(ctx, opts...)
 	}
@@ -136,11 +142,17 @@ func newMetricExporter(ctx context.Context, cfg config.TelemetryConfig) (sdkmetr
 		if cfg.Insecure {
 			opts = append(opts, otlpmetrichttp.WithInsecure())
 		}
+		if len(cfg.Headers) > 0 {
+			opts = append(opts, otlpmetrichttp.WithHeaders(cfg.Headers))
+		}
 		return otlpmetrichttp.New(ctx, opts...)
 	default:
 		opts := []otlpmetricgrpc.Option{otlpmetricgrpc.WithEndpoint(cfg.Endpoint)}
 		if cfg.Insecure {
 			opts = append(opts, otlpmetricgrpc.WithInsecure())
+		}
+		if len(cfg.Headers) > 0 {
+			opts = append(opts, otlpmetricgrpc.WithHeaders(cfg.Headers))
 		}
 		return otlpmetricgrpc.New(ctx, opts...)
 	}

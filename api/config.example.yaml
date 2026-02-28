@@ -34,3 +34,5 @@ telemetry:
   insecure: true               # use plaintext (no TLS) for OTLP export
   sample_rate: 1.0             # 0.0 to 1.0
   service_name: "enzyme"       # service name reported to collector
+  # headers:                   # OTLP exporter headers (e.g. for auth)
+  #   x-honeycomb-team: "YOUR_API_KEY"

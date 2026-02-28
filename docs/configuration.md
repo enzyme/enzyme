@@ -135,14 +135,15 @@ Rate limiting protects authentication endpoints from brute-force attacks. Limits
 
 Optional observability via OpenTelemetry. When enabled, Enzyme exports traces and metrics to any OTLP-compatible collector (Jaeger, Grafana Alloy, Datadog Agent, etc.). Disabled by default with zero overhead.
 
-| Key                      | Env Var                         | CLI Flag                   | Default          | Description                                                                    |
-| ------------------------ | ------------------------------- | -------------------------- | ---------------- | ------------------------------------------------------------------------------ |
-| `telemetry.enabled`      | `ENZYME_TELEMETRY_ENABLED`      | `--telemetry.enabled`      | `false`          | Enable OpenTelemetry instrumentation.                                          |
-| `telemetry.endpoint`     | `ENZYME_TELEMETRY_ENDPOINT`     | `--telemetry.endpoint`     | `localhost:4317` | OTLP collector endpoint (host:port).                                           |
-| `telemetry.protocol`     | `ENZYME_TELEMETRY_PROTOCOL`     | `--telemetry.protocol`     | `grpc`           | Export protocol: `grpc` or `http`.                                             |
-| `telemetry.insecure`     | `ENZYME_TELEMETRY_INSECURE`     | `--telemetry.insecure`     | `true`           | Use plaintext (no TLS) for OTLP export.                                        |
-| `telemetry.sample_rate`  | `ENZYME_TELEMETRY_SAMPLE_RATE`  | `--telemetry.sample_rate`  | `1.0`            | Trace sampling rate. `1.0` = sample everything, `0.1` = sample 10%.            |
-| `telemetry.service_name` | `ENZYME_TELEMETRY_SERVICE_NAME` | `--telemetry.service_name` | `enzyme`         | Service name reported to the collector. Useful for multi-instance deployments. |
+| Key                      | Env Var                         | CLI Flag                   | Default          | Description                                                                                          |
+| ------------------------ | ------------------------------- | -------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
+| `telemetry.enabled`      | `ENZYME_TELEMETRY_ENABLED`      | `--telemetry.enabled`      | `false`          | Enable OpenTelemetry instrumentation.                                                                |
+| `telemetry.endpoint`     | `ENZYME_TELEMETRY_ENDPOINT`     | `--telemetry.endpoint`     | `localhost:4317` | OTLP collector endpoint (host:port).                                                                 |
+| `telemetry.protocol`     | `ENZYME_TELEMETRY_PROTOCOL`     | `--telemetry.protocol`     | `grpc`           | Export protocol: `grpc` or `http`.                                                                   |
+| `telemetry.insecure`     | `ENZYME_TELEMETRY_INSECURE`     | `--telemetry.insecure`     | `true`           | Use plaintext (no TLS) for OTLP export.                                                              |
+| `telemetry.sample_rate`  | `ENZYME_TELEMETRY_SAMPLE_RATE`  | `--telemetry.sample_rate`  | `1.0`            | Trace sampling rate. `1.0` = sample everything, `0.1` = sample 10%.                                  |
+| `telemetry.service_name` | `ENZYME_TELEMETRY_SERVICE_NAME` | `--telemetry.service_name` | `enzyme`         | Service name reported to the collector. Useful for multi-instance deployments.                       |
+| `telemetry.headers`      |                                 |                            |                  | Map of headers sent with every OTLP export request. Use for backend auth (e.g., `x-honeycomb-team`). |
 
 See the [Observability Guide](observability.md) for details on what's captured (traces, metrics, log correlation) and setup examples.
 

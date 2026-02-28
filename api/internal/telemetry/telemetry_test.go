@@ -88,6 +88,58 @@ func TestInit_HTTP(t *testing.T) {
 	defer tel.Shutdown(context.Background())
 }
 
+func TestInit_WithHeaders(t *testing.T) {
+	restore := saveGlobalProviders(t)
+	defer restore()
+
+	cfg := config.TelemetryConfig{
+		Enabled:     true,
+		Endpoint:    "localhost:4317",
+		Protocol:    "grpc",
+		Insecure:    true,
+		SampleRate:  1.0,
+		ServiceName: "test-headers",
+		Headers: map[string]string{
+			"x-honeycomb-team": "test-key",
+			"authorization":    "Bearer token",
+		},
+	}
+	tel, err := Init(cfg, "test-version")
+	if err != nil {
+		t.Fatalf("Init() with headers should not fail: %v", err)
+	}
+	defer tel.Shutdown(context.Background())
+
+	if tel.tracerProvider == nil {
+		t.Fatal("tracer provider should not be nil")
+	}
+	if tel.meterProvider == nil {
+		t.Fatal("meter provider should not be nil")
+	}
+}
+
+func TestInit_WithHeaders_HTTP(t *testing.T) {
+	restore := saveGlobalProviders(t)
+	defer restore()
+
+	cfg := config.TelemetryConfig{
+		Enabled:     true,
+		Endpoint:    "localhost:4318",
+		Protocol:    "http",
+		Insecure:    true,
+		SampleRate:  1.0,
+		ServiceName: "test-headers-http",
+		Headers: map[string]string{
+			"x-api-key": "test-key",
+		},
+	}
+	tel, err := Init(cfg, "test-version")
+	if err != nil {
+		t.Fatalf("Init() with http headers should not fail: %v", err)
+	}
+	defer tel.Shutdown(context.Background())
+}
+
 func TestInit_SamplerZero(t *testing.T) {
 	restore := saveGlobalProviders(t)
 	defer restore()

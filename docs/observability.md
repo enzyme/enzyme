@@ -1,6 +1,6 @@
 # Observability Guide
 
-Enzyme has built-in OpenTelemetry (OTel) instrumentation for traces and metrics. When enabled, telemetry data is exported via OTLP to any compatible backend — Jaeger, Grafana, Datadog, Honeycomb, etc. Disabled by default with zero overhead.
+Enzyme has built-in OpenTelemetry (OTel) instrumentation for traces and metrics. When enabled, telemetry data is exported via OTLP to any compatible backend — Datadog, Honeycomb, HyperDX, Grafana Cloud, etc. Disabled by default with zero overhead.
 
 This guide covers what Enzyme captures, how to set it up, and how to add system-level metrics with an OTel Collector.
 
@@ -27,14 +27,15 @@ Enzyme pushes data to the configured OTLP endpoint. You need a collector or back
 
 ## Configuration
 
-| Key                      | Env Var                         | Default          | Description                                                |
-| ------------------------ | ------------------------------- | ---------------- | ---------------------------------------------------------- |
-| `telemetry.enabled`      | `ENZYME_TELEMETRY_ENABLED`      | `false`          | Enable OpenTelemetry instrumentation.                      |
-| `telemetry.endpoint`     | `ENZYME_TELEMETRY_ENDPOINT`     | `localhost:4317` | OTLP collector endpoint (host:port).                       |
-| `telemetry.protocol`     | `ENZYME_TELEMETRY_PROTOCOL`     | `grpc`           | Export protocol: `grpc` (port 4317) or `http` (port 4318). |
-| `telemetry.insecure`     | `ENZYME_TELEMETRY_INSECURE`     | `true`           | Use plaintext (no TLS) for OTLP export.                    |
-| `telemetry.sample_rate`  | `ENZYME_TELEMETRY_SAMPLE_RATE`  | `1.0`            | Trace sampling rate. `1.0` = all, `0.1` = 10%, `0` = none. |
-| `telemetry.service_name` | `ENZYME_TELEMETRY_SERVICE_NAME` | `enzyme`         | Service name reported to the collector.                    |
+| Key                      | Env Var                         | Default          | Description                                                          |
+| ------------------------ | ------------------------------- | ---------------- | -------------------------------------------------------------------- |
+| `telemetry.enabled`      | `ENZYME_TELEMETRY_ENABLED`      | `false`          | Enable OpenTelemetry instrumentation.                                |
+| `telemetry.endpoint`     | `ENZYME_TELEMETRY_ENDPOINT`     | `localhost:4317` | OTLP collector endpoint (host:port).                                 |
+| `telemetry.protocol`     | `ENZYME_TELEMETRY_PROTOCOL`     | `grpc`           | Export protocol: `grpc` (port 4317) or `http` (port 4318).           |
+| `telemetry.insecure`     | `ENZYME_TELEMETRY_INSECURE`     | `true`           | Use plaintext (no TLS) for OTLP export.                              |
+| `telemetry.sample_rate`  | `ENZYME_TELEMETRY_SAMPLE_RATE`  | `1.0`            | Trace sampling rate. `1.0` = all, `0.1` = 10%, `0` = none.           |
+| `telemetry.service_name` | `ENZYME_TELEMETRY_SERVICE_NAME` | `enzyme`         | Service name reported to the collector.                              |
+| `telemetry.headers`      |                                 |                  | Map of headers sent with every OTLP export request (e.g., API keys). |
 
 See the full [Configuration Reference](configuration.md#telemetry-opentelemetry) for details.
 
@@ -166,123 +167,6 @@ The frontend exports traces over OTLP/HTTP (not gRPC, since browsers can't speak
 
 ---
 
-## Setup Examples
-
-### Jaeger (Local Development)
-
-Jaeger all-in-one accepts OTLP on port 4317 (gRPC) and 4318 (HTTP), and provides a UI on port 16686.
-
-```bash
-docker run -d --name jaeger \
-  -p 4317:4317 \
-  -p 4318:4318 \
-  -p 16686:16686 \
-  jaegertracing/all-in-one:latest
-```
-
-```bash
-ENZYME_TELEMETRY_ENABLED=true ./enzyme
-```
-
-Open `http://localhost:16686` and select the `enzyme` service to view traces.
-
-### Grafana + Tempo (Production)
-
-A production setup with Grafana for dashboards, Tempo for traces, and Prometheus for metrics:
-
-```yaml
-# docker-compose.yml
-services:
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
-    volumes:
-      - ./otel-config.yaml:/etc/otelcol/config.yaml
-    ports:
-      - '4317:4317' # OTLP gRPC
-      - '4318:4318' # OTLP HTTP
-
-  tempo:
-    image: grafana/tempo:latest
-    command: ['-config.file=/etc/tempo.yaml']
-    volumes:
-      - ./tempo.yaml:/etc/tempo.yaml
-
-  prometheus:
-    image: prom/prometheus:latest
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - '3001:3000'
-    environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-```
-
-```yaml
-# otel-config.yaml
-receivers:
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-      http:
-        endpoint: 0.0.0.0:4318
-
-  hostmetrics:
-    collection_interval: 30s
-    scrapers:
-      cpu:
-      memory:
-      disk:
-      network:
-
-exporters:
-  otlphttp/tempo:
-    endpoint: http://tempo:4318
-
-  prometheusremotewrite:
-    endpoint: http://prometheus:9090/api/v1/write
-
-service:
-  pipelines:
-    traces:
-      receivers: [otlp]
-      exporters: [otlphttp/tempo]
-    metrics:
-      receivers: [otlp, hostmetrics]
-      exporters: [prometheusremotewrite]
-```
-
-The `hostmetrics` receiver adds system-level metrics (CPU, memory, disk, network) alongside Enzyme's application telemetry.
-
-### Datadog
-
-The Datadog Agent accepts OTLP natively:
-
-```yaml
-# In your Datadog Agent config (datadog.yaml)
-otlp_config:
-  receiver:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-```
-
-```bash
-ENZYME_TELEMETRY_ENABLED=true \
-ENZYME_TELEMETRY_ENDPOINT=localhost:4317 \
-ENZYME_TELEMETRY_SERVICE_NAME=enzyme-production \
-./enzyme
-```
-
-### Other Backends
-
-Enzyme exports standard OTLP, so it works with any OTLP-compatible backend (Honeycomb, Axiom, Grafana Cloud, etc.). Point `telemetry.endpoint` at their OTLP receiver and set `telemetry.protocol` to match.
-
----
-
 ## Sampling
 
 For high-traffic deployments, trace sampling reduces data volume without losing visibility. The `sample_rate` setting controls what fraction of traces are captured:
@@ -313,3 +197,72 @@ When **enabled**, the overhead is minimal:
 - Metrics are collected and exported every 60 seconds
 
 For most deployments, telemetry overhead is unmeasurable relative to actual request processing time.
+
+---
+
+## Setup Examples
+
+Enzyme exports standard OTLP, so it works with any backend that accepts OTLP. Below are examples for common platforms.
+
+The Honeycomb and HyperDX examples send OTLP directly from Enzyme to the backend. This covers Enzyme's own traces and metrics, but not system-level metrics like CPU, memory, and disk usage. If you want those, run an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) alongside Enzyme with the [Host Metrics receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/hostmetricsreceiver) enabled, point Enzyme at the collector, and have the collector forward to your backend. The Datadog example already works this way since the Datadog Agent acts as a collector.
+
+### Datadog
+
+The Datadog Agent runs alongside Enzyme and accepts OTLP locally, then forwards to Datadog. No API key header is needed from Enzyme — the agent holds the key.
+
+Enable the OTLP receiver in your Datadog Agent config:
+
+```yaml
+# datadog.yaml
+otlp_config:
+  receiver:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+```
+
+Then point Enzyme at the agent:
+
+```yaml
+telemetry:
+  enabled: true
+  endpoint: 'localhost:4317'
+```
+
+If the agent runs on a different host (e.g., a sidecar in Kubernetes), replace `localhost` with the agent's address.
+
+### Honeycomb
+
+Honeycomb accepts OTLP directly — no collector or agent needed. Authentication uses the `x-honeycomb-team` header with your API key.
+
+```yaml
+telemetry:
+  enabled: true
+  endpoint: 'api.honeycomb.io:443'
+  protocol: 'grpc'
+  insecure: false
+  headers:
+    x-honeycomb-team: 'YOUR_API_KEY'
+```
+
+For EU region, use `api.eu1.honeycomb.io:443` instead.
+
+### HyperDX
+
+HyperDX accepts OTLP directly. Authentication uses the `authorization` header with your ingestion API key (found under Team Settings in HyperDX).
+
+```yaml
+telemetry:
+  enabled: true
+  endpoint: 'in-otel.hyperdx.io:4317'
+  protocol: 'grpc'
+  insecure: false
+  headers:
+    authorization: 'YOUR_HYPERDX_API_KEY'
+```
+
+### Other Backends
+
+Any OTLP-compatible backend (Axiom, Grafana Cloud, New Relic, etc.) works the same way: set `telemetry.endpoint` to their OTLP receiver, `telemetry.protocol` to `grpc` or `http`, and pass any required auth headers via `telemetry.headers`.

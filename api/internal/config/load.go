@@ -177,6 +177,7 @@ func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 			"insecure":     d.defaults.Telemetry.Insecure,
 			"sample_rate":  d.defaults.Telemetry.SampleRate,
 			"service_name": d.defaults.Telemetry.ServiceName,
+			"headers":      map[string]string{},
 		},
 	}, nil
 }
