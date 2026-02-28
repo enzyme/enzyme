@@ -4,25 +4,37 @@ import (
 	"context"
 	"log/slog"
 
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel/trace"
 )
 
-// SlogBridge wraps an slog.Handler to inject trace_id and span_id from the
-// context into every log record. If no span is active, the fields are omitted.
-type SlogBridge struct {
+// NewSlogHandler returns an slog.Handler that injects trace_id and span_id
+// into log records. When otelLogs is true, records are also sent to the OTel
+// log pipeline via otelslog. The trace injection happens before fan-out so
+// both the console handler and OTel handler see the enriched record.
+func NewSlogHandler(inner slog.Handler, otelLogs bool, serviceName string) slog.Handler {
+	if !otelLogs {
+		return &traceInjector{inner: inner}
+	}
+	// traceInjector wraps the fanout so both handlers receive enriched records.
+	return &traceInjector{
+		inner: &fanoutHandler{
+			console: inner,
+			otel:    otelslog.NewHandler(serviceName),
+		},
+	}
+}
+
+// traceInjector injects trace_id and span_id from context into log records.
+type traceInjector struct {
 	inner slog.Handler
 }
 
-// NewSlogBridge returns a new SlogBridge wrapping the given handler.
-func NewSlogBridge(inner slog.Handler) *SlogBridge {
-	return &SlogBridge{inner: inner}
-}
-
-func (h *SlogBridge) Enabled(ctx context.Context, level slog.Level) bool {
+func (h *traceInjector) Enabled(ctx context.Context, level slog.Level) bool {
 	return h.inner.Enabled(ctx, level)
 }
 
-func (h *SlogBridge) Handle(ctx context.Context, record slog.Record) error {
+func (h *traceInjector) Handle(ctx context.Context, record slog.Record) error {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 	if sc.IsValid() {
 		record.AddAttrs(
@@ -33,10 +45,52 @@ func (h *SlogBridge) Handle(ctx context.Context, record slog.Record) error {
 	return h.inner.Handle(ctx, record)
 }
 
-func (h *SlogBridge) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return &SlogBridge{inner: h.inner.WithAttrs(attrs)}
+func (h *traceInjector) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &traceInjector{inner: h.inner.WithAttrs(attrs)}
 }
 
-func (h *SlogBridge) WithGroup(name string) slog.Handler {
-	return &SlogBridge{inner: h.inner.WithGroup(name)}
+func (h *traceInjector) WithGroup(name string) slog.Handler {
+	return &traceInjector{inner: h.inner.WithGroup(name)}
+}
+
+// fanoutHandler sends each record to both the console and OTel handlers.
+// Records are cloned before each handler to prevent shared-state corruption.
+// Errors from one handler do not prevent the other from receiving the record.
+type fanoutHandler struct {
+	console slog.Handler
+	otel    slog.Handler
+}
+
+func (h *fanoutHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.console.Enabled(ctx, level) || h.otel.Enabled(ctx, level)
+}
+
+func (h *fanoutHandler) Handle(ctx context.Context, record slog.Record) error {
+	// Clone before each handler so neither can corrupt the other's view.
+	var firstErr error
+	if h.console.Enabled(ctx, record.Level) {
+		if err := h.console.Handle(ctx, record.Clone()); err != nil {
+			firstErr = err
+		}
+	}
+	if h.otel.Enabled(ctx, record.Level) {
+		if err := h.otel.Handle(ctx, record.Clone()); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
+}
+
+func (h *fanoutHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &fanoutHandler{
+		console: h.console.WithAttrs(attrs),
+		otel:    h.otel.WithAttrs(attrs),
+	}
+}
+
+func (h *fanoutHandler) WithGroup(name string) slog.Handler {
+	return &fanoutHandler{
+		console: h.console.WithGroup(name),
+		otel:    h.otel.WithGroup(name),
+	}
 }
