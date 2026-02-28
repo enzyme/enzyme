@@ -346,7 +346,6 @@ make build
 
 The binary at `api/bin/enzyme` includes the embedded web client. Run it directly — no separate frontend serving needed.
 
-
 ### Automatic Updates
 
 You can set up a systemd timer to check for new releases nightly and update automatically.
