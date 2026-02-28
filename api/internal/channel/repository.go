@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/enzyme/api/internal/telemetry"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -137,10 +138,13 @@ func (r *Repository) CreateDM(ctx context.Context, workspaceID string, userIDs [
 }
 
 func (r *Repository) GetByID(ctx context.Context, id string) (*Channel, error) {
-	return r.scanChannel(r.db.QueryRowContext(ctx, `
+	ctx, endSpan := telemetry.StartDBSpan(ctx, "channel.GetByID")
+	ch, err := r.scanChannel(r.db.QueryRowContext(ctx, `
 		SELECT id, workspace_id, name, description, type, dm_participant_hash, is_default, archived_at, created_by, created_at, updated_at
 		FROM channels WHERE id = ?
 	`, id))
+	endSpan(err)
+	return ch, err
 }
 
 func (r *Repository) GetByWorkspaceAndName(ctx context.Context, workspaceID, name string) (*Channel, error) {
@@ -201,7 +205,9 @@ func (r *Repository) Archive(ctx context.Context, channelID string) error {
 	return nil
 }
 
-func (r *Repository) ListForWorkspace(ctx context.Context, workspaceID, userID string) ([]ChannelWithMembership, error) {
+func (r *Repository) ListForWorkspace(ctx context.Context, workspaceID, userID string) (_ []ChannelWithMembership, err error) {
+	ctx, endSpan := telemetry.StartDBSpan(ctx, "channel.ListForWorkspace")
+	defer func() { endSpan(err) }()
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT c.id, c.workspace_id, c.name, c.description, c.type, c.dm_participant_hash, c.is_default, c.archived_at, c.created_by, c.created_at, c.updated_at,
 		       cm.channel_role, cm.last_read_message_id, COALESCE(cm.is_starred, 0) as is_starred,

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/enzyme/api/internal/moderation"
+	"github.com/enzyme/api/internal/telemetry"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -29,7 +30,9 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) Create(ctx context.Context, msg *Message) error {
+func (r *Repository) Create(ctx context.Context, msg *Message) (err error) {
+	ctx, endSpan := telemetry.StartDBSpan(ctx, "message.Create")
+	defer func() { endSpan(err) }()
 	msg.ID = ulid.Make().String()
 	now := time.Now().UTC()
 	msg.CreatedAt = now
@@ -221,7 +224,9 @@ func (r *Repository) Delete(ctx context.Context, id string) error {
 	return tx.Commit()
 }
 
-func (r *Repository) List(ctx context.Context, channelID string, opts ListOptions, filter *moderation.FilterOptions) (*ListResult, error) {
+func (r *Repository) List(ctx context.Context, channelID string, opts ListOptions, filter *moderation.FilterOptions) (_ *ListResult, err error) {
+	ctx, endSpan := telemetry.StartDBSpan(ctx, "message.List")
+	defer func() { endSpan(err) }()
 	if opts.Limit <= 0 || opts.Limit > 100 {
 		opts.Limit = 50
 	}
@@ -1022,7 +1027,9 @@ func sanitizeFTSQuery(query string) string {
 }
 
 // Search searches messages across channels in a workspace using FTS5
-func (r *Repository) Search(ctx context.Context, workspaceID, currentUserID string, opts SearchOptions, filter *moderation.FilterOptions) (*SearchResult, error) {
+func (r *Repository) Search(ctx context.Context, workspaceID, currentUserID string, opts SearchOptions, filter *moderation.FilterOptions) (_ *SearchResult, err error) {
+	ctx, endSpan := telemetry.StartDBSpan(ctx, "message.Search")
+	defer func() { endSpan(err) }()
 	if opts.Limit <= 0 || opts.Limit > 100 {
 		opts.Limit = 20
 	}

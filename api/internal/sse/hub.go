@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/oklog/ulid/v2"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type Client struct {
@@ -35,17 +38,44 @@ type Hub struct {
 
 	register   chan *Client
 	unregister chan *Client
+
+	// OTel metrics (no-op when telemetry is disabled)
+	connectionsActive metric.Int64UpDownCounter
+	eventsBroadcast   metric.Int64Counter
 }
 
+// Pre-computed metric attribute sets to avoid allocation per broadcast under lock.
+var (
+	broadcastAttrsWorkspace = metric.WithAttributes(attribute.String("scope", "workspace"))
+	broadcastAttrsChannel   = metric.WithAttributes(attribute.String("scope", "channel"))
+	broadcastAttrsUser      = metric.WithAttributes(attribute.String("scope", "user"))
+)
+
 func NewHub(db *sql.DB, retention, cleanupInterval time.Duration) *Hub {
+	meter := otel.Meter("enzyme.sse")
+	connectionsActive, err := meter.Int64UpDownCounter("sse.connections.active",
+		metric.WithDescription("Number of active SSE connections"),
+	)
+	if err != nil {
+		slog.Error("failed to create sse.connections.active metric", "error", err)
+	}
+	eventsBroadcast, err := meter.Int64Counter("sse.events.broadcast",
+		metric.WithDescription("Total SSE events broadcast"),
+	)
+	if err != nil {
+		slog.Error("failed to create sse.events.broadcast metric", "error", err)
+	}
+
 	return &Hub{
-		workspaces:      make(map[string]map[string][]*Client),
-		channelMembers:  make(map[string]map[string]bool),
-		db:              db,
-		retention:       retention,
-		cleanupInterval: cleanupInterval,
-		register:        make(chan *Client, 256),
-		unregister:      make(chan *Client, 256),
+		workspaces:        make(map[string]map[string][]*Client),
+		channelMembers:    make(map[string]map[string]bool),
+		db:                db,
+		retention:         retention,
+		cleanupInterval:   cleanupInterval,
+		register:          make(chan *Client, 256),
+		unregister:        make(chan *Client, 256),
+		connectionsActive: connectionsActive,
+		eventsBroadcast:   eventsBroadcast,
 	}
 }
 
@@ -113,6 +143,7 @@ func (h *Hub) addClient(client *Client) bool {
 	}
 	isFirst := len(h.workspaces[client.WorkspaceID][client.UserID]) == 0
 	h.workspaces[client.WorkspaceID][client.UserID] = append(h.workspaces[client.WorkspaceID][client.UserID], client)
+	h.connectionsActive.Add(context.Background(), 1)
 	return isFirst
 }
 
@@ -140,6 +171,7 @@ func (h *Hub) removeClient(client *Client) bool {
 	}
 
 	close(client.Send)
+	h.connectionsActive.Add(context.Background(), -1)
 	return isLast
 }
 
@@ -150,6 +182,8 @@ func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {
 	if event.ID == "" {
 		event.ID = ulid.Make().String()
 	}
+
+	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsWorkspace)
 
 	// Store event for replay
 	h.storeEvent(workspaceID, event)
@@ -174,6 +208,8 @@ func (h *Hub) BroadcastToChannel(workspaceID, channelID string, event Event) {
 	if event.ID == "" {
 		event.ID = ulid.Make().String()
 	}
+
+	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsChannel)
 
 	// Store event for replay
 	h.storeEvent(workspaceID, event)
@@ -203,6 +239,8 @@ func (h *Hub) BroadcastToUser(workspaceID, userID string, event Event) {
 	if event.ID == "" {
 		event.ID = ulid.Make().String()
 	}
+
+	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsUser)
 
 	if workspace, ok := h.workspaces[workspaceID]; ok {
 		if clients, ok := workspace[userID]; ok {

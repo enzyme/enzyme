@@ -15,6 +15,7 @@ import (
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/ratelimit"
 	"github.com/enzyme/api/internal/sse"
+	"github.com/enzyme/api/internal/telemetry"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -54,7 +55,7 @@ func InvalidateBanCacheByWorkspace(workspaceID string) {
 // NewRouter creates a new HTTP router with all routes registered.
 // If spaHandler is non-nil, it is mounted as a fallback for unmatched routes
 // to serve the embedded web client.
-func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.SessionStore, moderationRepo *moderation.Repository, limiter *ratelimit.Limiter, allowedOrigins []string, spaHandler http.Handler) http.Handler {
+func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.SessionStore, moderationRepo *moderation.Repository, limiter *ratelimit.Limiter, allowedOrigins []string, telemetryEnabled bool, spaHandler http.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -62,11 +63,19 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.S
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RealIP)
 
+	if telemetryEnabled {
+		r.Use(telemetry.Middleware())
+	}
+
 	if len(allowedOrigins) > 0 {
+		allowedHeaders := []string{"Content-Type", "Authorization"}
+		if telemetryEnabled {
+			allowedHeaders = append(allowedHeaders, "traceparent", "tracestate")
+		}
 		r.Use(cors.Handler(cors.Options{
 			AllowedOrigins: allowedOrigins,
 			AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-			AllowedHeaders: []string{"Content-Type", "Authorization"},
+			AllowedHeaders: allowedHeaders,
 			ExposedHeaders: []string{"X-Request-Id"},
 			MaxAge:         86400,
 		}))
@@ -117,11 +126,16 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.S
 
 	// Mount generated API routes with /api base URL.
 	// Ban check is applied as a per-handler middleware (runs after route matching,
-	// so chi.URLParam is available).
+	// so chi.URLParam is available). SpanRenameMiddleware updates the OTel span name
+	// with the matched route pattern (e.g. "GET /api/workspaces/{wid}/channels").
+	routeMiddlewares := []openapi.MiddlewareFunc{banCheckMw}
+	if telemetryEnabled {
+		routeMiddlewares = append([]openapi.MiddlewareFunc{telemetry.SpanRenameMiddleware()}, routeMiddlewares...)
+	}
 	openapi.HandlerWithOptions(strictHandler, openapi.ChiServerOptions{
 		BaseURL:     "/api",
 		BaseRouter:  r,
-		Middlewares: []openapi.MiddlewareFunc{banCheckMw},
+		Middlewares: routeMiddlewares,
 	})
 
 	// Mount SSE routes separately (not generated - requires streaming)

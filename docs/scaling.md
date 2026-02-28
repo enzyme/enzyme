@@ -142,9 +142,26 @@ server:
 sse:
   heartbeat_interval: '20s'
   client_buffer_size: 1024
+
+telemetry:
+  sample_rate: 0.1 # 10% — full sampling is too expensive at this scale
 ```
 
 Also set `LimitNOFILE=65536` in the systemd unit for this profile.
+
+---
+
+## Telemetry Sampling
+
+If [OpenTelemetry is enabled](observability.md), the default `sample_rate` of `1.0` traces every request. This is fine for small deployments but adds overhead at scale — each trace generates spans for the HTTP request, database queries, and SSE operations.
+
+For the Medium profile (~1,000 users), `0.5` (50%) is a reasonable starting point. For the Large profile (~10,000 users), drop to `0.1` (10%) or lower. You can also disable tracing entirely (`0.0`) and keep only metrics, which are always aggregated and cheap regardless of traffic volume.
+
+```yaml
+telemetry:
+  enabled: true
+  sample_rate: 0.1 # adjust based on traffic
+```
 
 ---
 
@@ -157,3 +174,4 @@ Key metrics to watch when scaling:
 - **Memory usage**: (`cache_size` x `max_open_conns`) + `mmap_size` + (SSE clients x buffer size x avg event size) gives a rough memory floor.
 - **File descriptors**: `ls /proc/$(pidof enzyme)/fd | wc -l` shows current usage. Compare to `LimitNOFILE`.
 - **Response latency**: If P99 response times degrade, the database may benefit from a larger cache or mmap.
+- **Trace export backpressure**: If the OTLP exporter queue fills up, you'll see dropped spans in logs. Lower `sample_rate` or scale your collector.

@@ -11,6 +11,7 @@ type Config struct {
 	Email     EmailConfig     `koanf:"email"`
 	RateLimit RateLimitConfig `koanf:"rate_limit"`
 	SSE       SSEConfig       `koanf:"sse"`
+	Telemetry TelemetryConfig `koanf:"telemetry"`
 }
 
 type LogConfig struct {
@@ -90,6 +91,16 @@ type SSEConfig struct {
 	ClientBufferSize  int           `koanf:"client_buffer_size"`
 }
 
+type TelemetryConfig struct {
+	Enabled     bool              `koanf:"enabled"`
+	Endpoint    string            `koanf:"endpoint"`
+	Protocol    string            `koanf:"protocol"`     // "grpc" or "http"
+	Insecure    bool              `koanf:"insecure"`     // use plaintext (no TLS) for OTLP export
+	SampleRate  float64           `koanf:"sample_rate"`  // 0.0 to 1.0
+	ServiceName string            `koanf:"service_name"` // default "enzyme"
+	Headers     map[string]string `koanf:"headers"`      // OTLP exporter headers (e.g. auth keys)
+}
+
 func Defaults() *Config {
 	return &Config{
 		Log: LogConfig{
@@ -141,6 +152,14 @@ func Defaults() *Config {
 			CleanupInterval:   time.Hour,
 			HeartbeatInterval: 30 * time.Second,
 			ClientBufferSize:  256,
+		},
+		Telemetry: TelemetryConfig{
+			Enabled:     false,
+			Endpoint:    "localhost:4317",
+			Protocol:    "grpc",
+			Insecure:    true,
+			SampleRate:  1.0,
+			ServiceName: "enzyme",
 		},
 	}
 }
