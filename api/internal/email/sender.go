@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/mail"
 	"net/smtp"
 
 	"github.com/enzyme/api/internal/config"
@@ -63,7 +64,13 @@ func (s *SMTPSender) Send(ctx context.Context, to, subject, textBody, htmlBody s
 		msg += textBody + "\r\n"
 	}
 
-	err := smtp.SendMail(addr, auth, s.from, []string{to}, []byte(msg))
+	// Extract bare email for SMTP envelope sender (s.from may contain display name)
+	envelopeFrom := s.from
+	if parsed, err := mail.ParseAddress(s.from); err == nil {
+		envelopeFrom = parsed.Address
+	}
+
+	err := smtp.SendMail(addr, auth, envelopeFrom, []string{to}, []byte(msg))
 	if err != nil {
 		slog.Error("failed to send email", "component", "email", "to", to, "error", err)
 		return err
