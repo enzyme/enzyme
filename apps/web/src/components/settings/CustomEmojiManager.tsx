@@ -7,7 +7,7 @@ import {
 } from '../../hooks/useCustomEmojis';
 import { useAuth } from '../../hooks';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
-import { Button, Spinner, toast, CustomEmojiImg } from '../ui';
+import { Button, Spinner, toast, CustomEmojiImg, ConfirmDialog } from '../ui';
 import { resolveStandardShortcode } from '../../lib/emoji';
 
 const NAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$/;
@@ -26,6 +26,7 @@ export function CustomEmojiManager({ workspaceId }: CustomEmojiManagerProps) {
   const [name, setName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [emojiToDelete, setEmojiToDelete] = useState<{ id: string; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentMember = membersData?.members.find((m) => m.user_id === user?.id);
@@ -84,12 +85,12 @@ export function CustomEmojiManager({ workspaceId }: CustomEmojiManagerProps) {
     }
   };
 
-  const handleDelete = async (emojiId: string, emojiName: string) => {
-    if (!confirm(`Delete :${emojiName}:? Messages using it will show the shortcode as plain text.`))
-      return;
+  const handleDelete = async () => {
+    if (!emojiToDelete) return;
     try {
-      await deleteEmoji.mutateAsync(emojiId);
-      toast(`Emoji :${emojiName}: deleted`, 'success');
+      await deleteEmoji.mutateAsync(emojiToDelete.id);
+      toast(`Emoji :${emojiToDelete.name}: deleted`, 'success');
+      setEmojiToDelete(null);
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Failed to delete emoji', 'error');
     }
@@ -202,8 +203,7 @@ export function CustomEmojiManager({ workspaceId }: CustomEmojiManagerProps) {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onPress={() => handleDelete(emoji.id, emoji.name)}
-                    isLoading={deleteEmoji.isPending}
+                    onPress={() => setEmojiToDelete({ id: emoji.id, name: emoji.name })}
                   >
                     <TrashIcon className="h-4 w-4" />
                   </Button>
@@ -217,6 +217,19 @@ export function CustomEmojiManager({ workspaceId }: CustomEmojiManagerProps) {
           </p>
         )}
       </div>
+
+      {emojiToDelete && (
+        <ConfirmDialog
+          isOpen
+          onClose={() => setEmojiToDelete(null)}
+          onConfirm={handleDelete}
+          title="Delete emoji"
+          description={`Delete :${emojiToDelete.name}:? Messages using it will show the shortcode as plain text.`}
+          confirmLabel="Delete"
+          variant="destructive"
+          isLoading={deleteEmoji.isPending}
+        />
+      )}
     </div>
   );
 }

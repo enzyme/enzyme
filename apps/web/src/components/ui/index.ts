@@ -5,6 +5,7 @@ export { Spinner } from './Spinner';
 export { Avatar } from './Avatar';
 export { AvatarStack } from './AvatarStack';
 export { Modal, DialogTrigger } from './Modal';
+export { ConfirmDialog } from './ConfirmDialog';
 export { Skeleton, MessageSkeleton, ChannelListSkeleton } from './Skeleton';
 export { toast } from './toast-store';
 export { Toaster } from './Toast';
