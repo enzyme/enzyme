@@ -345,3 +345,105 @@ make build
 ```
 
 The binary at `api/bin/enzyme` includes the embedded web client. Run it directly — no separate frontend serving needed.
+
+### Automatic Updates
+
+You can set up a systemd timer to check for new releases nightly and update automatically.
+
+Create the update script at `/opt/enzyme/update.sh`:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+INSTALL_DIR="/opt/enzyme"
+BINARY="$INSTALL_DIR/enzyme"
+REPO="enzyme/enzyme"
+ASSET="enzyme-linux-amd64"
+LOG_TAG="enzyme-updater"
+
+CURRENT=$("$BINARY" --version 2>&1 || echo "unknown")
+
+LATEST=$(curl -sf "https://api.github.com/repos/$REPO/releases/latest" | grep -m1 '"tag_name"' | cut -d'"' -f4)
+
+if [ -z "$LATEST" ]; then
+    logger -t "$LOG_TAG" "Failed to fetch latest release"
+    exit 1
+fi
+
+if [ "$CURRENT" = "$LATEST" ] || [ "v$CURRENT" = "$LATEST" ]; then
+    logger -t "$LOG_TAG" "Already up to date ($CURRENT)"
+    exit 0
+fi
+
+logger -t "$LOG_TAG" "Updating from $CURRENT to $LATEST"
+
+TMP=$(mktemp)
+trap "rm -f $TMP" EXIT
+
+if ! curl -sfL -o "$TMP" "https://github.com/$REPO/releases/download/$LATEST/$ASSET"; then
+    logger -t "$LOG_TAG" "Failed to download $LATEST"
+    exit 1
+fi
+
+chmod +x "$TMP"
+
+if ! "$TMP" --version >/dev/null 2>&1; then
+    logger -t "$LOG_TAG" "Downloaded binary failed verification"
+    exit 1
+fi
+
+mv "$TMP" "$BINARY"
+chown enzyme:enzyme "$BINARY"
+systemctl restart enzyme
+
+logger -t "$LOG_TAG" "Updated to $LATEST and restarted"
+```
+
+Make it executable:
+
+```bash
+chmod +x /opt/enzyme/update.sh
+```
+
+Create `/etc/systemd/system/enzyme-update.service`:
+
+```ini
+[Unit]
+Description=Enzyme auto-update
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/enzyme/update.sh
+```
+
+Create `/etc/systemd/system/enzyme-update.timer`:
+
+```ini
+[Unit]
+Description=Check for Enzyme updates nightly
+
+[Timer]
+OnCalendar=*-*-* 00:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Enable the timer:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now enzyme-update.timer
+```
+
+Check status and logs:
+
+```bash
+sudo systemctl status enzyme-update.timer    # Next run time
+sudo journalctl -u enzyme-update.service     # Update history
+sudo systemctl start enzyme-update.service   # Run manually
+```
