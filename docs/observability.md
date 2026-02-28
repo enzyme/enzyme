@@ -204,8 +204,6 @@ For most deployments, telemetry overhead is unmeasurable relative to actual requ
 
 Enzyme exports standard OTLP, so it works with any backend that accepts OTLP. Below are examples for common platforms.
 
-The Honeycomb and HyperDX examples send OTLP directly from Enzyme to the backend. This covers Enzyme's own traces and metrics, but not system-level metrics like CPU, memory, and disk usage. If you want those, run an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) alongside Enzyme with the [Host Metrics receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/hostmetricsreceiver) enabled, point Enzyme at the collector, and have the collector forward to your backend. The Datadog example already works this way since the Datadog Agent acts as a collector.
-
 ### Datadog
 
 The Datadog Agent runs alongside Enzyme and accepts OTLP locally, then forwards to Datadog. No API key header is needed from Enzyme — the agent holds the key.
@@ -266,3 +264,50 @@ telemetry:
 ### Other Backends
 
 Any OTLP-compatible backend (Axiom, Grafana Cloud, New Relic, etc.) works the same way: set `telemetry.endpoint` to their OTLP receiver, `telemetry.protocol` to `grpc` or `http`, and pass any required auth headers via `telemetry.headers`.
+
+### Adding System Metrics with a Collector
+
+The examples above (except Datadog) send OTLP directly from Enzyme to the backend. This covers Enzyme's own traces and metrics, but not system-level metrics like CPU, memory, and disk usage.
+
+To get system metrics, run an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) alongside Enzyme with the [Host Metrics receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/hostmetricsreceiver) enabled. Point Enzyme at the collector instead of the backend, and have the collector forward everything upstream.
+
+```yaml
+# otel-collector-config.yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+  hostmetrics:
+    collection_interval: 30s
+    scrapers:
+      cpu:
+      memory:
+      disk:
+      network:
+
+exporters:
+  otlphttp:
+    endpoint: https://api.honeycomb.io
+    headers:
+      x-honeycomb-team: 'YOUR_API_KEY'
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlphttp]
+    metrics:
+      receivers: [otlp, hostmetrics]
+      exporters: [otlphttp]
+```
+
+Then point Enzyme at the collector:
+
+```yaml
+telemetry:
+  enabled: true
+  endpoint: 'localhost:4317'
+```
+
+The Datadog Agent already works this way — it acts as a collector that gathers both OTLP data and system metrics.
