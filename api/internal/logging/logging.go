@@ -10,9 +10,9 @@ import (
 
 // Setup configures the default slog logger based on the provided config.
 // This also bridges the standard "log" package via slog.SetDefault (Go 1.22+).
-// When telemetryEnabled is true, log records are enriched with trace_id and
-// span_id from the active span context.
-func Setup(cfg config.LogConfig, telemetryEnabled bool) {
+// When otelLogs is true, log records are enriched with trace_id and span_id
+// and forwarded to the OTel log pipeline.
+func Setup(cfg config.LogConfig, otelLogs bool, serviceName string) {
 	var level slog.Level
 	switch cfg.Level {
 	case "debug":
@@ -34,9 +34,7 @@ func Setup(cfg config.LogConfig, telemetryEnabled bool) {
 		handler = slog.NewTextHandler(os.Stderr, opts)
 	}
 
-	if telemetryEnabled {
-		handler = telemetry.NewSlogBridge(handler)
-	}
+	handler = telemetry.NewSlogHandler(handler, otelLogs, serviceName)
 
 	slog.SetDefault(slog.New(handler))
 }
