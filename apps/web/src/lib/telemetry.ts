@@ -7,8 +7,8 @@ import { registerInstrumentations } from '@opentelemetry/instrumentation';
 import { getWebAutoInstrumentations } from '@opentelemetry/auto-instrumentations-web';
 import { getApiBase } from '@enzyme/api-client';
 
-export function initTelemetry(): void {
-  const endpoint = import.meta.env.VITE_OTEL_ENDPOINT || '/v1/traces';
+export function initTelemetry(config?: { endpoint?: string }): void {
+  const endpoint = config?.endpoint ?? import.meta.env.VITE_OTEL_ENDPOINT ?? '/v1/traces';
 
   const resource = resourceFromAttributes({
     [ATTR_SERVICE_NAME]: 'enzyme-web',

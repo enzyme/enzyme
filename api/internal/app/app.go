@@ -200,7 +200,10 @@ func New(cfg *config.Config) (*App, error) {
 	// Create embedded SPA handler if web client is bundled
 	var spaHandler http.Handler
 	if web.HasContent() {
-		spaHandler = web.Handler()
+		spaHandler = web.Handler(web.Config{
+			TelemetryEnabled:  cfg.Telemetry.Enabled,
+			TelemetryEndpoint: "/v1/traces",
+		})
 		slog.Info("embedded web client enabled")
 	} else {
 		slog.Info("embedded web client not found, serve frontend separately")
