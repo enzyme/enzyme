@@ -124,7 +124,7 @@ export function WorkspaceSwitcher({ onOpenWorkspaceSettings }: WorkspaceSwitcher
 
   return (
     <div className="flex w-full flex-col border-r border-gray-200 bg-white pb-4 md:w-16 md:items-center md:gap-4 md:pt-3 dark:border-gray-700 dark:bg-gray-900">
-      <h2 className="border-b border-gray-200 px-3 py-3 font-semibold text-gray-900 md:hidden dark:border-gray-700 dark:text-white">
+      <h2 className="border-b border-gray-200 px-3 py-3 text-center font-semibold text-gray-900 md:hidden dark:border-gray-700 dark:text-white">
         Workspaces
       </h2>
       {/* Workspaces */}
