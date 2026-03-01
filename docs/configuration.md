@@ -144,6 +144,9 @@ Optional observability via OpenTelemetry. When enabled, Enzyme exports traces an
 | `telemetry.sample_rate`  | `ENZYME_TELEMETRY_SAMPLE_RATE`  | `--telemetry.sample_rate`  | `1.0`            | Trace sampling rate. `1.0` = sample everything, `0.1` = sample 10%.                                  |
 | `telemetry.service_name` | `ENZYME_TELEMETRY_SERVICE_NAME` | `--telemetry.service_name` | `enzyme`         | Service name reported to the collector. Useful for multi-instance deployments.                       |
 | `telemetry.headers`      |                                 |                            |                  | Map of headers sent with every OTLP export request. Use for backend auth (e.g., `x-honeycomb-team`). |
+| `telemetry.traces`       | `ENZYME_TELEMETRY_TRACES`       | `--telemetry.traces`       | `true`           | Export traces. Set to `false` to disable trace export while keeping other signals.                   |
+| `telemetry.metrics`      | `ENZYME_TELEMETRY_METRICS`      | `--telemetry.metrics`      | `true`           | Export metrics. Set to `false` to disable metric export while keeping other signals.                 |
+| `telemetry.logs`         | `ENZYME_TELEMETRY_LOGS`         | `--telemetry.logs`         | `true`           | Export logs via OTLP. Set to `false` to disable log export while keeping other signals.              |
 
 See the [Observability Guide](observability.md) for details on what's captured (traces, metrics, log correlation) and setup examples.
 
@@ -233,6 +236,10 @@ telemetry:
   enabled: false
   endpoint: 'localhost:4317'
   protocol: 'grpc'
+  insecure: true
   sample_rate: 1.0
   service_name: 'enzyme'
+  traces: true
+  metrics: true
+  logs: true
 ```

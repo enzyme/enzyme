@@ -36,6 +36,9 @@ Enzyme pushes data to the configured OTLP endpoint. You need a collector or back
 | `telemetry.sample_rate`  | `ENZYME_TELEMETRY_SAMPLE_RATE`  | `1.0`            | Trace sampling rate. `1.0` = all, `0.1` = 10%, `0` = none.           |
 | `telemetry.service_name` | `ENZYME_TELEMETRY_SERVICE_NAME` | `enzyme`         | Service name reported to the collector.                              |
 | `telemetry.headers`      |                                 |                  | Map of headers sent with every OTLP export request (e.g., API keys). |
+| `telemetry.traces`       | `ENZYME_TELEMETRY_TRACES`       | `true`           | Export traces. Disable to keep only metrics and/or logs.             |
+| `telemetry.metrics`      | `ENZYME_TELEMETRY_METRICS`      | `true`           | Export metrics. Disable to keep only traces and/or logs.             |
+| `telemetry.logs`         | `ENZYME_TELEMETRY_LOGS`         | `true`           | Export logs via OTLP. Disable to keep only traces and/or metrics.    |
 
 See the full [Configuration Reference](configuration.md#telemetry-opentelemetry) for details.
 

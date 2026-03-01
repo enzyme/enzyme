@@ -99,6 +99,9 @@ type TelemetryConfig struct {
 	SampleRate  float64           `koanf:"sample_rate"`  // 0.0 to 1.0
 	ServiceName string            `koanf:"service_name"` // default "enzyme"
 	Headers     map[string]string `koanf:"headers"`      // OTLP exporter headers (e.g. auth keys)
+	Traces      bool              `koanf:"traces"`       // export traces (default true)
+	Metrics     bool              `koanf:"metrics"`      // export metrics (default true)
+	Logs        bool              `koanf:"logs"`         // export logs (default true)
 }
 
 func Defaults() *Config {
@@ -160,6 +163,9 @@ func Defaults() *Config {
 			Insecure:    true,
 			SampleRate:  1.0,
 			ServiceName: "enzyme",
+			Traces:      true,
+			Metrics:     true,
+			Logs:        true,
 		},
 	}
 }
