@@ -1,7 +1,13 @@
 import { useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button as AriaButton } from 'react-aria-components';
-import { XMarkIcon, PhotoIcon, TrashIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
+import {
+  XMarkIcon,
+  PhotoIcon,
+  TrashIcon,
+  NoSymbolIcon,
+  ChevronLeftIcon,
+} from '@heroicons/react/24/outline';
 import {
   useUserProfile,
   useUpdateProfile,
@@ -30,11 +36,16 @@ export function ProfilePane({ userId }: ProfilePaneProps) {
   const profile = data?.user;
 
   return (
-    <div className="flex h-full flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <div className="flex h-full flex-col border-gray-200 bg-white md:border-l dark:border-gray-700 dark:bg-gray-900">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 p-3 dark:border-gray-700">
-        <h3 className="font-semibold text-gray-900 dark:text-white">Profile</h3>
-        <IconButton onPress={closeProfile} aria-label="Close profile">
+        <div className="flex items-center gap-2">
+          <IconButton onPress={closeProfile} aria-label="Back to channel" className="md:hidden">
+            <ChevronLeftIcon className="h-4 w-4" />
+          </IconButton>
+          <h3 className="font-semibold text-gray-900 dark:text-white">Profile</h3>
+        </div>
+        <IconButton onPress={closeProfile} aria-label="Close profile" className="hidden md:flex">
           <XMarkIcon className="h-4 w-4" />
         </IconButton>
       </div>

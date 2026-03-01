@@ -123,9 +123,12 @@ export function WorkspaceSwitcher({ onOpenWorkspaceSettings }: WorkspaceSwitcher
   const workspaceIds = localWorkspaces.map((ws) => ws.id);
 
   return (
-    <div className="flex w-16 flex-col items-center gap-4 border-r border-gray-200 bg-white pt-3 pb-4 dark:border-gray-700 dark:bg-gray-900">
+    <div className="flex h-full w-full flex-col border-r border-gray-200 bg-white pb-4 md:w-16 md:items-center md:gap-4 md:pt-3 dark:border-gray-700 dark:bg-gray-900">
+      <h2 className="border-b border-gray-200 px-3 py-3 text-center font-semibold text-gray-900 md:hidden dark:border-gray-700 dark:text-white">
+        Workspaces
+      </h2>
       {/* Workspaces */}
-      <div className="flex flex-1 flex-col items-center gap-3 overflow-y-auto px-2 py-2">
+      <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2 md:items-center md:gap-3 md:px-2">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -161,16 +164,18 @@ export function WorkspaceSwitcher({ onOpenWorkspaceSettings }: WorkspaceSwitcher
         <Tooltip content="Add workspace" placement="right">
           <AriaButton
             onPress={() => setIsCreateModalOpen(true)}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-gray-300"
+            className="flex h-10 cursor-pointer items-center gap-3 rounded-lg px-2 py-1 text-gray-500 transition-colors hover:bg-gray-100 md:h-auto md:justify-center md:p-0 dark:text-gray-400 dark:hover:bg-gray-800"
           >
-            <PlusIcon className="h-4 w-4" />
+            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-200 dark:bg-gray-700">
+              <PlusIcon className="h-4 w-4" />
+            </span>
+            <span className="text-sm font-medium md:hidden">Add Workspace</span>
           </AriaButton>
         </Tooltip>
       </div>
 
       {/* Bottom section */}
-      <div className="flex flex-col items-center gap-3">
-        {/* User menu */}
+      <div className="border-t border-gray-200 px-3 pt-3 md:border-0 md:px-0 md:pt-0 dark:border-gray-700">
         <UserMenu />
       </div>
 
@@ -231,7 +236,11 @@ function SortableWorkspaceItem({
             style={style}
             onPress={onPress}
             aria-label={workspace.name}
-            className={cn('cursor-grab outline-none', isDragging && 'cursor-grabbing opacity-50')}
+            className={cn(
+              'flex h-10 cursor-grab items-center gap-3 rounded-lg px-2 py-1 transition-colors outline-none hover:bg-gray-100 md:h-auto md:p-0 dark:hover:bg-gray-800',
+              isDragging && 'cursor-grabbing opacity-50',
+              isActive && 'bg-gray-100 dark:bg-gray-800',
+            )}
             {...(pointerListeners as React.DOMAttributes<Element>)}
             onContextMenu={onContextMenu}
           >
@@ -241,6 +250,9 @@ function SortableWorkspaceItem({
               isMenuOpen={isMenuOpen}
               notificationMap={notificationMap}
             />
+            <span className="truncate text-sm font-medium text-gray-900 md:hidden dark:text-white">
+              {workspace.name}
+            </span>
           </AriaButton>
         </Tooltip>
       )}
@@ -345,7 +357,7 @@ function UserMenu() {
       align="start"
       placement="top"
       trigger={
-        <AriaButton className="cursor-pointer rounded-lg outline-none hover:opacity-80">
+        <AriaButton className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-1 transition-colors outline-none hover:bg-gray-100 hover:opacity-80 md:w-auto md:p-0 dark:hover:bg-gray-800">
           <Avatar
             src={user?.avatar_url}
             gravatarSrc={user?.gravatar_url}
@@ -354,6 +366,9 @@ function UserMenu() {
             size="md"
             status="online"
           />
+          <span className="truncate text-sm font-medium text-gray-900 md:hidden dark:text-white">
+            {user?.display_name}
+          </span>
         </AriaButton>
       }
     >

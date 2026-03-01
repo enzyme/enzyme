@@ -13,6 +13,7 @@ import {
   BellSlashIcon,
   BellIcon,
   LinkIcon,
+  ChevronLeftIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { Button as AriaButton } from 'react-aria-components';
@@ -45,7 +46,10 @@ import {
   DisclosureCaret,
   toast,
   Tooltip,
+  Avatar,
+  AvatarStack,
 } from '../components/ui';
+import { useUserPresence } from '../lib/presenceStore';
 
 function ChannelIcon({ type, className }: { type: string; className?: string }) {
   if (type === 'private') {
@@ -75,6 +79,14 @@ export function ChannelPage() {
   const composerRef = useRef<MessageComposerRef>(null);
 
   const channel = channelsData?.channels.find((c) => c.id === channelId);
+  const isDM = channel?.type === 'dm' || channel?.type === 'group_dm';
+  const dmParticipant = isDM && channel?.dm_participants?.[0];
+  const dmDisplayName = isDM
+    ? channel?.dm_participants?.map((p) => p.display_name).join(', ') || channel?.name
+    : channel?.name;
+  const dmPresence = useUserPresence(
+    channel?.type === 'dm' && dmParticipant ? dmParticipant.user_id : '',
+  );
   const archiveChannel = useArchiveChannel(workspaceId || '');
   const leaveChannel = useLeaveChannel(workspaceId || '');
   const joinChannel = useJoinChannel(workspaceId || '');
@@ -158,6 +170,10 @@ export function ChannelPage() {
   const handleAtBottomChange = useCallback((atBottom: boolean) => {
     setIsAtBottom(atBottom);
   }, []);
+
+  const handleMobileBack = useCallback(() => {
+    navigate(`/workspaces/${workspaceId}`);
+  }, [navigate, workspaceId]);
 
   const handleArchive = async () => {
     if (!channelId || !workspaceId) return;
@@ -261,6 +277,13 @@ export function ChannelPage() {
       <div className="flex-shrink-0 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
+            <IconButton
+              onPress={handleMobileBack}
+              aria-label="Back to channels"
+              className="flex-shrink-0 md:hidden"
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+            </IconButton>
             {isMember && (
               <Tooltip content={channel.is_starred ? 'Unstar channel' : 'Star channel'}>
                 <IconButton
@@ -284,12 +307,48 @@ export function ChannelPage() {
             )}
             <Menu
               trigger={
-                <AriaButton className="-ml-1.5 flex flex-shrink-0 cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
-                  <ChannelIcon
-                    type={channel.type}
-                    className="h-4 w-4 text-gray-500 dark:text-gray-400"
-                  />
-                  <h1 className="font-semibold text-gray-900 dark:text-white">{channel.name}</h1>
+                <AriaButton className="-ml-1.5 flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
+                  {isDM ? (
+                    <>
+                      {channel.type === 'group_dm' &&
+                      channel.dm_participants &&
+                      channel.dm_participants.length > 1 ? (
+                        <AvatarStack
+                          users={channel.dm_participants.map((p) => ({
+                            user_id: p.user_id,
+                            display_name: p.display_name,
+                            avatar_url: p.avatar_url,
+                            gravatar_url: p.gravatar_url,
+                          }))}
+                          max={2}
+                          size="xs"
+                          showCount={false}
+                        />
+                      ) : dmParticipant ? (
+                        <Avatar
+                          src={dmParticipant.avatar_url}
+                          gravatarSrc={dmParticipant.gravatar_url}
+                          name={dmParticipant.display_name}
+                          id={dmParticipant.user_id}
+                          size="xs"
+                          status={dmPresence ?? undefined}
+                        />
+                      ) : null}
+                      <h1 className="font-semibold text-gray-900 dark:text-white">
+                        {dmDisplayName}
+                      </h1>
+                    </>
+                  ) : (
+                    <>
+                      <ChannelIcon
+                        type={channel.type}
+                        className="h-4 w-4 text-gray-500 dark:text-gray-400"
+                      />
+                      <h1 className="font-semibold text-gray-900 dark:text-white">
+                        {channel.name}
+                      </h1>
+                    </>
+                  )}
                   <DisclosureCaret isExpanded className="text-gray-500 dark:text-gray-400" />
                 </AriaButton>
               }
@@ -492,7 +551,7 @@ export function ChannelPage() {
           ref={composerRef}
           channelId={channelId}
           workspaceId={workspaceId}
-          placeholder={`Message ${getChannelPrefix(channel.type)}${channel.name}`}
+          placeholder={`Message ${isDM ? dmDisplayName : `${getChannelPrefix(channel.type)}${channel.name}`}`}
         />
       )}
 
