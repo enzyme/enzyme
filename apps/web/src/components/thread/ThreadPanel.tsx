@@ -14,6 +14,7 @@ import {
   EllipsisVerticalIcon,
   BellIcon,
   BellSlashIcon,
+  ChevronLeftIcon,
 } from '@heroicons/react/24/outline';
 import {
   useThreadMessages,
@@ -185,10 +186,15 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
   useAutoFocusComposer(composerRef, true);
 
   return (
-    <div className="flex h-full flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <div className="flex h-full flex-col border-gray-200 bg-white md:border-l dark:border-gray-700 dark:bg-gray-900">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 p-3 dark:border-gray-700">
-        <h3 className="font-semibold text-gray-900 dark:text-white">Thread</h3>
+        <div className="flex items-center gap-2">
+          <IconButton onPress={closeThread} aria-label="Back to channel" className="md:hidden">
+            <ChevronLeftIcon className="h-4 w-4" />
+          </IconButton>
+          <h3 className="font-semibold text-gray-900 dark:text-white">Thread</h3>
+        </div>
         <div className="flex items-center gap-1">
           <Menu
             align="end"

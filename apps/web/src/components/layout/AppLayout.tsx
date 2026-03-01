@@ -11,16 +11,17 @@ import {
   type WorkspaceSettingsTab,
 } from '../settings/WorkspaceSettingsModal';
 import { BanScreen } from '../moderation/BanModal';
-import { useSSE, useAuth } from '../../hooks';
+import { useSSE, useAuth, useIsMobile, useMobileNav } from '../../hooks';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { useSidebar } from '../../hooks/useSidebar';
 import { useResizableWidth } from '../../hooks/useResizableWidth';
+import { cn } from '../../lib/utils';
 import { recordChannelVisit } from '../../lib/recentChannels';
 
 function Divider(props: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className="relative z-10 -mx-0.5 w-1 flex-shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-blue-200 active:bg-blue-300 dark:hover:bg-blue-800 dark:active:bg-blue-700"
+      className="relative z-10 -mx-0.5 hidden w-1 flex-shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-blue-200 active:bg-blue-300 md:block dark:hover:bg-blue-800 dark:active:bg-blue-700"
       {...props}
     />
   );
@@ -35,6 +36,8 @@ export function AppLayout() {
   const { profileUserId } = useProfilePanel();
   const { collapsed: sidebarCollapsed } = useSidebar();
   const rightPanelOpen = Boolean(threadId || profileUserId);
+  const isMobile = useIsMobile();
+  const { activePanel } = useMobileNav();
 
   const { width: sidebarWidth, dividerProps: sidebarDividerProps } = useResizableWidth(
     'enzyme:sidebar-width',
@@ -117,7 +120,14 @@ export function AppLayout() {
 
       <div className="flex min-h-0 flex-1">
         {/* Workspace Switcher */}
-        <WorkspaceSwitcher onOpenWorkspaceSettings={handleOpenWorkspaceSettings} />
+        <div
+          className={cn(
+            'md:flex md:flex-shrink-0',
+            activePanel === 'switcher' ? 'flex min-h-0 flex-1 flex-col' : 'hidden',
+          )}
+        >
+          <WorkspaceSwitcher onOpenWorkspaceSettings={handleOpenWorkspaceSettings} />
+        </div>
 
         {currentWorkspace?.ban ? (
           <BanScreen workspace={currentWorkspace} />
@@ -125,12 +135,16 @@ export function AppLayout() {
           <>
             {/* Channel Sidebar */}
             <div
-              className="flex-shrink-0 overflow-hidden"
-              style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
+              className={cn(
+                'flex-shrink-0 overflow-hidden',
+                'md:!block',
+                activePanel === 'sidebar' ? 'flex min-h-0 flex-1 flex-col' : 'hidden',
+              )}
+              style={isMobile ? undefined : { width: sidebarCollapsed ? 0 : sidebarWidth }}
             >
               <div
-                className="h-full border-r border-gray-200 dark:border-gray-700"
-                style={{ width: sidebarWidth }}
+                className="h-full border-r border-gray-200 md:border-r dark:border-gray-700"
+                style={isMobile ? undefined : { width: sidebarWidth }}
               >
                 <ChannelSidebar
                   workspaceId={workspaceId}
@@ -149,7 +163,13 @@ export function AppLayout() {
             {!sidebarCollapsed && <Divider {...sidebarDividerProps} />}
 
             {/* Main Content */}
-            <div className="flex min-w-0 flex-1 flex-col">
+            <div
+              className={cn(
+                'min-w-0 flex-1 flex-col',
+                'md:!flex',
+                activePanel === 'channel' ? 'flex' : 'hidden',
+              )}
+            >
               <Outlet />
             </div>
 
@@ -157,7 +177,16 @@ export function AppLayout() {
             {rightPanelOpen && (
               <>
                 <Divider {...rightPanelDividerProps} />
-                <div className="flex-shrink-0" style={{ width: rightPanelWidth }}>
+                <div
+                  className={cn(
+                    'flex-shrink-0',
+                    'md:!block',
+                    activePanel === 'thread' || activePanel === 'profile'
+                      ? 'flex min-h-0 flex-1 flex-col'
+                      : 'hidden',
+                  )}
+                  style={isMobile ? undefined : { width: rightPanelWidth }}
+                >
                   {threadId && !profileUserId && <ThreadPanel messageId={threadId} />}
                   {profileUserId && <ProfilePane userId={profileUserId} />}
                 </div>

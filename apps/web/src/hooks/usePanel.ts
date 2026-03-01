@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useIsMobile } from './useIsMobile';
 
 /**
  * URL-based thread panel state
@@ -7,6 +8,7 @@ import { useSearchParams } from 'react-router-dom';
  */
 export function useThreadPanel() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const isMobile = useIsMobile();
   const threadId = searchParams.get('thread');
 
   const openThread = useCallback(
@@ -18,10 +20,10 @@ export function useThreadPanel() {
           next.delete('profile'); // Close profile when opening thread
           return next;
         },
-        { replace: true },
+        { replace: !isMobile },
       );
     },
-    [setSearchParams],
+    [setSearchParams, isMobile],
   );
 
   const closeThread = useCallback(() => {
@@ -31,9 +33,9 @@ export function useThreadPanel() {
         next.delete('thread');
         return next;
       },
-      { replace: true },
+      { replace: !isMobile },
     );
-  }, [setSearchParams]);
+  }, [setSearchParams, isMobile]);
 
   return { threadId, openThread, closeThread };
 }
@@ -44,6 +46,7 @@ export function useThreadPanel() {
  */
 export function useProfilePanel() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const isMobile = useIsMobile();
   const profileUserId = searchParams.get('profile');
 
   const openProfile = useCallback(
@@ -55,10 +58,10 @@ export function useProfilePanel() {
           next.delete('thread'); // Close thread when opening profile
           return next;
         },
-        { replace: true },
+        { replace: !isMobile },
       );
     },
-    [setSearchParams],
+    [setSearchParams, isMobile],
   );
 
   const closeProfile = useCallback(() => {
@@ -68,9 +71,9 @@ export function useProfilePanel() {
         next.delete('profile');
         return next;
       },
-      { replace: true },
+      { replace: !isMobile },
     );
-  }, [setSearchParams]);
+  }, [setSearchParams, isMobile]);
 
   return { profileUserId, openProfile, closeProfile };
 }

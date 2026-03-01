@@ -18,6 +18,7 @@ import {
   InformationCircleIcon,
   XMarkIcon,
   CheckIcon,
+  ChevronLeftIcon,
 } from '@heroicons/react/24/outline';
 import {
   DndContext,
@@ -65,6 +66,7 @@ import { useUserPresence } from '../../lib/presenceStore';
 import { AvatarStack } from '../ui';
 import type { ChannelWithMembership, ChannelType } from '@enzyme/api-client';
 import { ChannelContextMenu } from './ChannelContextMenu';
+import { useMobileNav } from '../../hooks/useMobileNav';
 import type { WorkspaceSettingsTab } from '../settings/WorkspaceSettingsModal';
 
 function ChannelIcon({
@@ -121,6 +123,7 @@ export function ChannelSidebar({
   const [activeChannel, setActiveChannel] = useState<ChannelWithMembership | null>(null);
   const workspaceMembership = workspaces?.find((w) => w.id === workspaceId);
   const canInvite = workspaceMembership?.role === 'owner' || workspaceMembership?.role === 'admin';
+  const { openSwitcher } = useMobileNav();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -250,9 +253,15 @@ export function ChannelSidebar({
 
   return (
     <div className="flex h-full flex-col bg-white dark:bg-gray-900">
-      {/* Header */}
       <div className="border-b border-gray-200 p-3 dark:border-gray-700">
         <div className="flex items-center justify-between gap-1">
+          <IconButton
+            onPress={openSwitcher}
+            aria-label="Back to workspaces"
+            className="flex-shrink-0 md:hidden"
+          >
+            <ChevronLeftIcon className="h-4 w-4" />
+          </IconButton>
           <Menu
             trigger={
               <AriaButton className="flex min-w-0 cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-left outline-none hover:bg-gray-100 dark:hover:bg-gray-800">
