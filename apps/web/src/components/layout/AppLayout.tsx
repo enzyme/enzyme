@@ -143,7 +143,7 @@ export function AppLayout() {
               style={isMobile ? undefined : { width: sidebarCollapsed ? 0 : sidebarWidth }}
             >
               <div
-                className="h-full border-r border-gray-200 md:border-r dark:border-gray-700"
+                className="h-full border-gray-200 md:border-r dark:border-gray-700"
                 style={isMobile ? undefined : { width: sidebarWidth }}
               >
                 <ChannelSidebar

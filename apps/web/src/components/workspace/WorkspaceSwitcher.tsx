@@ -122,10 +122,6 @@ export function WorkspaceSwitcher({ onOpenWorkspaceSettings }: WorkspaceSwitcher
 
   const workspaceIds = localWorkspaces.map((ws) => ws.id);
 
-  const handleWorkspacePress = (wsId: string) => {
-    navigate(`/workspaces/${wsId}`);
-  };
-
   return (
     <div className="flex w-full flex-col border-r border-gray-200 bg-white pb-4 md:w-16 md:items-center md:gap-4 md:pt-3 dark:border-gray-700 dark:bg-gray-900">
       <h2 className="border-b border-gray-200 px-3 py-3 font-semibold text-gray-900 md:hidden dark:border-gray-700 dark:text-white">
@@ -145,7 +141,7 @@ export function WorkspaceSwitcher({ onOpenWorkspaceSettings }: WorkspaceSwitcher
                 key={ws.id}
                 workspace={ws}
                 isActive={ws.id === workspaceId}
-                onPress={() => handleWorkspacePress(ws.id)}
+                onPress={() => navigate(`/workspaces/${ws.id}`)}
                 notificationMap={notificationMap}
                 onOpenWorkspaceSettings={onOpenWorkspaceSettings}
                 canInvite={ws.role === 'owner' || ws.role === 'admin'}
@@ -165,15 +161,17 @@ export function WorkspaceSwitcher({ onOpenWorkspaceSettings }: WorkspaceSwitcher
         </DndContext>
 
         {/* Add Workspace Button */}
-        <AriaButton
-          onPress={() => setIsCreateModalOpen(true)}
-          className="flex h-10 cursor-pointer items-center gap-3 rounded-lg px-2 py-1 text-gray-500 transition-colors hover:bg-gray-100 md:h-auto md:justify-center md:p-0 dark:text-gray-400 dark:hover:bg-gray-800"
-        >
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-200 dark:bg-gray-700">
-            <PlusIcon className="h-4 w-4" />
-          </span>
-          <span className="text-sm font-medium md:hidden">Add Workspace</span>
-        </AriaButton>
+        <Tooltip content="Add workspace" placement="right">
+          <AriaButton
+            onPress={() => setIsCreateModalOpen(true)}
+            className="flex h-10 cursor-pointer items-center gap-3 rounded-lg px-2 py-1 text-gray-500 transition-colors hover:bg-gray-100 md:h-auto md:justify-center md:p-0 dark:text-gray-400 dark:hover:bg-gray-800"
+          >
+            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-200 dark:bg-gray-700">
+              <PlusIcon className="h-4 w-4" />
+            </span>
+            <span className="text-sm font-medium md:hidden">Add Workspace</span>
+          </AriaButton>
+        </Tooltip>
       </div>
 
       {/* Bottom section */}

@@ -4,6 +4,10 @@ import { useIsMobile } from './useIsMobile';
 
 export type MobilePanel = 'switcher' | 'sidebar' | 'channel' | 'thread' | 'profile';
 
+// Routes that render into <Outlet /> and should show as main content.
+// Update this when adding new workspace-level pages.
+const CONTENT_PAGE_RE = /\/workspaces\/[^/]+\/(unreads|threads|scheduled)$/;
+
 export function useMobileNav() {
   const { channelId } = useParams<{ channelId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -14,8 +18,7 @@ export function useMobileNav() {
   const hasProfile = searchParams.has('profile');
   const hasSwitcher = searchParams.has('switcher');
 
-  // These routes render into <Outlet /> and should show as main content
-  const isContentPage = /\/(unreads|threads|scheduled)$/.test(location.pathname);
+  const isContentPage = CONTENT_PAGE_RE.test(location.pathname);
 
   let activePanel: MobilePanel;
   if (hasSwitcher) {
@@ -43,16 +46,5 @@ export function useMobileNav() {
     );
   }, [setSearchParams, isMobile]);
 
-  const closeSwitcher = useCallback(() => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete('switcher');
-        return next;
-      },
-      { replace: !isMobile },
-    );
-  }, [setSearchParams, isMobile]);
-
-  return { activePanel, openSwitcher, closeSwitcher };
+  return { activePanel, openSwitcher };
 }

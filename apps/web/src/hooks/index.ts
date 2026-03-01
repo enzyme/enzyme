@@ -52,7 +52,6 @@ export {
 export { useSearch } from './useSearch';
 export { useIsMobile } from './useIsMobile';
 export { useMobileNav } from './useMobileNav';
-export type { MobilePanel } from './useMobileNav';
 export {
   usePinnedMessages,
   usePinMessage,

@@ -232,7 +232,7 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
               Copy link
             </MenuItem>
           </Menu>
-          <IconButton onPress={closeThread} aria-label="Close thread">
+          <IconButton onPress={closeThread} aria-label="Close thread" className="hidden md:flex">
             <XMarkIcon className="h-4 w-4" />
           </IconButton>
         </div>
