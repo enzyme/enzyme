@@ -40,6 +40,7 @@ export function ChannelMembersButton({
     user_id: m.user_id,
     display_name: m.display_name,
     avatar_url: m.avatar_url,
+    gravatar_url: m.gravatar_url,
   }));
 
   return (
