@@ -35,4 +35,10 @@ export const authApi = {
 
   resetPassword: (token: string, new_password: string) =>
     post<{ success: boolean }>('/auth/reset-password', { token, new_password }),
+
+  verifyEmail: (token: string) =>
+    post<{ success: boolean }>('/auth/verify-email', { token }),
+
+  resendVerification: () =>
+    post<{ success?: boolean; message?: string }>('/auth/resend-verification'),
 };

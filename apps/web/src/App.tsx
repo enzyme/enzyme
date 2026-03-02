@@ -27,6 +27,9 @@ const ForgotPasswordPage = lazy(() =>
 const ResetPasswordPage = lazy(() =>
   import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
 );
+const VerifyEmailPage = lazy(() =>
+  import('./pages/VerifyEmailPage').then((m) => ({ default: m.VerifyEmailPage })),
+);
 
 function PageSpinner() {
   return (
@@ -64,6 +67,14 @@ function App() {
             element={
               <Suspense fallback={<PageSpinner />}>
                 <ResetPasswordPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/verify-email"
+            element={
+              <Suspense fallback={<PageSpinner />}>
+                <VerifyEmailPage />
               </Suspense>
             }
           />

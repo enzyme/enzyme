@@ -45,7 +45,8 @@ func testHandler(t *testing.T) (*Handler, *sql.DB) {
 	hub := sse.NewHub(db, 24*time.Hour)
 
 	passwordResets := auth.NewPasswordResetRepo(db)
-	authService := auth.NewService(userRepo, passwordResets, 4)
+	emailVerifications := auth.NewEmailVerificationRepo(db)
+	authService := auth.NewService(userRepo, passwordResets, emailVerifications, 4)
 
 	sessionStore := auth.NewSessionStore(db, 24*time.Hour)
 
@@ -170,7 +171,8 @@ func testHandlerWithLinkPreviews(t *testing.T, httpClient *http.Client) (*Handle
 	hub := sse.NewHub(db, 24*time.Hour)
 
 	passwordResets := auth.NewPasswordResetRepo(db)
-	authService := auth.NewService(userRepo, passwordResets, 4)
+	emailVerifications := auth.NewEmailVerificationRepo(db)
+	authService := auth.NewService(userRepo, passwordResets, emailVerifications, 4)
 
 	sessionStore := auth.NewSessionStore(db, 24*time.Hour)
 

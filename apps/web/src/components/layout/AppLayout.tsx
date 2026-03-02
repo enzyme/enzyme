@@ -11,6 +11,7 @@ import {
   type WorkspaceSettingsTab,
 } from '../settings/WorkspaceSettingsModal';
 import { BanScreen } from '../moderation/BanModal';
+import { EmailVerificationBanner } from '../auth/EmailVerificationBanner';
 import { useSSE, useAuth, useIsMobile, useMobileNav } from '../../hooks';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { useSidebar } from '../../hooks/useSidebar';
@@ -30,7 +31,7 @@ function Divider(props: React.HTMLAttributes<HTMLDivElement>) {
 export function AppLayout() {
   const { workspaceId, channelId } = useParams<{ workspaceId: string; channelId: string }>();
   const { isReconnecting } = useSSE(workspaceId);
-  const { workspaces } = useAuth();
+  const { user, workspaces } = useAuth();
   const currentWorkspace = workspaces?.find((ws) => ws.id === workspaceId);
   const { threadId } = useThreadPanel();
   const { profileUserId } = useProfilePanel();
@@ -111,6 +112,9 @@ export function AppLayout() {
 
   return (
     <div className="flex h-screen flex-col bg-white dark:bg-gray-900">
+      {/* Email Verification Banner */}
+      {!user?.email_verified_at && <EmailVerificationBanner />}
+
       {/* Connection Status - full width */}
       {isReconnecting && workspaceId && (
         <div className="flex-shrink-0 border-b border-yellow-200 bg-yellow-100 px-4 py-1.5 text-center text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200">

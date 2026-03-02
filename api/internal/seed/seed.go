@@ -67,6 +67,10 @@ func Run(ctx context.Context, db *sql.DB) error {
 		if err != nil {
 			return fmt.Errorf("create user %s: %w", su.email, err)
 		}
+		// Mark seed users as email-verified so they don't see the verification banner
+		if err := userRepo.VerifyEmail(ctx, u.ID); err != nil {
+			return fmt.Errorf("verify email for %s: %w", su.email, err)
+		}
 		users[i] = u
 		slog.Info("created user", "email", su.email)
 	}

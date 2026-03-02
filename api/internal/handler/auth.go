@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/url"
 	"time"
 
 	"github.com/enzyme/api/internal/auth"
+	"github.com/enzyme/api/internal/email"
 	"github.com/enzyme/api/internal/gravatar"
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/user"
@@ -46,6 +48,21 @@ func (h *Handler) Register(ctx context.Context, request openapi.RegisterRequestO
 	if err != nil {
 		return nil, err
 	}
+
+	// Send verification email (don't fail registration if this fails)
+	go func() {
+		sendCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		verifyToken, err := h.authService.CreateEmailVerificationToken(sendCtx, u.ID)
+		if err != nil {
+			slog.Error("failed to create email verification token", "error", err)
+			return
+		}
+		verifyURL := h.publicURL + "/verify-email?" + url.Values{"token": {verifyToken}}.Encode()
+		if err := h.emailService.SendEmailVerification(sendCtx, u.Email, email.VerifyEmailData{VerifyURL: verifyURL}); err != nil {
+			slog.Error("failed to send verification email", "error", err)
+		}
+	}()
 
 	return openapi.Register200JSONResponse{
 		User:  userToAPI(u),
@@ -198,6 +215,63 @@ func (h *Handler) ResetPassword(ctx context.Context, request openapi.ResetPasswo
 
 	return openapi.ResetPassword200JSONResponse{
 		Success: true,
+	}, nil
+}
+
+// VerifyEmail handles email verification with a token
+func (h *Handler) VerifyEmail(ctx context.Context, request openapi.VerifyEmailRequestObject) (openapi.VerifyEmailResponseObject, error) {
+	err := h.authService.VerifyEmail(ctx, request.Body.Token)
+	if err != nil {
+		if errors.Is(err, auth.ErrInvalidVerificationToken) {
+			return openapi.VerifyEmail400JSONResponse{
+				BadRequestJSONResponse: badRequestResponse("INVALID_VERIFICATION_TOKEN", "Invalid or expired verification token"),
+			}, nil
+		}
+		return nil, err
+	}
+
+	return openapi.VerifyEmail200JSONResponse{Success: true}, nil
+}
+
+// ResendVerification resends the verification email to the current user
+func (h *Handler) ResendVerification(ctx context.Context, request openapi.ResendVerificationRequestObject) (openapi.ResendVerificationResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.ResendVerification401JSONResponse{
+			UnauthorizedJSONResponse: openapi.UnauthorizedJSONResponse(newErrorResponse(ErrCodeNotAuthenticated, "Not authenticated")),
+		}, nil
+	}
+
+	u, err := h.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if u.EmailVerifiedAt != nil {
+		return openapi.ResendVerification400JSONResponse{
+			BadRequestJSONResponse: badRequestResponse("ALREADY_VERIFIED", "Email is already verified"),
+		}, nil
+	}
+
+	token, err := h.authService.CreateEmailVerificationToken(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		sendCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		verifyURL := h.publicURL + "/verify-email?" + url.Values{"token": {token}}.Encode()
+		if err := h.emailService.SendEmailVerification(sendCtx, u.Email, email.VerifyEmailData{VerifyURL: verifyURL}); err != nil {
+			slog.Error("failed to send verification email", "error", err)
+		}
+	}()
+
+	success := true
+	msg := "Verification email sent"
+	return openapi.ResendVerification200JSONResponse{
+		Success: &success,
+		Message: &msg,
 	}, nil
 }
 

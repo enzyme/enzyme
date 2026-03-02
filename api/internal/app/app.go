@@ -40,22 +40,23 @@ import (
 )
 
 type App struct {
-	Config              *config.Config
-	DB                  *database.DB
-	Server              *server.Server
-	Hub                 *sse.Hub
-	PresenceManager     *presence.Manager
-	EmailService        *email.Service
-	NotificationService *notification.Service
-	EmailWorker         *notification.EmailWorker
-	RateLimiter         *ratelimit.Limiter
-	SessionStore        *auth.SessionStore
-	LinkPreviewRepo     *linkpreview.Repository
-	ScheduledWorker     *scheduled.Worker
-	passwordResetRepo   *auth.PasswordResetRepo
-	moderationRepo      *moderation.Repository
-	scheduler           *scheduler.Scheduler
-	Telemetry           *telemetry.Telemetry
+	Config                *config.Config
+	DB                    *database.DB
+	Server                *server.Server
+	Hub                   *sse.Hub
+	PresenceManager       *presence.Manager
+	EmailService          *email.Service
+	NotificationService   *notification.Service
+	EmailWorker           *notification.EmailWorker
+	RateLimiter           *ratelimit.Limiter
+	SessionStore          *auth.SessionStore
+	EmailVerificationRepo *auth.EmailVerificationRepo
+	LinkPreviewRepo       *linkpreview.Repository
+	ScheduledWorker       *scheduled.Worker
+	passwordResetRepo     *auth.PasswordResetRepo
+	moderationRepo        *moderation.Repository
+	scheduler             *scheduler.Scheduler
+	Telemetry             *telemetry.Telemetry
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -105,6 +106,7 @@ func New(cfg *config.Config) (*App, error) {
 	// Initialize repositories
 	userRepo := user.NewRepository(db.DB)
 	passwordResetRepo := auth.NewPasswordResetRepo(db.DB)
+	emailVerificationRepo := auth.NewEmailVerificationRepo(db.DB)
 	workspaceRepo := workspace.NewRepository(db.DB)
 	channelRepo := channel.NewRepository(db.DB)
 	messageRepo := message.NewRepository(db.DB)
@@ -117,7 +119,7 @@ func New(cfg *config.Config) (*App, error) {
 	moderationRepo := moderation.NewRepository(db.DB)
 
 	// Initialize services
-	authService := auth.NewService(userRepo, passwordResetRepo, cfg.Auth.BcryptCost)
+	authService := auth.NewService(userRepo, passwordResetRepo, emailVerificationRepo, cfg.Auth.BcryptCost)
 
 	// Initialize notification service
 	notificationPrefsRepo := notification.NewPreferencesRepository(db.DB)
@@ -198,6 +200,8 @@ func New(cfg *config.Config) (*App, error) {
 			{Method: "POST", Path: "/api/auth/register", Limit: cfg.RateLimit.Register.Limit, Window: cfg.RateLimit.Register.Window},
 			{Method: "POST", Path: "/api/auth/forgot-password", Limit: cfg.RateLimit.ForgotPassword.Limit, Window: cfg.RateLimit.ForgotPassword.Window},
 			{Method: "POST", Path: "/api/auth/reset-password", Limit: cfg.RateLimit.ResetPassword.Limit, Window: cfg.RateLimit.ResetPassword.Window},
+			{Method: "POST", Path: "/api/auth/verify-email", Limit: cfg.RateLimit.VerifyEmail.Limit, Window: cfg.RateLimit.VerifyEmail.Window},
+			{Method: "POST", Path: "/api/auth/resend-verification", Limit: cfg.RateLimit.ResendVerification.Limit, Window: cfg.RateLimit.ResendVerification.Window},
 		}
 		limiter = ratelimit.NewLimiter(rules)
 	}
@@ -241,22 +245,23 @@ func New(cfg *config.Config) (*App, error) {
 		cfg.Server.ReadTimeout, cfg.Server.WriteTimeout, cfg.Server.IdleTimeout)
 
 	return &App{
-		Config:              cfg,
-		DB:                  db,
-		Server:              srv,
-		Hub:                 hub,
-		PresenceManager:     presenceManager,
-		EmailService:        emailService,
-		NotificationService: notificationService,
-		EmailWorker:         emailWorker,
-		RateLimiter:         limiter,
-		SessionStore:        sessionStore,
-		LinkPreviewRepo:     linkPreviewRepo,
-		ScheduledWorker:     scheduledWorker,
-		passwordResetRepo:   passwordResetRepo,
-		moderationRepo:      moderationRepo,
-		scheduler:           scheduler.New(),
-		Telemetry:           tel,
+		Config:                cfg,
+		DB:                    db,
+		Server:                srv,
+		Hub:                   hub,
+		PresenceManager:       presenceManager,
+		EmailService:          emailService,
+		NotificationService:   notificationService,
+		EmailWorker:           emailWorker,
+		RateLimiter:           limiter,
+		SessionStore:          sessionStore,
+		EmailVerificationRepo: emailVerificationRepo,
+		LinkPreviewRepo:       linkPreviewRepo,
+		ScheduledWorker:       scheduledWorker,
+		passwordResetRepo:     passwordResetRepo,
+		moderationRepo:        moderationRepo,
+		scheduler:             scheduler.New(),
+		Telemetry:             tel,
 	}, nil
 }
 
@@ -286,6 +291,8 @@ func (a *App) Start(ctx context.Context) error {
 	s.Register(scheduler.Task{Name: "password-reset-cleanup", Interval: 24 * time.Hour, Fn: a.passwordResetRepo.DeleteExpired})
 	s.Register(scheduler.Task{Name: "expired-ban-cleanup", Interval: time.Hour, Fn: a.moderationRepo.CleanupExpiredBans})
 	s.Register(scheduler.Task{Name: "sqlite-optimize", Interval: 24 * time.Hour, Fn: func(ctx context.Context) error { _, err := a.DB.Exec("PRAGMA optimize(0x10002)"); return err }})
+
+	s.Register(scheduler.Task{Name: "email-verification-cleanup", Interval: 24 * time.Hour, Fn: a.EmailVerificationRepo.DeleteExpired})
 
 	s.Start(ctx)
 

@@ -62,11 +62,73 @@ func (m *mockPasswordResetRepository) MarkUsed(ctx context.Context, id string) e
 	return nil
 }
 
-func TestService_Register(t *testing.T) {
+// mockEmailVerificationRepository is a mock implementation of EmailVerificationRepository
+type mockEmailVerificationRepository struct {
+	Verifications map[string]*EmailVerification
+	CreateErr     error
+	GetErr        error
+	DeleteErr     error
+}
+
+func newMockEmailVerificationRepository() *mockEmailVerificationRepository {
+	return &mockEmailVerificationRepository{
+		Verifications: make(map[string]*EmailVerification),
+	}
+}
+
+func (m *mockEmailVerificationRepository) Create(ctx context.Context, userID string, token string, expiresAt time.Time) error {
+	if m.CreateErr != nil {
+		return m.CreateErr
+	}
+	// Delete existing tokens for user (mirrors real behavior)
+	for k, v := range m.Verifications {
+		if v.UserID == userID {
+			delete(m.Verifications, k)
+		}
+	}
+	m.Verifications[token] = &EmailVerification{
+		UserID:    userID,
+		Token:     token,
+		ExpiresAt: expiresAt,
+	}
+	return nil
+}
+
+func (m *mockEmailVerificationRepository) GetByToken(ctx context.Context, token string) (*EmailVerification, error) {
+	if m.GetErr != nil {
+		return nil, m.GetErr
+	}
+	ev, ok := m.Verifications[token]
+	if !ok {
+		return nil, ErrInvalidVerificationToken
+	}
+	return ev, nil
+}
+
+func (m *mockEmailVerificationRepository) DeleteForUser(ctx context.Context, userID string) error {
+	if m.DeleteErr != nil {
+		return m.DeleteErr
+	}
+	for k, v := range m.Verifications {
+		if v.UserID == userID {
+			delete(m.Verifications, k)
+		}
+	}
+	return nil
+}
+
+func newTestService(t *testing.T) (*Service, *user.Repository, *mockPasswordResetRepository, *mockEmailVerificationRepository) {
+	t.Helper()
 	db := testutil.TestDB(t)
 	userRepo := user.NewRepository(db)
 	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4) // Low bcrypt cost for tests
+	mockVerifications := newMockEmailVerificationRepository()
+	svc := NewService(userRepo, mockResets, mockVerifications, 4) // Low bcrypt cost for tests
+	return svc, userRepo, mockResets, mockVerifications
+}
+
+func TestService_Register(t *testing.T) {
+	svc, _, _, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -91,10 +153,7 @@ func TestService_Register(t *testing.T) {
 }
 
 func TestService_Register_PasswordTooShort(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, _, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -109,10 +168,7 @@ func TestService_Register_PasswordTooShort(t *testing.T) {
 }
 
 func TestService_Register_DisplayNameRequired(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, _, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -127,10 +183,7 @@ func TestService_Register_DisplayNameRequired(t *testing.T) {
 }
 
 func TestService_Register_InvalidEmail(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, _, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -157,10 +210,7 @@ func TestService_Register_InvalidEmail(t *testing.T) {
 }
 
 func TestService_Register_DuplicateEmail(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, _, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -184,10 +234,7 @@ func TestService_Register_DuplicateEmail(t *testing.T) {
 }
 
 func TestService_Login(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, _, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -213,10 +260,7 @@ func TestService_Login(t *testing.T) {
 }
 
 func TestService_Login_InvalidCredentials(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, _, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -250,10 +294,7 @@ func TestService_Login_InvalidCredentials(t *testing.T) {
 }
 
 func TestService_Login_DeactivatedUser(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, userRepo, _, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -277,10 +318,7 @@ func TestService_Login_DeactivatedUser(t *testing.T) {
 }
 
 func TestService_GetCurrentUser(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, _, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -301,10 +339,7 @@ func TestService_GetCurrentUser(t *testing.T) {
 }
 
 func TestService_CreatePasswordResetToken(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, mockResets, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -331,10 +366,7 @@ func TestService_CreatePasswordResetToken(t *testing.T) {
 }
 
 func TestService_CreatePasswordResetToken_NonexistentEmail(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, _, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -350,10 +382,7 @@ func TestService_CreatePasswordResetToken_NonexistentEmail(t *testing.T) {
 }
 
 func TestService_ResetPassword(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, mockResets, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -399,10 +428,7 @@ func TestService_ResetPassword(t *testing.T) {
 }
 
 func TestService_ResetPassword_InvalidToken(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, _, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -413,10 +439,7 @@ func TestService_ResetPassword_InvalidToken(t *testing.T) {
 }
 
 func TestService_ResetPassword_ExpiredToken(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, mockResets, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -443,10 +466,7 @@ func TestService_ResetPassword_ExpiredToken(t *testing.T) {
 }
 
 func TestService_ResetPassword_UsedToken(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, mockResets, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -475,10 +495,7 @@ func TestService_ResetPassword_UsedToken(t *testing.T) {
 }
 
 func TestService_ResetPassword_PasswordTooShort(t *testing.T) {
-	db := testutil.TestDB(t)
-	userRepo := user.NewRepository(db)
-	mockResets := newMockPasswordResetRepository()
-	svc := NewService(userRepo, mockResets, 4)
+	svc, _, _, _ := newTestService(t)
 
 	ctx := context.Background()
 
@@ -530,5 +547,121 @@ func TestCheckPassword(t *testing.T) {
 				t.Errorf("CheckPassword() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestService_CreateEmailVerificationToken(t *testing.T) {
+	svc, _, _, mockVerifications := newTestService(t)
+	ctx := context.Background()
+
+	u, _ := svc.Register(ctx, RegisterInput{
+		Email:       "verify@example.com",
+		Password:    "password123",
+		DisplayName: "Verify User",
+	})
+
+	token, err := svc.CreateEmailVerificationToken(ctx, u.ID)
+	if err != nil {
+		t.Fatalf("CreateEmailVerificationToken() error = %v", err)
+	}
+
+	if token == "" {
+		t.Error("expected non-empty token")
+	}
+
+	if len(mockVerifications.Verifications) != 1 {
+		t.Errorf("len(Verifications) = %d, want 1", len(mockVerifications.Verifications))
+	}
+}
+
+func TestService_CreateEmailVerificationToken_ReplacesExisting(t *testing.T) {
+	svc, _, _, mockVerifications := newTestService(t)
+	ctx := context.Background()
+
+	u, _ := svc.Register(ctx, RegisterInput{
+		Email:       "verify@example.com",
+		Password:    "password123",
+		DisplayName: "Verify User",
+	})
+
+	token1, _ := svc.CreateEmailVerificationToken(ctx, u.ID)
+	token2, _ := svc.CreateEmailVerificationToken(ctx, u.ID)
+
+	if token1 == token2 {
+		t.Error("expected different tokens")
+	}
+
+	// Only one token should exist (old one deleted)
+	if len(mockVerifications.Verifications) != 1 {
+		t.Errorf("len(Verifications) = %d, want 1", len(mockVerifications.Verifications))
+	}
+
+	// The remaining token should be the new one
+	if _, ok := mockVerifications.Verifications[token2]; !ok {
+		t.Error("expected second token to be stored")
+	}
+}
+
+func TestService_VerifyEmail(t *testing.T) {
+	svc, userRepo, _, _ := newTestService(t)
+	ctx := context.Background()
+
+	u, _ := svc.Register(ctx, RegisterInput{
+		Email:       "verify@example.com",
+		Password:    "password123",
+		DisplayName: "Verify User",
+	})
+
+	// User should not be verified yet
+	fetched, _ := userRepo.GetByID(ctx, u.ID)
+	if fetched.EmailVerifiedAt != nil {
+		t.Error("expected EmailVerifiedAt to be nil before verification")
+	}
+
+	token, _ := svc.CreateEmailVerificationToken(ctx, u.ID)
+
+	err := svc.VerifyEmail(ctx, token)
+	if err != nil {
+		t.Fatalf("VerifyEmail() error = %v", err)
+	}
+
+	// User should now be verified
+	fetched, _ = userRepo.GetByID(ctx, u.ID)
+	if fetched.EmailVerifiedAt == nil {
+		t.Error("expected EmailVerifiedAt to be set after verification")
+	}
+}
+
+func TestService_VerifyEmail_InvalidToken(t *testing.T) {
+	svc, _, _, _ := newTestService(t)
+	ctx := context.Background()
+
+	err := svc.VerifyEmail(ctx, "invalid-token")
+	if !errors.Is(err, ErrInvalidVerificationToken) {
+		t.Errorf("VerifyEmail() error = %v, want %v", err, ErrInvalidVerificationToken)
+	}
+}
+
+func TestService_VerifyEmail_ExpiredToken(t *testing.T) {
+	svc, _, _, mockVerifications := newTestService(t)
+	ctx := context.Background()
+
+	u, _ := svc.Register(ctx, RegisterInput{
+		Email:       "verify@example.com",
+		Password:    "password123",
+		DisplayName: "Verify User",
+	})
+
+	// Manually create an expired verification token
+	expiredToken := "expired-verification-token-1234567890"
+	mockVerifications.Verifications[expiredToken] = &EmailVerification{
+		UserID:    u.ID,
+		Token:     expiredToken,
+		ExpiresAt: time.Now().Add(-1 * time.Hour),
+	}
+
+	err := svc.VerifyEmail(ctx, expiredToken)
+	if !errors.Is(err, ErrInvalidVerificationToken) {
+		t.Errorf("VerifyEmail() error = %v, want %v", err, ErrInvalidVerificationToken)
 	}
 }

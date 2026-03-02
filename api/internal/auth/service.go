@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"errors"
 	"time"
@@ -11,18 +12,20 @@ import (
 )
 
 var (
-	ErrInvalidCredentials  = errors.New("invalid email or password")
-	ErrUserDeactivated     = errors.New("user account is deactivated")
-	ErrInvalidResetToken   = errors.New("invalid or expired reset token")
-	ErrPasswordTooShort    = errors.New("password must be at least 8 characters")
-	ErrDisplayNameRequired = errors.New("display name is required")
-	ErrInvalidEmail        = errors.New("invalid email address")
+	ErrInvalidCredentials       = errors.New("invalid email or password")
+	ErrUserDeactivated          = errors.New("user account is deactivated")
+	ErrInvalidResetToken        = errors.New("invalid or expired reset token")
+	ErrInvalidVerificationToken = errors.New("invalid or expired verification token")
+	ErrPasswordTooShort         = errors.New("password must be at least 8 characters")
+	ErrDisplayNameRequired      = errors.New("display name is required")
+	ErrInvalidEmail             = errors.New("invalid email address")
 )
 
 type Service struct {
-	userRepo       *user.Repository
-	passwordResets PasswordResetRepository
-	bcryptCost     int
+	userRepo           *user.Repository
+	passwordResets     PasswordResetRepository
+	emailVerifications EmailVerificationRepository
+	bcryptCost         int
 }
 
 type PasswordResetRepository interface {
@@ -39,11 +42,12 @@ type PasswordReset struct {
 	UsedAt    *time.Time
 }
 
-func NewService(userRepo *user.Repository, passwordResets PasswordResetRepository, bcryptCost int) *Service {
+func NewService(userRepo *user.Repository, passwordResets PasswordResetRepository, emailVerifications EmailVerificationRepository, bcryptCost int) *Service {
 	return &Service{
-		userRepo:       userRepo,
-		passwordResets: passwordResets,
-		bcryptCost:     bcryptCost,
+		userRepo:           userRepo,
+		passwordResets:     passwordResets,
+		emailVerifications: emailVerifications,
+		bcryptCost:         bcryptCost,
 	}
 }
 
@@ -149,6 +153,39 @@ func (s *Service) ResetPassword(ctx context.Context, token string, newPassword s
 	}
 
 	return s.passwordResets.MarkUsed(ctx, reset.ID)
+}
+
+func (s *Service) CreateEmailVerificationToken(ctx context.Context, userID string) (string, error) {
+	token := generateSecureToken(32)
+	expiresAt := time.Now().Add(24 * time.Hour)
+
+	if err := s.emailVerifications.Create(ctx, userID, token, expiresAt); err != nil {
+		return "", err
+	}
+
+	return token, nil
+}
+
+func (s *Service) VerifyEmail(ctx context.Context, token string) error {
+	ev, err := s.emailVerifications.GetByToken(ctx, token)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrInvalidVerificationToken
+		}
+		return err
+	}
+
+	if time.Now().After(ev.ExpiresAt) {
+		return ErrInvalidVerificationToken
+	}
+
+	if err := s.userRepo.VerifyEmail(ctx, ev.UserID); err != nil {
+		return err
+	}
+
+	_ = s.emailVerifications.DeleteForUser(ctx, ev.UserID)
+
+	return nil
 }
 
 func validateEmail(email string) error {

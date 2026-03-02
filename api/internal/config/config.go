@@ -72,11 +72,13 @@ type EmailConfig struct {
 }
 
 type RateLimitConfig struct {
-	Enabled        bool              `koanf:"enabled"`
-	Login          RateLimitEndpoint `koanf:"login"`
-	Register       RateLimitEndpoint `koanf:"register"`
-	ForgotPassword RateLimitEndpoint `koanf:"forgot_password"`
-	ResetPassword  RateLimitEndpoint `koanf:"reset_password"`
+	Enabled            bool              `koanf:"enabled"`
+	Login              RateLimitEndpoint `koanf:"login"`
+	Register           RateLimitEndpoint `koanf:"register"`
+	ForgotPassword     RateLimitEndpoint `koanf:"forgot_password"`
+	ResetPassword      RateLimitEndpoint `koanf:"reset_password"`
+	VerifyEmail        RateLimitEndpoint `koanf:"verify_email"`
+	ResendVerification RateLimitEndpoint `koanf:"resend_verification"`
 }
 
 type RateLimitEndpoint struct {
@@ -145,11 +147,13 @@ func Defaults() *Config {
 			Port:    587,
 		},
 		RateLimit: RateLimitConfig{
-			Enabled:        true,
-			Login:          RateLimitEndpoint{Limit: 10, Window: time.Minute},
-			Register:       RateLimitEndpoint{Limit: 5, Window: time.Hour},
-			ForgotPassword: RateLimitEndpoint{Limit: 5, Window: 15 * time.Minute},
-			ResetPassword:  RateLimitEndpoint{Limit: 10, Window: 15 * time.Minute},
+			Enabled:            true,
+			Login:              RateLimitEndpoint{Limit: 10, Window: time.Minute},
+			Register:           RateLimitEndpoint{Limit: 5, Window: time.Hour},
+			ForgotPassword:     RateLimitEndpoint{Limit: 5, Window: 15 * time.Minute},
+			ResetPassword:      RateLimitEndpoint{Limit: 10, Window: 15 * time.Minute},
+			VerifyEmail:        RateLimitEndpoint{Limit: 10, Window: 15 * time.Minute},
+			ResendVerification: RateLimitEndpoint{Limit: 5, Window: time.Hour},
 		},
 		SSE: SSEConfig{
 			EventRetention:    24 * time.Hour,

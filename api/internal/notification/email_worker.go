@@ -71,6 +71,19 @@ func (w *EmailWorker) ProcessPending(ctx context.Context) error {
 			continue
 		}
 
+		// Skip unverified users — digest emails aren't deliverable
+		if usr.EmailVerifiedAt == nil {
+			slog.Warn("skipping notification digest for unverified email", "component", "notification", "user_id", userID)
+			ids := make([]string, len(notifications))
+			for i, n := range notifications {
+				ids[i] = n.ID
+			}
+			if err := w.pendingRepo.DeleteByIDs(ctx, ids); err != nil {
+				slog.Error("error deleting pending notifications for unverified user", "component", "notification", "user_id", userID, "error", err)
+			}
+			continue
+		}
+
 		// Group notifications by workspace for better email structure
 		byWorkspace := make(map[string][]PendingNotification)
 		for _, n := range notifications {
