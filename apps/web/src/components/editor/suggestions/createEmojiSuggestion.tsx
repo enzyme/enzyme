@@ -19,6 +19,7 @@ export function createEmojiSuggestion(
   return {
     char: ':',
     allowSpaces: false,
+    allowedPrefixes: [' ', '+'],
 
     items: ({ query }) => {
       const customEmojis = customEmojisRef?.current || [];

@@ -201,12 +201,12 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
         if (reactionMatch) {
           const shortcode = reactionMatch[1];
           const isValid =
-            shortcode in EMOJI_MAP || customEmojis?.some((e) => e.shortcode === shortcode);
+            shortcode in EMOJI_MAP || customEmojis?.some((e) => e.name === shortcode);
           if (isValid) {
             const messages = getNewestPage();
             const latestMessage = messages.find((m) => !m.deleted_at);
             if (latestMessage) {
-              addReaction.mutate({ messageId: latestMessage.id, emoji: shortcode });
+              addReaction.mutate({ messageId: latestMessage.id, emoji: `:${shortcode}:` });
               editorRef.current?.clear();
               return;
             }
