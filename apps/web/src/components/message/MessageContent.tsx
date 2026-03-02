@@ -12,6 +12,12 @@ interface MessageContentProps {
   customEmojiMap?: Map<string, CustomEmoji>;
 }
 
+export function EditedBadge({ inline }: { inline?: boolean }) {
+  return (
+    <span className="text-sm text-gray-400 dark:text-gray-500">{inline ? ' ' : ''}(edited)</span>
+  );
+}
+
 export function MessageContent({
   content,
   members = [],

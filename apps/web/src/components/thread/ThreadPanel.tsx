@@ -60,9 +60,14 @@ import { AttachmentDisplay } from '../message/AttachmentDisplay';
 import { LinkPreviewDisplay } from '../message/LinkPreviewDisplay';
 import { MessagePreviewDisplay } from '../message/MessagePreviewDisplay';
 import { CollapsibleMessage } from '../message/CollapsibleMessage';
-import { MessageContent } from '../message/MessageContent';
+import { MessageContent, EditedBadge } from '../message/MessageContent';
 import { MessageComposer, type MessageComposerRef } from '../message/MessageComposer';
 import { cn, formatTime } from '../../lib/utils';
+import {
+  useIsEditingMessage,
+  setEditingMessageId,
+  clearEditingMessageId,
+} from '../../lib/editingMessageStore';
 import { messagesApi } from '../../api/messages';
 import { useMarkThreadRead } from '../../hooks/useThreads';
 import type {
@@ -353,7 +358,7 @@ function ParentMessage({
   const [showActions, setShowActions] = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const isEditing = useIsEditingMessage(message.id);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const editEditorRef = useRef<RichTextEditorRef>(null);
   const [localReactions, setLocalReactions] = useState(message.reactions || []);
@@ -480,12 +485,12 @@ function ParentMessage({
   };
 
   const handleStartEdit = () => {
-    setIsEditing(true);
+    setEditingMessageId(message.id);
     setShowDropdown(false);
   };
 
   const handleCancelEdit = () => {
-    setIsEditing(false);
+    clearEditingMessageId();
   };
 
   const handleSaveEdit = (content: string) => {
@@ -495,7 +500,7 @@ function ParentMessage({
         content: content.trim(),
       });
     }
-    setIsEditing(false);
+    clearEditingMessageId();
   };
 
   const handleDeleteClick = () => {
@@ -563,7 +568,6 @@ function ParentMessage({
             <span className="text-xs text-gray-500 dark:text-gray-400">
               {formatTime(message.created_at)}
             </span>
-            {isEdited && <span className="text-xs text-gray-400 dark:text-gray-500">(edited)</span>}
           </div>
 
           {isEditing ? (
@@ -593,11 +597,13 @@ function ParentMessage({
                     channels={channels}
                     customEmojiMap={customEmojiMap}
                   />
+                  {isEdited && <EditedBadge inline />}
                 </div>
               )}
               {message.attachments && message.attachments.length > 0 && (
                 <AttachmentDisplay attachments={message.attachments} />
               )}
+              {isEdited && !message.content && <EditedBadge />}
               {message.link_preview &&
                 (message.link_preview.type === 'message' ? (
                   <MessagePreviewDisplay
@@ -777,7 +783,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
   const [showActions, setShowActions] = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const isEditing = useIsEditingMessage(message.id);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const editEditorRef = useRef<RichTextEditorRef>(null);
   const updateMessage = useUpdateMessage();
@@ -895,12 +901,12 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
   };
 
   const handleStartEdit = () => {
-    setIsEditing(true);
+    setEditingMessageId(message.id);
     setShowDropdown(false);
   };
 
   const handleCancelEdit = () => {
-    setIsEditing(false);
+    clearEditingMessageId();
   };
 
   const handleSaveEdit = (content: string) => {
@@ -910,7 +916,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
         content: content.trim(),
       });
     }
-    setIsEditing(false);
+    clearEditingMessageId();
   };
 
   const handleDeleteClick = () => {
@@ -995,7 +1001,6 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
             <span className="text-xs text-gray-500 dark:text-gray-400">
               {formatTime(message.created_at)}
             </span>
-            {isEdited && <span className="text-xs text-gray-400 dark:text-gray-500">(edited)</span>}
           </div>
 
           {/* Message content */}
@@ -1026,11 +1031,13 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
                     channels={channels}
                     customEmojiMap={customEmojiMap}
                   />
+                  {isEdited && <EditedBadge inline />}
                 </div>
               )}
               {message.attachments && message.attachments.length > 0 && (
                 <AttachmentDisplay attachments={message.attachments} />
               )}
+              {isEdited && !message.content && <EditedBadge />}
               {message.link_preview &&
                 (message.link_preview.type === 'message' ? (
                   <MessagePreviewDisplay

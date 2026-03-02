@@ -202,6 +202,7 @@ export interface RichTextEditorProps {
   onAddEmoji?: () => void;
   belowEditor?: React.ReactNode;
   onEscape?: () => void;
+  onUpArrow?: () => void;
   submitLabel?: string;
   onScheduleClick?: () => void;
   onSchedule?: (scheduledFor: string) => void;
@@ -226,6 +227,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       onAddEmoji,
       belowEditor,
       onEscape,
+      onUpArrow,
       submitLabel,
       onScheduleClick,
       onSchedule,
@@ -236,6 +238,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     const submittingRef = useRef(false);
     const suggestionOpenRef = useRef(false);
     const onEscapeRef = useRef(onEscape);
+    const onUpArrowRef = useRef(onUpArrow);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
     const [contentLength, setContentLength] = useState(0);
     const [showLinkModal, setShowLinkModal] = useState(false);
@@ -244,6 +247,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     useEffect(() => {
       onEscapeRef.current = onEscape;
     }, [onEscape]);
+    useEffect(() => {
+      onUpArrowRef.current = onUpArrow;
+    }, [onUpArrow]);
 
     // Use refs so suggestion closures (captured by TipTap on mount) always see latest data
     const membersRef = useRef(workspaceMembers);
@@ -533,6 +539,14 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
                   .setCodeBlock()
                   .run();
               }
+              return true;
+            }
+          }
+
+          if (event.key === 'ArrowUp') {
+            if (suggestionOpenRef.current) return false;
+            if (onUpArrowRef.current && view.state.doc.textContent.trim() === '') {
+              onUpArrowRef.current();
               return true;
             }
           }

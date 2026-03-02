@@ -25,7 +25,7 @@ import { AttachmentDisplay } from './AttachmentDisplay';
 import { LinkPreviewDisplay } from './LinkPreviewDisplay';
 import { MessagePreviewDisplay } from './MessagePreviewDisplay';
 import { CollapsibleMessage } from './CollapsibleMessage';
-import { MessageContent } from './MessageContent';
+import { MessageContent, EditedBadge } from './MessageContent';
 import { ThreadRepliesIndicator } from './ThreadRepliesIndicator';
 import { MessageActionBar } from './MessageActionBar';
 import { ReactionsDisplay } from './ReactionsDisplay';
@@ -42,6 +42,11 @@ import { usePinMessage, useUnpinMessage, useBlockUser } from '../../hooks/useMod
 import { useCustomEmojiMap, useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { cn, formatTime } from '../../lib/utils';
+import {
+  useIsEditingMessage,
+  setEditingMessageId,
+  clearEditingMessageId,
+} from '../../lib/editingMessageStore';
 import { PinSolidIcon } from '../ui';
 import type { MessageWithUser, ChannelWithMembership } from '@enzyme/api-client';
 
@@ -86,7 +91,7 @@ export function MessageItem({ message, channelId, channels, isAdmin }: MessageIt
   const [showActions, setShowActions] = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const isEditing = useIsEditingMessage(message.id);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const editEditorRef = useRef<RichTextEditorRef>(null);
@@ -138,12 +143,12 @@ export function MessageItem({ message, channelId, channels, isAdmin }: MessageIt
   };
 
   const handleStartEdit = () => {
-    setIsEditing(true);
+    setEditingMessageId(message.id);
     setShowDropdown(false);
   };
 
   const handleCancelEdit = () => {
-    setIsEditing(false);
+    clearEditingMessageId();
   };
 
   const handleSaveEdit = (content: string) => {
@@ -153,7 +158,7 @@ export function MessageItem({ message, channelId, channels, isAdmin }: MessageIt
         content: content.trim(),
       });
     }
-    setIsEditing(false);
+    clearEditingMessageId();
   };
 
   const handleDeleteClick = () => {
@@ -322,7 +327,6 @@ export function MessageItem({ message, channelId, channels, isAdmin }: MessageIt
             <span className="text-xs text-gray-500 dark:text-gray-400">
               {formatTime(message.created_at)}
             </span>
-            {isEdited && <span className="text-xs text-gray-400 dark:text-gray-500">(edited)</span>}
           </div>
 
           {/* Broadcast thread reply indicator */}
@@ -364,11 +368,13 @@ export function MessageItem({ message, channelId, channels, isAdmin }: MessageIt
                     channels={channels}
                     customEmojiMap={customEmojiMap}
                   />
+                  {isEdited && <EditedBadge inline />}
                 </div>
               )}
               {message.attachments && message.attachments.length > 0 && (
                 <AttachmentDisplay attachments={message.attachments} />
               )}
+              {isEdited && !message.content && <EditedBadge />}
               {message.link_preview &&
                 (message.link_preview.type === 'message' ? (
                   <MessagePreviewDisplay

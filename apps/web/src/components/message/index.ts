@@ -2,7 +2,7 @@ export { MessageList } from './MessageList';
 export { MessageItem } from './MessageItem';
 export { MessageComposer } from './MessageComposer';
 export type { MessageComposerRef } from './MessageComposer';
-export { MessageContent } from './MessageContent';
+export { MessageContent, EditedBadge } from './MessageContent';
 export { ThreadRepliesIndicator } from './ThreadRepliesIndicator';
 export { UserMentionBadge, SpecialMentionBadge } from './MentionBadge';
 export { MessageActionBar } from './MessageActionBar';

@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { DropZone } from 'react-aria-components';
 import { DocumentIcon, ExclamationCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useSendMessage,
   useSendThreadReply,
@@ -16,11 +17,15 @@ import {
   useAuth,
   useWorkspaceMembers,
   useChannels,
+  useAddReaction,
 } from '../../hooks';
 import { useScheduleMessage } from '../../hooks/useScheduledMessages';
 import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useTypingUsers } from '../../lib/presenceStore';
+import { setEditingMessageId } from '../../lib/editingMessageStore';
+import { EMOJI_MAP } from '../../lib/emoji';
 import { cn } from '../../lib/utils';
+import type { MessageListResult } from '@enzyme/api-client';
 import {
   LazyRichTextEditor,
   useEditorMembers,
@@ -83,10 +88,12 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
       focus: () => editorRef.current?.focus(),
       insertText: (text: string) => editorRef.current?.insertText(text),
     }));
+    const queryClient = useQueryClient();
     const sendMessage = useSendMessage(channelId);
     const sendThreadReply = useSendThreadReply(parentMessageId ?? '', channelId);
     const scheduleMessage = useScheduleMessage(channelId);
     const uploadFile = useUploadFile(channelId);
+    const addReaction = useAddReaction(channelId);
     const { onTyping, onStopTyping } = useTyping(workspaceId, channelId);
     const { user } = useAuth();
     const { data: membersData } = useWorkspaceMembers(workspaceId);
@@ -169,8 +176,44 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
     const isUploading = pendingAttachments.some((a) => a.status === 'uploading');
     const hasAttachments = completedAttachmentIds.length > 0;
 
+    const getNewestPage = useCallback(() => {
+      const cacheKey = parentMessageId ? ['thread', parentMessageId] : ['messages', channelId];
+      const cached = queryClient.getQueryData<{ pages: MessageListResult[] }>(cacheKey);
+      return cached?.pages?.[0]?.messages ?? [];
+    }, [queryClient, channelId, parentMessageId]);
+
+    const userId = user?.id;
+    const handleUpArrow = useCallback(() => {
+      if (!userId) return;
+      const messages = getNewestPage();
+      const lastOwn = messages.find((m) => m.user_id === userId && !m.deleted_at);
+      if (lastOwn) {
+        setEditingMessageId(lastOwn.id);
+      }
+    }, [userId, getNewestPage]);
+
     const handleSubmit = async (content: string) => {
       const hasContent = content.trim() !== '';
+
+      // Intercept +:<shortcode>: pattern to react instead of sending
+      if (hasContent && !hasAttachments) {
+        const reactionMatch = content.trim().match(/^\+:([a-z0-9_+-]+):$/);
+        if (reactionMatch) {
+          const shortcode = reactionMatch[1];
+          const isValid =
+            shortcode in EMOJI_MAP || customEmojis?.some((e) => e.shortcode === shortcode);
+          if (isValid) {
+            const messages = getNewestPage();
+            const latestMessage = messages.find((m) => !m.deleted_at);
+            if (latestMessage) {
+              addReaction.mutate({ messageId: latestMessage.id, emoji: shortcode });
+              editorRef.current?.clear();
+              return;
+            }
+          }
+        }
+      }
+
       const canSend = (hasContent || hasAttachments) && !activeMutation.isPending && !isUploading;
 
       if (!canSend) return;
@@ -357,6 +400,7 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
               onSubmit={handleSubmit}
               onTyping={isThreadVariant ? undefined : onTyping}
               onBlur={isThreadVariant ? undefined : onStopTyping}
+              onUpArrow={handleUpArrow}
               workspaceMembers={workspaceMembers}
               workspaceChannels={workspaceChannels}
               customEmojis={customEmojis}
