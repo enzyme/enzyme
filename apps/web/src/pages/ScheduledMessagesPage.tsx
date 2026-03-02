@@ -12,6 +12,7 @@ import {
   useSendScheduledMessageNow,
   useRetryScheduledMessage,
 } from '../hooks/useScheduledMessages';
+import { usePageTitle } from '../hooks';
 import { EditScheduledMessageModal } from '../components/message/EditScheduledMessageModal';
 import { Spinner, Button } from '../components/ui';
 import type { ScheduledMessage } from '@enzyme/api-client';
@@ -112,6 +113,7 @@ function ScheduledMessageItem({
 
 export function ScheduledMessagesPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  usePageTitle('Scheduled');
   const { data, isLoading } = useScheduledMessages(workspaceId || '');
   const deleteMutation = useDeleteScheduledMessage();
   const sendNowMutation = useSendScheduledMessageNow();

@@ -51,6 +51,7 @@ export {
 } from './useCustomEmojis';
 export { useSearch } from './useSearch';
 export { useIsMobile } from './useIsMobile';
+export { usePageTitle } from './usePageTitle';
 export { useMobileNav } from './useMobileNav';
 export {
   usePinnedMessages,

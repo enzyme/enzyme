@@ -26,6 +26,7 @@ import {
   useAutoFocusComposer,
   useChannelNotifications,
   useUpdateChannelNotifications,
+  usePageTitle,
 } from '../hooks';
 import { useThreadPanel } from '../hooks/usePanel';
 import { useMarkChannelAsRead, useStarChannel, useUnstarChannel } from '../hooks/useChannels';
@@ -84,6 +85,12 @@ export function ChannelPage() {
   const dmDisplayName = isDM
     ? channel?.dm_participants?.map((p) => p.display_name).join(', ') || channel?.name
     : channel?.name;
+  const pageTitle = channel
+    ? isDM
+      ? `DM with ${dmDisplayName}`
+      : `${getChannelPrefix(channel.type)}${channel.name}`
+    : undefined;
+  usePageTitle(pageTitle);
   const dmPresence = useUserPresence(
     channel?.type === 'dm' && dmParticipant ? dmParticipant.user_id : '',
   );

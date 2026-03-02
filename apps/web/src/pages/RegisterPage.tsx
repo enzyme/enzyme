@@ -1,8 +1,9 @@
 import { Navigate } from 'react-router-dom';
 import { RegisterForm } from '../components/auth';
-import { useAuth } from '../hooks';
+import { useAuth, usePageTitle } from '../hooks';
 
 export function RegisterPage() {
+  usePageTitle('Register');
   const { isAuthenticated, isLoading, workspaces } = useAuth();
 
   if (isLoading) {

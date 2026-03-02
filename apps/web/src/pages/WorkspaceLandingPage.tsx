@@ -1,10 +1,11 @@
 import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useChannels, useIsMobile } from '../hooks';
+import { useChannels, useIsMobile, usePageTitle } from '../hooks';
 import { Spinner } from '../components/ui';
 
 export function WorkspaceLandingPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  usePageTitle();
   const navigate = useNavigate();
   const { data, isLoading } = useChannels(workspaceId);
   const isMobile = useIsMobile();

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { LoginForm } from '../components/auth';
-import { useAuth, useCreateWorkspace } from '../hooks';
+import { useAuth, useCreateWorkspace, usePageTitle } from '../hooks';
 import { Spinner, Button, Input, toast } from '../components/ui';
 
 export function LoginPage() {
+  usePageTitle('Log in');
   const { isAuthenticated, isLoading, workspaces } = useAuth();
   const [workspaceName, setWorkspaceName] = useState('');
   const createWorkspace = useCreateWorkspace();

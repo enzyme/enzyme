@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { HashtagIcon, LockClosedIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import { useAllUnreads } from '../hooks/useAllUnreads';
+import { usePageTitle } from '../hooks';
 import { Spinner } from '../components/ui';
 import { formatRelativeTime } from '../lib/utils';
 import type { UnreadMessage } from '@enzyme/api-client';
@@ -71,6 +72,7 @@ function UnreadMessageItem({
 
 export function AllUnreadsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  usePageTitle('Unreads');
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useAllUnreads({
     workspaceId: workspaceId || '',
   });

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useAcceptInvite, useAuth } from '../hooks';
+import { useAcceptInvite, useAuth, usePageTitle } from '../hooks';
 import { Button, Spinner } from '../components/ui';
 
 export function AcceptInvitePage() {
+  usePageTitle('Join Workspace');
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, isLoading: authLoading, workspaces } = useAuth();

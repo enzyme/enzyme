@@ -7,6 +7,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useUserThreads } from '../hooks/useThreads';
 import { useThreadPanel } from '../hooks/usePanel';
+import { usePageTitle } from '../hooks';
 import { Spinner, Avatar } from '../components/ui';
 import { cn, formatRelativeTime } from '../lib/utils';
 import type { ThreadMessage } from '@enzyme/api-client';
@@ -99,6 +100,7 @@ function ThreadItem({ thread, onOpen }: { thread: ThreadMessage; onOpen: (id: st
 
 export function ThreadsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  usePageTitle('Threads');
   const { openThread } = useThreadPanel();
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useUserThreads({
     workspaceId: workspaceId || '',
