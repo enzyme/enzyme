@@ -200,8 +200,7 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
         const reactionMatch = content.trim().match(/^\+:([a-z0-9_+-]+):$/);
         if (reactionMatch) {
           const shortcode = reactionMatch[1];
-          const isValid =
-            shortcode in EMOJI_MAP || customEmojis?.some((e) => e.name === shortcode);
+          const isValid = shortcode in EMOJI_MAP || customEmojis?.some((e) => e.name === shortcode);
           if (isValid) {
             const messages = getNewestPage();
             const latestMessage = messages.find((m) => !m.deleted_at);
