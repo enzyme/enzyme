@@ -200,14 +200,20 @@ func New(cfg *config.Config) (*App, error) {
 	// Create embedded SPA handler if web client is bundled
 	var spaHandler http.Handler
 	if web.HasContent() {
-		spaHandler = web.Handler()
+		spaHandler = web.Handler(cfg.Telemetry.Enabled && cfg.Telemetry.Traces)
 		slog.Info("embedded web client enabled")
 	} else {
 		slog.Info("embedded web client not found, serve frontend separately")
 	}
 
+	// Create OTLP proxy for frontend telemetry
+	var otlpProxy http.Handler
+	if cfg.Telemetry.Enabled && cfg.Telemetry.Traces {
+		otlpProxy = telemetry.NewOTLPProxy(cfg.Telemetry)
+	}
+
 	// Create router with generated handlers
-	router := server.NewRouter(h, sseHandler, sessionStore, moderationRepo, limiter, cfg.Server.AllowedOrigins, cfg.Telemetry.Enabled, spaHandler)
+	router := server.NewRouter(h, sseHandler, sessionStore, moderationRepo, limiter, cfg.Server.AllowedOrigins, cfg.Telemetry.Enabled, spaHandler, otlpProxy)
 
 	// Build TLS options
 	tlsOpts := server.TLSOptions{

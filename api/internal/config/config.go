@@ -92,16 +92,17 @@ type SSEConfig struct {
 }
 
 type TelemetryConfig struct {
-	Enabled     bool              `koanf:"enabled"`
-	Endpoint    string            `koanf:"endpoint"`
-	Protocol    string            `koanf:"protocol"`     // "grpc" or "http"
-	Insecure    bool              `koanf:"insecure"`     // use plaintext (no TLS) for OTLP export
-	SampleRate  float64           `koanf:"sample_rate"`  // 0.0 to 1.0
-	ServiceName string            `koanf:"service_name"` // default "enzyme"
-	Headers     map[string]string `koanf:"headers"`      // OTLP exporter headers (e.g. auth keys)
-	Traces      bool              `koanf:"traces"`       // export traces (default true)
-	Metrics     bool              `koanf:"metrics"`      // export metrics (default true)
-	Logs        bool              `koanf:"logs"`         // export logs (default true)
+	Enabled          bool              `koanf:"enabled"`
+	Endpoint         string            `koanf:"endpoint"`
+	Protocol         string            `koanf:"protocol"`          // "grpc" or "http"
+	Insecure         bool              `koanf:"insecure"`          // use plaintext (no TLS) for OTLP export
+	SampleRate       float64           `koanf:"sample_rate"`       // 0.0 to 1.0
+	ServiceName      string            `koanf:"service_name"`      // default "enzyme"
+	Headers          map[string]string `koanf:"headers"`           // OTLP exporter headers (e.g. auth keys)
+	Traces           bool              `koanf:"traces"`            // export traces (default true)
+	Metrics          bool              `koanf:"metrics"`           // export metrics (default true)
+	Logs             bool              `koanf:"logs"`              // export logs (default true)
+	FrontendEndpoint string            `koanf:"frontend_endpoint"` // OTLP/HTTP endpoint for browser trace proxy (auto-derived if empty)
 }
 
 func Defaults() *Config {

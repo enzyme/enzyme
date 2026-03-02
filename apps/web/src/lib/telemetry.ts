@@ -5,10 +5,19 @@ import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic
 import { ZoneContextManager } from '@opentelemetry/context-zone';
 import { registerInstrumentations } from '@opentelemetry/instrumentation';
 import { getWebAutoInstrumentations } from '@opentelemetry/auto-instrumentations-web';
+import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { getApiBase } from '@enzyme/api-client';
 
+let initialized = false;
+
+const MAX_ERROR_SPANS = 50;
+let errorSpanCount = 0;
+
 export function initTelemetry(): void {
-  const endpoint = import.meta.env.VITE_OTEL_ENDPOINT || '/v1/traces';
+  if (initialized) return;
+  initialized = true;
+
+  const endpoint = import.meta.env.VITE_OTEL_ENDPOINT ?? '/api/telemetry/traces';
 
   const resource = resourceFromAttributes({
     [ATTR_SERVICE_NAME]: 'enzyme-web',
@@ -52,5 +61,28 @@ export function initTelemetry(): void {
         },
       }),
     ],
+  });
+
+  const tracer = trace.getTracer('enzyme-web');
+
+  window.addEventListener('error', (event) => {
+    if (++errorSpanCount > MAX_ERROR_SPANS) return;
+    const span = tracer.startSpan('error.unhandled');
+    span.setStatus({ code: SpanStatusCode.ERROR });
+    span.recordException(event.error ?? event.message);
+    if (event.filename) {
+      span.setAttribute('code.filepath', event.filename);
+      span.setAttribute('code.lineno', event.lineno);
+      span.setAttribute('code.column', event.colno);
+    }
+    span.end();
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    if (++errorSpanCount > MAX_ERROR_SPANS) return;
+    const span = tracer.startSpan('error.unhandled_rejection');
+    span.setStatus({ code: SpanStatusCode.ERROR });
+    span.recordException(event.reason instanceof Error ? event.reason : String(event.reason));
+    span.end();
   });
 }

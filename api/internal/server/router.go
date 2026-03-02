@@ -55,7 +55,7 @@ func InvalidateBanCacheByWorkspace(workspaceID string) {
 // NewRouter creates a new HTTP router with all routes registered.
 // If spaHandler is non-nil, it is mounted as a fallback for unmatched routes
 // to serve the embedded web client.
-func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.SessionStore, moderationRepo *moderation.Repository, limiter *ratelimit.Limiter, allowedOrigins []string, telemetryEnabled bool, spaHandler http.Handler) http.Handler {
+func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.SessionStore, moderationRepo *moderation.Repository, limiter *ratelimit.Limiter, allowedOrigins []string, telemetryEnabled bool, spaHandler http.Handler, otlpProxy http.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -153,6 +153,11 @@ func NewRouter(h *handler.Handler, sseHandler *sse.Handler, sessionStore *auth.S
 			r.Post("/workspaces/{wid}/typing/stop", sseHandler.StopTyping)
 		})
 	})
+
+	// Mount OTLP trace proxy for frontend telemetry
+	if otlpProxy != nil {
+		r.Post("/api/telemetry/traces", otlpProxy.ServeHTTP)
+	}
 
 	// Mount embedded SPA as fallback for all unmatched routes
 	if spaHandler != nil {

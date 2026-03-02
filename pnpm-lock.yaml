@@ -59,6 +59,9 @@ importers:
       '@internationalized/date':
         specifier: ^3.11.0
         version: 3.11.0
+      '@opentelemetry/api':
+        specifier: ^1.9.0
+        version: 1.9.0
       '@opentelemetry/auto-instrumentations-web':
         specifier: ^0.57.0
         version: 0.57.0(@opentelemetry/api@1.9.0)(zone.js@0.16.1)

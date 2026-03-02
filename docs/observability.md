@@ -134,39 +134,57 @@ Every trace and metric is tagged with resource attributes that identify the Enzy
 
 ## Frontend Telemetry
 
-The web client has separate, opt-in telemetry. When enabled, it instruments browser-side fetch calls and page loads, and propagates trace context to the backend.
+The web client has separate telemetry for browser-side fetch calls and page loads, with trace context propagation to the backend.
 
 ### Enabling
 
-Set these environment variables **at build time** (they're baked into the Vite bundle):
+Frontend telemetry activates automatically when the Go server serves the embedded web client with `telemetry.enabled` and `telemetry.traces` both set to `true` (the defaults when telemetry is enabled). No build-time configuration or environment variables are needed.
+
+The server injects a `window.__ENZYME_CONFIG__` script into `index.html` at runtime, telling the frontend to load the OTel SDK. The Go server also proxies `/api/telemetry/traces` to the configured OTLP collector, so no reverse proxy setup is needed. Self-hosters who download the pre-built binary get frontend telemetry without rebuilding the web client.
+
+**For development without the Go server** (e.g., `pnpm --filter @enzyme/web dev` against a separate API), use the build-time env var as a fallback:
 
 ```bash
-VITE_OTEL_ENABLED=true VITE_OTEL_ENDPOINT=/v1/traces pnpm --filter @enzyme/web build
+VITE_OTEL_ENABLED=true VITE_OTEL_ENDPOINT=/api/telemetry/traces pnpm --filter @enzyme/web dev
 ```
 
-| Env Var              | Default      | Description                                   |
-| -------------------- | ------------ | --------------------------------------------- |
-| `VITE_OTEL_ENABLED`  | not set      | Set to `"true"` to enable frontend telemetry. |
-| `VITE_OTEL_ENDPOINT` | `/v1/traces` | OTLP HTTP endpoint for trace export.          |
+| Env Var              | Default                 | Description                                             |
+| -------------------- | ----------------------- | ------------------------------------------------------- |
+| `VITE_OTEL_ENABLED`  | not set                 | Dev-only fallback. Set to `"true"` to enable telemetry. |
+| `VITE_OTEL_ENDPOINT` | `/api/telemetry/traces` | Dev-only fallback. OTLP HTTP endpoint for trace export. |
 
 ### What's Instrumented
 
 - **Fetch calls**: Every `fetch()` request creates a span with URL, method, status, and duration. Since the `@enzyme/api-client` uses native `fetch`, all API calls are automatically covered.
 - **Page loads**: Document load timing (DNS, TCP, TLS, TTFB, DOM content loaded, load complete).
+- **Unhandled errors**: Uncaught exceptions (`error.unhandled`) and unhandled promise rejections (`error.unhandled_rejection`) are captured as error spans with `exception.type`, `exception.message`, and `exception.stacktrace` attributes.
 - **Trace propagation**: W3C `traceparent` header is injected into requests to same-origin and the configured API base URL. Third-party requests are not affected.
 
 ### How It Works
 
-Frontend telemetry is **lazy-loaded** — the OTel SDK is only imported when `VITE_OTEL_ENABLED` is `"true"`. When disabled, zero OTel code is included in the bundle.
+Frontend telemetry is **lazy-loaded** — the OTel SDK is only imported when the runtime config or `VITE_OTEL_ENABLED` enables it. The telemetry chunk is included in the production bundle but only fetched by the browser when telemetry is active.
 
 The frontend reports as service name `enzyme-web`, separate from the backend's `enzyme` service. In your observability backend, you'll see traces that start in `enzyme-web` and continue into `enzyme` via the propagated trace context.
 
 ### Collector Routing
 
-The frontend exports traces over OTLP/HTTP (not gRPC, since browsers can't speak gRPC). The default endpoint `/v1/traces` assumes you either:
+The frontend exports traces over OTLP/HTTP (not gRPC, since browsers can't speak gRPC) to `/api/telemetry/traces`. The Go server includes a built-in reverse proxy that forwards these requests to the collector's OTLP/HTTP receiver:
 
-1. Proxy `/v1/traces` to your OTel Collector via your reverse proxy (nginx, Caddy, etc.)
-2. Set `VITE_OTEL_ENDPOINT` to the full collector URL (e.g., `https://otel.example.com:4318/v1/traces`)
+- **HTTP protocol** (`telemetry.protocol: http`): forwards to the configured `telemetry.endpoint`
+- **gRPC on port 4317** (local collector default): swaps to port `4318` (the standard OTLP/HTTP port)
+- **gRPC on any other port** (cloud providers like Honeycomb, Grafana Cloud): uses the same endpoint, since these providers serve both gRPC and HTTP on the same port
+
+To override the auto-derived endpoint, set `telemetry.frontend_endpoint`:
+
+```yaml
+telemetry:
+  enabled: true
+  endpoint: api.honeycomb.io:443
+  protocol: grpc
+  frontend_endpoint: collector.internal:4318 # explicit override
+```
+
+The proxy also forwards any `telemetry.headers` to the collector for authentication (e.g., Honeycomb API keys).
 
 ---
 
