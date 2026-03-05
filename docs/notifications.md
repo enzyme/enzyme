@@ -37,7 +37,7 @@ When a user is offline and has `email_enabled` turned on for a channel, notifica
 **Delivery timing:**
 
 1. A pending notification is created with a 5-minute delay.
-2. A background worker checks for ready-to-send notifications every 60 seconds.
+2. The scheduler checks for ready-to-send notifications every 60 seconds.
 3. Notifications are grouped by workspace into a single digest email.
 4. If the user comes back online before the delay expires, the pending notification is cancelled automatically.
 

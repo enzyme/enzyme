@@ -29,7 +29,7 @@ Enzyme does not set security response headers (HSTS, CSP, X-Frame-Options, X-Con
 
 API authentication uses `Authorization: Bearer <token>` headers. Tokens are 32 bytes generated from `crypto/rand`, hex-encoded to a 64-character string. Only the SHA-256 hash of the token is stored in the database — a database leak does not expose usable tokens.
 
-Tokens expire after 30 days by default (configurable via `auth.session_duration`). Expired sessions are cleaned up by a background goroutine every hour.
+Tokens expire after 30 days by default (configurable via `auth.session_duration`). Expired sessions are cleaned up automatically every hour.
 
 ### Why Headers, Not Cookies
 
