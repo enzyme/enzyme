@@ -68,7 +68,7 @@ export function WorkspaceContextMenu({
             <MenuItem
               onAction={() => setShowLeaveConfirm(true)}
               icon={<ArrowRightStartOnRectangleIcon className="h-4 w-4" />}
-              className="text-red-600 dark:text-red-400"
+              variant="danger"
             >
               Leave Workspace
             </MenuItem>
