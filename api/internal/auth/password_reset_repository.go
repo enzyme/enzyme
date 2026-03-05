@@ -58,3 +58,10 @@ func (r *PasswordResetRepo) MarkUsed(ctx context.Context, id string) error {
 	`, now.Format(time.RFC3339), id)
 	return err
 }
+
+// DeleteExpired removes password reset tokens that have passed their expiry.
+func (r *PasswordResetRepo) DeleteExpired(ctx context.Context) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := r.db.ExecContext(ctx, `DELETE FROM password_resets WHERE expires_at < ?`, now)
+	return err
+}

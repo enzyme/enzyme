@@ -1,6 +1,7 @@
 package sse
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -13,7 +14,7 @@ func TestDeleteOldEvents(t *testing.T) {
 	user := testutil.CreateTestUser(t, db, "test@example.com", "Test")
 	ws := testutil.CreateTestWorkspace(t, db, user.ID, "Test Workspace")
 
-	hub := NewHub(db, 1*time.Hour, 0)
+	hub := NewHub(db, 1*time.Hour)
 
 	now := time.Now().UTC()
 	oldTime := now.Add(-2 * time.Hour).Format(time.RFC3339)
@@ -38,7 +39,7 @@ func TestDeleteOldEvents(t *testing.T) {
 	}
 
 	// Run cleanup
-	hub.deleteOldEvents()
+	hub.CleanupOldEvents(context.Background())
 
 	// Verify old event was deleted and recent one remains
 	var count int
@@ -61,9 +62,9 @@ func TestDeleteOldEvents(t *testing.T) {
 }
 
 func TestDeleteOldEventsNilDB(t *testing.T) {
-	hub := NewHub(nil, 1*time.Hour, 0)
+	hub := NewHub(nil, 1*time.Hour)
 	// Should not panic
-	hub.deleteOldEvents()
+	hub.CleanupOldEvents(context.Background())
 }
 
 func TestDeleteOldEventsZeroRetention(t *testing.T) {
@@ -72,7 +73,7 @@ func TestDeleteOldEventsZeroRetention(t *testing.T) {
 	user := testutil.CreateTestUser(t, db, "test@example.com", "Test")
 	ws := testutil.CreateTestWorkspace(t, db, user.ID, "Test Workspace")
 
-	hub := NewHub(db, 0, 0)
+	hub := NewHub(db, 0)
 
 	// Insert an event
 	_, err := db.Exec(`
@@ -84,7 +85,7 @@ func TestDeleteOldEventsZeroRetention(t *testing.T) {
 	}
 
 	// Should be a no-op with zero retention
-	hub.deleteOldEvents()
+	hub.CleanupOldEvents(context.Background())
 
 	var count int
 	err = db.QueryRow(`SELECT COUNT(*) FROM workspace_events`).Scan(&count)

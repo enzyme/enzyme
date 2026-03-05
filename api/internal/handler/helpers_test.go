@@ -42,7 +42,7 @@ func testHandler(t *testing.T) (*Handler, *sql.DB) {
 	fileRepo := file.NewRepository(db)
 	threadRepo := thread.NewRepository(db)
 	emojiRepo := emoji.NewRepository(db)
-	hub := sse.NewHub(db, 24*time.Hour, time.Hour)
+	hub := sse.NewHub(db, 24*time.Hour)
 
 	passwordResets := auth.NewPasswordResetRepo(db)
 	authService := auth.NewService(userRepo, passwordResets, 4)
@@ -167,7 +167,7 @@ func testHandlerWithLinkPreviews(t *testing.T, httpClient *http.Client) (*Handle
 	fileRepo := file.NewRepository(db)
 	threadRepo := thread.NewRepository(db)
 	emojiRepo := emoji.NewRepository(db)
-	hub := sse.NewHub(db, 24*time.Hour, time.Hour)
+	hub := sse.NewHub(db, 24*time.Hour)
 
 	passwordResets := auth.NewPasswordResetRepo(db)
 	authService := auth.NewService(userRepo, passwordResets, 4)

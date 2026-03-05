@@ -14,41 +14,22 @@ type MessageSender interface {
 	NotifyScheduledMessageFailed(ctx context.Context, msg *ScheduledMessage, reason string)
 }
 
-// Worker processes due scheduled messages on a ticker.
+// Worker processes due scheduled messages.
 type Worker struct {
-	repo     *Repository
-	sender   MessageSender
-	interval time.Duration
+	repo   *Repository
+	sender MessageSender
 }
 
 // NewWorker creates a new scheduled message worker.
 func NewWorker(repo *Repository, sender MessageSender) *Worker {
 	return &Worker{
-		repo:     repo,
-		sender:   sender,
-		interval: 30 * time.Second,
+		repo:   repo,
+		sender: sender,
 	}
 }
 
-// Start begins the worker loop.
-func (w *Worker) Start(ctx context.Context) {
-	ticker := time.NewTicker(w.interval)
-	defer ticker.Stop()
-
-	slog.Info("scheduled message worker started", "component", "scheduled")
-
-	for {
-		select {
-		case <-ctx.Done():
-			slog.Info("scheduled message worker stopped", "component", "scheduled")
-			return
-		case <-ticker.C:
-			w.processDue(ctx)
-		}
-	}
-}
-
-func (w *Worker) processDue(ctx context.Context) {
+// ProcessDue processes all due scheduled messages.
+func (w *Worker) ProcessDue(ctx context.Context) error {
 	// Recover any messages stuck in "sending" state from a previous crash
 	reset, err := w.repo.ResetStuckSending(ctx, 5*time.Minute)
 	if err != nil {
@@ -59,8 +40,7 @@ func (w *Worker) processDue(ctx context.Context) {
 
 	messages, err := w.repo.ListDue(ctx)
 	if err != nil {
-		slog.Error("failed to list due scheduled messages", "component", "scheduled", "error", err)
-		return
+		return err
 	}
 
 	for _, msg := range messages {
@@ -110,4 +90,5 @@ func (w *Worker) processDue(ctx context.Context) {
 			"channel_id", msg.ChannelID,
 		)
 	}
+	return nil
 }

@@ -30,7 +30,7 @@ The owner can never be banned. Self-banning is rejected.
 
 ### Temporary bans
 
-Bans can include an expiry duration (in hours). Expired bans are checked lazily — the ban is considered inactive once `expires_at` passes, and the user can accept new invites. No background job is needed.
+Bans can include an expiry duration (in hours). Expired bans are checked lazily on read — the ban is considered inactive once `expires_at` passes, and the user can accept new invites. Additionally, expired ban records are cleaned up automatically every hour.
 
 Available preset durations: 1 hour, 24 hours, 7 days, 30 days, or permanent.
 

@@ -421,6 +421,14 @@ func (r *Repository) ListAuditLog(ctx context.Context, workspaceID string, curso
 	return entries, hasMore, nextCursor, nil
 }
 
+// CleanupExpiredBans deletes bans that have passed their expiry.
+func (r *Repository) CleanupExpiredBans(ctx context.Context) error {
+	_, err := r.db.ExecContext(ctx, `
+		DELETE FROM workspace_bans WHERE expires_at IS NOT NULL AND expires_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+	`)
+	return err
+}
+
 // isUniqueViolation checks if the error is a SQLite unique constraint violation
 func isUniqueViolation(err error) bool {
 	return err != nil && (strings.Contains(err.Error(), "UNIQUE constraint failed") || strings.Contains(err.Error(), "duplicate key"))
