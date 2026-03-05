@@ -73,7 +73,7 @@ func TestWorker_ProcessDue(t *testing.T) {
 
 	sender := &mockSender{}
 	worker := NewWorker(repo, sender)
-	worker.processDue(ctx)
+	worker.ProcessDue(ctx)
 
 	sent := sender.getSentIDs()
 	if len(sent) != 1 {
@@ -107,7 +107,7 @@ func TestWorker_ProcessDue_ContinuesOnError(t *testing.T) {
 	// Sender fails on all messages
 	sender := &mockSender{err: context.DeadlineExceeded}
 	worker := NewWorker(repo, sender)
-	worker.processDue(ctx)
+	worker.ProcessDue(ctx)
 
 	// Messages should be retried (status back to pending, retry_count incremented)
 	due, _ := repo.ListDue(ctx)
@@ -140,7 +140,7 @@ func TestWorker_ProcessDue_PermanentError(t *testing.T) {
 
 	sender := &mockSender{err: &PermanentError{Err: fmt.Errorf("channel is archived")}}
 	worker := NewWorker(repo, sender)
-	worker.processDue(ctx)
+	worker.ProcessDue(ctx)
 
 	// Message should be immediately marked as failed (no retries)
 	got, _ := repo.GetByID(ctx, msg.ID)
@@ -180,7 +180,7 @@ func TestWorker_ProcessDue_RetryExhausted(t *testing.T) {
 
 	// Process MaxRetries times — each time increments retry_count
 	for i := 0; i < MaxRetries; i++ {
-		worker.processDue(ctx)
+		worker.ProcessDue(ctx)
 	}
 
 	got, _ := repo.GetByID(ctx, msg.ID)
@@ -221,7 +221,7 @@ func TestWorker_ProcessDue_AtomicClaim(t *testing.T) {
 	// Now the worker shouldn't be able to claim it
 	sender := &mockSender{}
 	worker := NewWorker(repo, sender)
-	worker.processDue(ctx) // no pending messages (it's in "sending" state)
+	worker.ProcessDue(ctx) // no pending messages (it's in "sending" state)
 
 	sent := sender.getSentIDs()
 	if len(sent) != 0 {
@@ -247,38 +247,10 @@ func TestWorker_ProcessDue_NoDueMessages(t *testing.T) {
 
 	sender := &mockSender{}
 	worker := NewWorker(repo, sender)
-	worker.processDue(ctx)
+	worker.ProcessDue(ctx)
 
 	sent := sender.getSentIDs()
 	if len(sent) != 0 {
 		t.Errorf("processDue sent %d messages, want 0", len(sent))
-	}
-}
-
-func TestWorker_StartAndStop(t *testing.T) {
-	db := testutil.TestDB(t)
-	repo := NewRepository(db)
-
-	sender := &mockSender{}
-	worker := NewWorker(repo, sender)
-	worker.interval = 50 * time.Millisecond
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	done := make(chan struct{})
-	go func() {
-		worker.Start(ctx)
-		close(done)
-	}()
-
-	// Let it tick at least once
-	time.Sleep(100 * time.Millisecond)
-	cancel()
-
-	select {
-	case <-done:
-		// Worker stopped gracefully
-	case <-time.After(2 * time.Second):
-		t.Fatal("worker did not stop within timeout")
 	}
 }

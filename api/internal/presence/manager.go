@@ -42,22 +42,15 @@ func NewManager(db *sql.DB, hub *sse.Hub) *Manager {
 	}
 }
 
-func (m *Manager) Start(ctx context.Context) {
-	// Load presence from database on startup
+// Init loads persisted presence state from the database. Call before scheduling CheckPresence.
+func (m *Manager) Init() {
 	m.loadFromDB()
+}
 
-	// Start presence check loop
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			m.checkPresence()
-		}
-	}
+// CheckPresence marks users as offline if they've been disconnected beyond the timeout.
+func (m *Manager) CheckPresence(ctx context.Context) error {
+	m.checkPresence(ctx)
+	return nil
 }
 
 func (m *Manager) loadFromDB() {
@@ -115,7 +108,7 @@ func (m *Manager) SetOnline(workspaceID, userID string) {
 		LastSeenAt:  now,
 	}
 
-	m.persistPresence(workspaceID, userID, StatusOnline, now)
+	m.persistPresence(context.Background(), workspaceID, userID, StatusOnline, now)
 
 	if prevStatus != StatusOnline {
 		m.broadcastPresenceChange(workspaceID, userID, StatusOnline)
@@ -144,7 +137,7 @@ func (m *Manager) SetOffline(workspaceID, userID string) {
 		LastSeenAt:  now,
 	}
 
-	m.persistPresence(workspaceID, userID, StatusOffline, now)
+	m.persistPresence(context.Background(), workspaceID, userID, StatusOffline, now)
 	m.broadcastPresenceChange(workspaceID, userID, StatusOffline)
 }
 
@@ -175,7 +168,7 @@ func (m *Manager) SetStatus(workspaceID, userID, status string) {
 		LastSeenAt:  now,
 	}
 
-	m.persistPresence(workspaceID, userID, status, now)
+	m.persistPresence(context.Background(), workspaceID, userID, status, now)
 
 	if prevStatus != status {
 		m.broadcastPresenceChange(workspaceID, userID, status)
@@ -207,7 +200,7 @@ func (m *Manager) GetWorkspacePresence(workspaceID string) map[string]string {
 	return result
 }
 
-func (m *Manager) checkPresence() {
+func (m *Manager) checkPresence(ctx context.Context) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -226,7 +219,7 @@ func (m *Manager) checkPresence() {
 				// User disconnected - mark offline after timeout
 				if now.Sub(p.LastSeenAt) > OfflineTimeout {
 					p.Status = StatusOffline
-					m.persistPresence(workspaceID, userID, StatusOffline, now)
+					m.persistPresence(ctx, workspaceID, userID, StatusOffline, now)
 					m.broadcastPresenceChange(workspaceID, userID, StatusOffline)
 				}
 			}
@@ -234,13 +227,13 @@ func (m *Manager) checkPresence() {
 	}
 }
 
-func (m *Manager) persistPresence(workspaceID, userID, status string, lastSeen time.Time) {
+func (m *Manager) persistPresence(ctx context.Context, workspaceID, userID, status string, lastSeen time.Time) {
 	if m.db == nil {
 		return
 	}
 
 	id := ulid.Make().String()
-	_, _ = m.db.Exec(`
+	_, _ = m.db.ExecContext(ctx, `
 		INSERT INTO user_presence (id, user_id, workspace_id, status, last_seen_at)
 		VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT(user_id, workspace_id) DO UPDATE SET status = excluded.status, last_seen_at = excluded.last_seen_at

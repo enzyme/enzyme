@@ -3,7 +3,6 @@ package notification
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	"github.com/enzyme/api/internal/email"
 	"github.com/enzyme/api/internal/sse"
@@ -16,7 +15,6 @@ type EmailWorker struct {
 	userRepo     *user.Repository
 	emailService *email.Service
 	hub          *sse.Hub
-	interval     time.Duration
 }
 
 // NewEmailWorker creates a new email notification worker
@@ -31,39 +29,19 @@ func NewEmailWorker(
 		userRepo:     userRepo,
 		emailService: emailService,
 		hub:          hub,
-		interval:     1 * time.Minute,
 	}
 }
 
-// Start begins the worker loop
-func (w *EmailWorker) Start(ctx context.Context) {
-	ticker := time.NewTicker(w.interval)
-	defer ticker.Stop()
-
-	slog.Info("email worker started", "component", "notification")
-
-	for {
-		select {
-		case <-ctx.Done():
-			slog.Info("email worker stopped", "component", "notification")
-			return
-		case <-ticker.C:
-			w.processPending(ctx)
-		}
-	}
-}
-
-// processPending processes all pending notifications ready to be sent
-func (w *EmailWorker) processPending(ctx context.Context) {
+// ProcessPending processes all pending notifications ready to be sent.
+func (w *EmailWorker) ProcessPending(ctx context.Context) error {
 	// Get notifications grouped by user
 	grouped, err := w.pendingRepo.GetGroupedByUser(ctx)
 	if err != nil {
-		slog.Error("error getting pending notifications", "component", "notification", "error", err)
-		return
+		return err
 	}
 
 	if len(grouped) == 0 {
-		return
+		return nil
 	}
 
 	for userID, notifications := range grouped {
@@ -141,6 +119,7 @@ func (w *EmailWorker) processPending(ctx context.Context) {
 			_ = w.pendingRepo.DeleteByIDs(ctx, ids)
 		}
 	}
+	return nil
 }
 
 // CancelForUser cancels all pending notifications for a user

@@ -27,6 +27,7 @@ import (
 	"github.com/enzyme/api/internal/presence"
 	"github.com/enzyme/api/internal/ratelimit"
 	"github.com/enzyme/api/internal/scheduled"
+	"github.com/enzyme/api/internal/scheduler"
 	"github.com/enzyme/api/internal/server"
 	"github.com/enzyme/api/internal/signing"
 	"github.com/enzyme/api/internal/sse"
@@ -51,6 +52,9 @@ type App struct {
 	SessionStore        *auth.SessionStore
 	LinkPreviewRepo     *linkpreview.Repository
 	ScheduledWorker     *scheduled.Worker
+	passwordResetRepo   *auth.PasswordResetRepo
+	moderationRepo      *moderation.Repository
+	scheduler           *scheduler.Scheduler
 	Telemetry           *telemetry.Telemetry
 }
 
@@ -86,7 +90,7 @@ func New(cfg *config.Config) (*App, error) {
 	}
 
 	// Initialize SSE hub
-	hub := sse.NewHub(db.DB, cfg.SSE.EventRetention, cfg.SSE.CleanupInterval)
+	hub := sse.NewHub(db.DB, cfg.SSE.EventRetention)
 
 	// Initialize presence manager
 	presenceManager := presence.NewManager(db.DB, hub)
@@ -249,66 +253,41 @@ func New(cfg *config.Config) (*App, error) {
 		SessionStore:        sessionStore,
 		LinkPreviewRepo:     linkPreviewRepo,
 		ScheduledWorker:     scheduledWorker,
+		passwordResetRepo:   passwordResetRepo,
+		moderationRepo:      moderationRepo,
+		scheduler:           scheduler.New(),
 		Telemetry:           tel,
 	}, nil
 }
 
 func (a *App) Start(ctx context.Context) error {
-	// Start SSE hub
+	// Init components that need startup work
+	a.PresenceManager.Init()
+
+	// Start SSE hub (needs its own goroutine for client register/unregister channels)
 	go a.Hub.Run(ctx)
 
-	// Start presence manager
-	go a.PresenceManager.Start(ctx)
+	// Register periodic tasks
+	s := a.scheduler
 
-	// Start email worker
-	go a.EmailWorker.Start(ctx)
-
-	// Start scheduled message worker
-	go a.ScheduledWorker.Start(ctx)
-
-	// Start rate limiter cleanup
 	if a.RateLimiter != nil {
-		go func() {
-			ticker := time.NewTicker(10 * time.Minute)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-ticker.C:
-					a.RateLimiter.Cleanup()
-				}
-			}
-		}()
+		s.Register(scheduler.Task{Name: "rate-limiter-cleanup", Interval: 10 * time.Minute, Fn: func(ctx context.Context) error { a.RateLimiter.Cleanup(); return nil }})
+	}
+	s.Register(scheduler.Task{Name: "session-cleanup", Interval: time.Hour, Fn: func(ctx context.Context) error { return a.SessionStore.DeleteExpired() }})
+	s.Register(scheduler.Task{Name: "link-preview-cleanup", Interval: 24 * time.Hour, Fn: func(ctx context.Context) error { return a.LinkPreviewRepo.CleanExpiredCache(ctx) }})
+
+	if a.Config.SSE.CleanupInterval > 0 {
+		s.Register(scheduler.Task{Name: "sse-event-cleanup", Interval: a.Config.SSE.CleanupInterval, Fn: a.Hub.CleanupOldEvents, RunOnStart: true})
 	}
 
-	// Start expired session cleanup
-	go func() {
-		ticker := time.NewTicker(time.Hour)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				_ = a.SessionStore.DeleteExpired()
-			}
-		}
-	}()
+	s.Register(scheduler.Task{Name: "presence-check", Interval: 10 * time.Second, Fn: a.PresenceManager.CheckPresence})
+	s.Register(scheduler.Task{Name: "email-notifications", Interval: time.Minute, Fn: a.EmailWorker.ProcessPending})
+	s.Register(scheduler.Task{Name: "scheduled-messages", Interval: 30 * time.Second, Fn: a.ScheduledWorker.ProcessDue})
+	s.Register(scheduler.Task{Name: "password-reset-cleanup", Interval: 24 * time.Hour, Fn: a.passwordResetRepo.DeleteExpired})
+	s.Register(scheduler.Task{Name: "expired-ban-cleanup", Interval: time.Hour, Fn: a.moderationRepo.CleanupExpiredBans})
+	s.Register(scheduler.Task{Name: "sqlite-optimize", Interval: 24 * time.Hour, Fn: func(ctx context.Context) error { _, err := a.DB.Exec("PRAGMA optimize(0x10002)"); return err }})
 
-	// Start link preview cache cleanup (daily)
-	go func() {
-		ticker := time.NewTicker(24 * time.Hour)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				_ = a.LinkPreviewRepo.CleanExpiredCache(context.Background())
-			}
-		}
-	}()
+	s.Start(ctx)
 
 	slog.Info("starting enzyme backend",
 		"addr", a.Server.Addr(),
@@ -322,6 +301,9 @@ func (a *App) Start(ctx context.Context) error {
 }
 
 func (a *App) Shutdown(ctx context.Context) error {
+	// Stop scheduler first so in-flight tasks finish before DB closes
+	a.scheduler.Stop(ctx)
+
 	if err := a.Server.Shutdown(ctx); err != nil {
 		return err
 	}
