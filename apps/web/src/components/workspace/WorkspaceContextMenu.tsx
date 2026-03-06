@@ -55,7 +55,6 @@ export function WorkspaceContextMenu({
             Invite People
           </MenuItem>
         )}
-        <MenuSeparator />
         <MenuItem
           onAction={() => markAllAsRead.mutate()}
           icon={<EnvelopeOpenIcon className="h-4 w-4" />}
