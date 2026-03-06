@@ -15,6 +15,7 @@ import {
   FaceSmileIcon,
   EnvelopeOpenIcon,
   ShieldExclamationIcon,
+  ArrowRightStartOnRectangleIcon,
   InformationCircleIcon,
   XMarkIcon,
   CheckIcon,
@@ -33,7 +34,7 @@ import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useChannels, useWorkspace, useAuth } from '../../hooks';
 import { useUserThreads } from '../../hooks/useThreads';
 import { useScheduledMessages } from '../../hooks/useScheduledMessages';
-import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
+import { useWorkspaceMembers, useLeaveAndNavigate } from '../../hooks/useWorkspaces';
 import {
   ChannelListSkeleton,
   Modal,
@@ -123,6 +124,9 @@ export function ChannelSidebar({
   const [activeChannel, setActiveChannel] = useState<ChannelWithMembership | null>(null);
   const workspaceMembership = workspaces?.find((w) => w.id === workspaceId);
   const canInvite = workspaceMembership?.role === 'owner' || workspaceMembership?.role === 'admin';
+  const isOwner = workspaceMembership?.role === 'owner';
+  const { leave, isPending: isLeavePending } = useLeaveAndNavigate(workspaces);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const { openSwitcher } = useMobileNav();
 
   const sensors = useSensors(
@@ -318,6 +322,18 @@ export function ChannelSidebar({
             >
               Mark All as Read
             </MenuItem>
+            {!isOwner && (
+              <>
+                <MenuSeparator />
+                <MenuItem
+                  onAction={() => setShowLeaveConfirm(true)}
+                  icon={<ArrowRightStartOnRectangleIcon className="h-4 w-4" />}
+                  variant="danger"
+                >
+                  Leave Workspace
+                </MenuItem>
+              </>
+            )}
           </Menu>
           {onSearchClick && (
             <IconButton onPress={onSearchClick} aria-label="Quick switch (Cmd+K)">
@@ -451,6 +467,32 @@ export function ChannelSidebar({
             onClose={onCloseNewDMModal}
             workspaceId={workspaceId}
           />
+          <Modal
+            isOpen={showLeaveConfirm}
+            onClose={() => setShowLeaveConfirm(false)}
+            title={`Leave ${workspaceData?.workspace.name ?? 'workspace'}?`}
+            size="sm"
+          >
+            <p className="mb-5 text-sm text-gray-600 dark:text-gray-300">
+              You will lose access to all channels in this workspace. You can rejoin later with an
+              invite.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onPress={() => setShowLeaveConfirm(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onPress={async () => {
+                  await leave(workspaceId);
+                  setShowLeaveConfirm(false);
+                }}
+                isLoading={isLeavePending}
+              >
+                Leave Workspace
+              </Button>
+            </div>
+          </Modal>
         </>
       )}
     </div>
