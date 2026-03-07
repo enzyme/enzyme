@@ -12,7 +12,7 @@ import {
 } from '../settings/WorkspaceSettingsModal';
 import { BanScreen } from '../moderation/BanModal';
 import { EmailVerificationBanner } from '../auth/EmailVerificationBanner';
-import { useSSE, useAuth, useIsMobile, useMobileNav } from '../../hooks';
+import { useSSE, useAuth, useServerInfo, useIsMobile, useMobileNav } from '../../hooks';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
 import { useSidebar } from '../../hooks/useSidebar';
 import { useResizableWidth } from '../../hooks/useResizableWidth';
@@ -32,6 +32,7 @@ export function AppLayout() {
   const { workspaceId, channelId } = useParams<{ workspaceId: string; channelId: string }>();
   const { isReconnecting } = useSSE(workspaceId);
   const { user, workspaces } = useAuth();
+  const { emailEnabled } = useServerInfo();
   const currentWorkspace = workspaces?.find((ws) => ws.id === workspaceId);
   const { threadId } = useThreadPanel();
   const { profileUserId } = useProfilePanel();
@@ -113,7 +114,7 @@ export function AppLayout() {
   return (
     <div className="flex h-screen flex-col bg-white dark:bg-gray-900">
       {/* Email Verification Banner */}
-      {!user?.email_verified_at && <EmailVerificationBanner />}
+      {emailEnabled && !user?.email_verified_at && <EmailVerificationBanner />}
 
       {/* Connection Status - full width */}
       {isReconnecting && workspaceId && (

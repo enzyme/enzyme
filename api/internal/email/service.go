@@ -47,6 +47,18 @@ func (s *Service) IsEnabled() bool {
 	return s.enabled
 }
 
+// NewTestService creates an email service for testing with a NoOpSender.
+// Use enabled=true to test email-enabled code paths without real SMTP.
+func NewTestService(enabled bool, publicURL string) *Service {
+	templates, _ := template.ParseFS(templateFS, "templates/*.html", "templates/*.txt")
+	return &Service{
+		sender:    &NoOpSender{},
+		templates: templates,
+		publicURL: publicURL,
+		enabled:   enabled,
+	}
+}
+
 type InviteEmailData struct {
 	WorkspaceName string
 	InviterName   string

@@ -28,6 +28,9 @@ vi.mock('../../api/auth', () => ({
 
 vi.mock('../../api', () => ({
   ApiError: MockApiError,
+  serverApi: {
+    getServerInfo: vi.fn().mockResolvedValue({ version: '0.0.0', email_enabled: true }),
+  },
 }));
 
 // Import after mocks are set up

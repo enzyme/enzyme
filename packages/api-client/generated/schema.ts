@@ -1817,6 +1817,7 @@ export interface components {
         };
         ServerInfo: {
             version: string;
+            email_enabled?: boolean;
         };
         SuccessResponse: {
             success: boolean;
@@ -2497,6 +2498,7 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
         };
     };
     resetPassword: {

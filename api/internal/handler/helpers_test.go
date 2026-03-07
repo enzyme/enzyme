@@ -12,7 +12,6 @@ import (
 
 	"github.com/enzyme/api/internal/auth"
 	"github.com/enzyme/api/internal/channel"
-	"github.com/enzyme/api/internal/config"
 	"github.com/enzyme/api/internal/email"
 	"github.com/enzyme/api/internal/emoji"
 	"github.com/enzyme/api/internal/file"
@@ -56,7 +55,7 @@ func testHandler(t *testing.T) (*Handler, *sql.DB) {
 
 	moderationRepo := moderation.NewRepository(db)
 
-	emailService, _ := email.NewService(config.EmailConfig{Enabled: false}, "http://localhost:8080")
+	emailService := email.NewTestService(false, "http://localhost:8080")
 
 	h := New(Dependencies{
 		AuthService:         authService,
@@ -154,6 +153,15 @@ func createFileAttachment(t *testing.T, db *sql.DB, channelID, userID string) st
 	return id
 }
 
+// testHandlerWithEmail creates a Handler with email enabled (using NoOpSender)
+// for testing email-dependent code paths without real SMTP.
+func testHandlerWithEmail(t *testing.T) (*Handler, *sql.DB) {
+	t.Helper()
+	h, db := testHandler(t)
+	h.emailService = email.NewTestService(true, "http://localhost:8080")
+	return h, db
+}
+
 // testHandlerWithLinkPreviews creates a Handler with link preview support wired in.
 // The httpClient is used by the fetcher (pass a test server's client).
 func testHandlerWithLinkPreviews(t *testing.T, httpClient *http.Client) (*Handler, *sql.DB) {
@@ -184,7 +192,7 @@ func testHandlerWithLinkPreviews(t *testing.T, httpClient *http.Client) (*Handle
 	lpFetcher := linkpreview.NewFetcherWithClient(lpRepo, httpClient)
 	moderationRepo := moderation.NewRepository(db)
 
-	emailService, _ := email.NewService(config.EmailConfig{Enabled: false}, "http://localhost:8080")
+	emailService := email.NewTestService(false, "http://localhost:8080")
 
 	h := New(Dependencies{
 		AuthService:         authService,

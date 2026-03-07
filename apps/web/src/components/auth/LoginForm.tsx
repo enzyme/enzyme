@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Input } from '../ui';
-import { useAuth } from '../../hooks';
+import { useAuth, useServerInfo } from '../../hooks';
 import { ApiError } from '../../api';
 
 export function LoginForm() {
@@ -9,6 +9,7 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login, isLoggingIn } = useAuth();
+  const { emailEnabled } = useServerInfo();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -59,14 +60,16 @@ export function LoginForm() {
           autoComplete="current-password"
         />
 
-        <div className="text-right">
-          <Link
-            to="/forgot-password"
-            className="text-sm font-medium text-blue-600 hover:text-blue-700"
-          >
-            Forgot password?
-          </Link>
-        </div>
+        {emailEnabled && (
+          <div className="text-right">
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              Forgot password?
+            </Link>
+          </div>
+        )}
 
         <Button type="submit" className="w-full" isLoading={isLoggingIn}>
           Sign in

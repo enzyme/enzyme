@@ -71,7 +71,7 @@ func TestUserToAPI_NilOptionalFields(t *testing.T) {
 }
 
 func TestForgotPassword(t *testing.T) {
-	h, db := testHandler(t)
+	h, db := testHandlerWithEmail(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -102,6 +102,36 @@ func TestForgotPassword(t *testing.T) {
 				t.Error("expected success=true")
 			}
 		})
+	}
+}
+
+func TestForgotPassword_EmailDisabled(t *testing.T) {
+	h, _ := testHandler(t)
+	ctx := context.Background()
+
+	body := openapi.ForgotPasswordJSONRequestBody{
+		Email: openapi_types.Email("test@example.com"),
+	}
+	resp, err := h.ForgotPassword(ctx, openapi.ForgotPasswordRequestObject{Body: &body})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := resp.(openapi.ForgotPassword400JSONResponse); !ok {
+		t.Fatalf("expected 400 response, got %T", resp)
+	}
+}
+
+func TestResendVerification_EmailDisabled(t *testing.T) {
+	h, db := testHandler(t)
+	u := testutil.CreateTestUser(t, db, "test@example.com", "Test")
+	ctx := ctxWithUser(t, h, u.ID)
+
+	resp, err := h.ResendVerification(ctx, openapi.ResendVerificationRequestObject{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := resp.(openapi.ResendVerification400JSONResponse); !ok {
+		t.Fatalf("expected 400 response, got %T", resp)
 	}
 }
 

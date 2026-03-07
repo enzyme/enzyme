@@ -286,13 +286,15 @@ func (a *App) Start(ctx context.Context) error {
 	}
 
 	s.Register(scheduler.Task{Name: "presence-check", Interval: 10 * time.Second, Fn: a.PresenceManager.CheckPresence})
-	s.Register(scheduler.Task{Name: "email-notifications", Interval: time.Minute, Fn: a.EmailWorker.ProcessPending})
 	s.Register(scheduler.Task{Name: "scheduled-messages", Interval: 30 * time.Second, Fn: a.ScheduledWorker.ProcessDue})
-	s.Register(scheduler.Task{Name: "password-reset-cleanup", Interval: 24 * time.Hour, Fn: a.passwordResetRepo.DeleteExpired})
 	s.Register(scheduler.Task{Name: "expired-ban-cleanup", Interval: time.Hour, Fn: a.moderationRepo.CleanupExpiredBans})
 	s.Register(scheduler.Task{Name: "sqlite-optimize", Interval: 24 * time.Hour, Fn: func(ctx context.Context) error { _, err := a.DB.Exec("PRAGMA optimize(0x10002)"); return err }})
 
-	s.Register(scheduler.Task{Name: "email-verification-cleanup", Interval: 24 * time.Hour, Fn: a.emailVerificationRepo.DeleteExpired})
+	if a.EmailService.IsEnabled() {
+		s.Register(scheduler.Task{Name: "email-notifications", Interval: time.Minute, Fn: a.EmailWorker.ProcessPending})
+		s.Register(scheduler.Task{Name: "password-reset-cleanup", Interval: 24 * time.Hour, Fn: a.passwordResetRepo.DeleteExpired})
+		s.Register(scheduler.Task{Name: "email-verification-cleanup", Interval: 24 * time.Hour, Fn: a.emailVerificationRepo.DeleteExpired})
+	}
 
 	s.Start(ctx)
 

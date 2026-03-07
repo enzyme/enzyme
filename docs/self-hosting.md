@@ -170,7 +170,7 @@ server:
 
 ## Email Setup
 
-Email is optional but enables password resets, workspace invites, and notification digests. Without email, users can only be invited via shareable invite links.
+Email is optional but enables password resets, email verification, workspace invites, and notification digests. Without email, the password reset and verification UI is hidden, and users can only be invited via shareable invite links.
 
 ```yaml
 email:

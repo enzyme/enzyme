@@ -33,6 +33,9 @@ export type Attachment = components['schemas']['Attachment'];
 export type LinkPreview = components['schemas']['LinkPreview'];
 export type ThreadParticipant = components['schemas']['ThreadParticipant'];
 
+// Server types
+export type ServerInfo = components['schemas']['ServerInfo'];
+
 // API types
 export type ApiError = components['schemas']['ApiError'];
 export type ApiErrorResponse = components['schemas']['ApiErrorResponse'];

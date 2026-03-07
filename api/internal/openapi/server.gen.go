@@ -535,7 +535,8 @@ type SendMessageInput struct {
 
 // ServerInfo defines model for ServerInfo.
 type ServerInfo struct {
-	Version string `json:"version"`
+	EmailEnabled *bool  `json:"email_enabled,omitempty"`
+	Version      string `json:"version"`
 }
 
 // SignedUrl defines model for SignedUrl.
@@ -4630,6 +4631,15 @@ type ForgotPassword200JSONResponse struct {
 func (response ForgotPassword200JSONResponse) VisitForgotPasswordResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ForgotPassword400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ForgotPassword400JSONResponse) VisitForgotPasswordResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 
 	return json.NewEncoder(w).Encode(response)
 }

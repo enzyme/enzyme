@@ -1,4 +1,5 @@
 export { authApi } from './auth';
+export { serverApi } from './server';
 export { workspacesApi } from './workspaces';
 export { channelsApi } from './channels';
 export { messagesApi } from './messages';

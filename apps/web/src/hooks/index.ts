@@ -1,4 +1,5 @@
 export { useAuth } from './useAuth';
+export { useServerInfo } from './useServerInfo';
 export {
   useWorkspace,
   useWorkspaceMembers,

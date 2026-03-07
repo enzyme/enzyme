@@ -95,7 +95,7 @@ Enzyme uses SQLite in WAL mode. No external database server is needed. See [Scal
 
 ## Email
 
-Email is optional. When disabled, features like password reset and notification emails won't be available, but invite links will still work.
+Email is optional. When disabled, password reset, email verification, and notification digest features are unavailable and their UI is hidden. Invite links will still work.
 
 | Key              | Env Var                 | CLI Flag          | Default | Description                                                  |
 | ---------------- | ----------------------- | ----------------- | ------- | ------------------------------------------------------------ |

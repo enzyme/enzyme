@@ -47,18 +47,21 @@ func (h *Handler) Register(ctx context.Context, request openapi.RegisterRequestO
 		return nil, err
 	}
 
-	// Create verification token synchronously, send email async
-	verifyToken, err := h.authService.CreateEmailVerificationToken(ctx, u.ID)
-	if err != nil {
-		slog.Error("failed to create email verification token", "user_id", u.ID, "error", err)
-	} else {
-		go func() {
-			sendCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-			if err := h.emailService.SendEmailVerification(sendCtx, u.Email, verifyToken); err != nil {
-				slog.Error("failed to send verification email", "user_id", u.ID, "error", err)
-			}
-		}()
+	// Verification email is best-effort; registration succeeds regardless of email config.
+	// When email is later enabled, unverified users will see the verification banner.
+	if h.emailService.IsEnabled() {
+		verifyToken, err := h.authService.CreateEmailVerificationToken(ctx, u.ID)
+		if err != nil {
+			slog.Error("failed to create email verification token", "user_id", u.ID, "error", err)
+		} else {
+			go func() {
+				sendCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+				if err := h.emailService.SendEmailVerification(sendCtx, u.Email, verifyToken); err != nil {
+					slog.Error("failed to send verification email", "user_id", u.ID, "error", err)
+				}
+			}()
+		}
 	}
 
 	return openapi.Register200JSONResponse{
@@ -168,6 +171,12 @@ func (h *Handler) GetMe(ctx context.Context, request openapi.GetMeRequestObject)
 
 // ForgotPassword handles password reset requests
 func (h *Handler) ForgotPassword(ctx context.Context, request openapi.ForgotPasswordRequestObject) (openapi.ForgotPasswordResponseObject, error) {
+	if !h.emailService.IsEnabled() {
+		return openapi.ForgotPassword400JSONResponse{
+			BadRequestJSONResponse: badRequestResponse("EMAIL_NOT_ENABLED", "Email is not configured on this server"),
+		}, nil
+	}
+
 	token, err := h.authService.CreatePasswordResetToken(ctx, string(request.Body.Email))
 	if err != nil {
 		slog.Error("failed to create password reset token", "error", err)
@@ -236,6 +245,12 @@ func (h *Handler) ResendVerification(ctx context.Context, request openapi.Resend
 	if userID == "" {
 		return openapi.ResendVerification401JSONResponse{
 			UnauthorizedJSONResponse: openapi.UnauthorizedJSONResponse(newErrorResponse(ErrCodeNotAuthenticated, "Not authenticated")),
+		}, nil
+	}
+
+	if !h.emailService.IsEnabled() {
+		return openapi.ResendVerification400JSONResponse{
+			BadRequestJSONResponse: badRequestResponse("EMAIL_NOT_ENABLED", "Email is not configured on this server"),
 		}, nil
 	}
 

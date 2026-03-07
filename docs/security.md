@@ -41,7 +41,7 @@ Passwords are hashed with bcrypt at cost 12 (configurable via `auth.bcrypt_cost`
 
 ### Password Reset
 
-Reset tokens are 32 bytes from `crypto/rand` (hex-encoded), expire after 1 hour, and are single-use. The forgot-password endpoint returns a success response regardless of whether the email exists, preventing email enumeration.
+Reset tokens are 32 bytes from `crypto/rand` (hex-encoded), expire after 1 hour, and are single-use. The forgot-password endpoint returns a success response regardless of whether the email exists, preventing email enumeration. When email is not configured, the endpoint returns a 400 error.
 
 ### Rate Limiting
 
