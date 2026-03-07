@@ -141,6 +141,14 @@ func (r *Repository) AddMember(ctx context.Context, userID, workspaceID, role st
 	}, nil
 }
 
+func (r *Repository) CountOwners(ctx context.Context, workspaceID string) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM workspace_memberships WHERE workspace_id = ? AND role = 'owner'
+	`, workspaceID).Scan(&count)
+	return count, err
+}
+
 func (r *Repository) RemoveMember(ctx context.Context, userID, workspaceID string) error {
 	// Check if owner
 	var role string
@@ -154,7 +162,14 @@ func (r *Repository) RemoveMember(ctx context.Context, userID, workspaceID strin
 		return err
 	}
 	if role == RoleOwner {
-		return ErrCannotRemoveOwner
+		// Allow removal if there are other owners
+		count, err := r.CountOwners(ctx, workspaceID)
+		if err != nil {
+			return err
+		}
+		if count <= 1 {
+			return ErrCannotRemoveOwner
+		}
 	}
 
 	_, err = r.db.ExecContext(ctx, `

@@ -3329,6 +3329,7 @@ components:
         - member.banned
         - member.unbanned
         - member.left
+        - member.role_changed
         - scheduled_message.created
         - scheduled_message.updated
         - scheduled_message.deleted

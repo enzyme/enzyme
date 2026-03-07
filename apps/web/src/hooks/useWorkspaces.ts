@@ -61,6 +61,7 @@ export function useUpdateMemberRole(workspaceId: string) {
       workspacesApi.updateMemberRole(workspaceId, userId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
     },
   });
 }

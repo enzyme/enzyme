@@ -22,11 +22,12 @@ const (
 	EventEmojiCreated    = "emoji.created"
 	EventEmojiDeleted    = "emoji.deleted"
 
-	EventMessagePinned   = "message.pinned"
-	EventMessageUnpinned = "message.unpinned"
-	EventMemberBanned    = "member.banned"
-	EventMemberUnbanned  = "member.unbanned"
-	EventMemberLeft      = "member.left"
+	EventMessagePinned     = "message.pinned"
+	EventMessageUnpinned   = "message.unpinned"
+	EventMemberBanned      = "member.banned"
+	EventMemberUnbanned    = "member.unbanned"
+	EventMemberLeft        = "member.left"
+	EventMemberRoleChanged = "member.role_changed"
 
 	EventScheduledMessageCreated = "scheduled_message.created"
 	EventScheduledMessageUpdated = "scheduled_message.updated"

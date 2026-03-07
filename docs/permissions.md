@@ -8,7 +8,7 @@ Every workspace member has exactly one role. Roles are ordered by privilege:
 
 | Role       | Rank | Description                               |
 | ---------- | ---- | ----------------------------------------- |
-| **Owner**  | 4    | Workspace creator, highest privilege      |
+| **Owner**  | 4    | Highest privilege, full workspace control |
 | **Admin**  | 3    | Can manage members and workspace settings |
 | **Member** | 2    | Standard participant                      |
 | **Guest**  | 1    | Limited access, cannot create channels    |
@@ -37,14 +37,16 @@ See [Workspace Administration](administration.md) for the operational guide on m
 | Upload/remove workspace icon        |   ✓   |   ✓   |        |       |
 | Archive channels                    |   ✓   |   ✓   |        |       |
 | Promote member to admin             |   ✓   |       |        |       |
+| Promote member to owner             |   ✓   |       |        |       |
 | Delete workspace                    |   ✓   |       |        |       |
 
 ### Special Rules
 
-- **Owner is immutable**: The owner's role cannot be changed or transferred. The workspace creator is permanently the owner.
-- **Admins cannot promote to admin**: Only the owner can make someone an admin. Admins can only assign the "member" role.
-- **Self-removal**: Any member can remove themselves from a workspace, regardless of role. The owner cannot be removed.
-- **Self role-change**: Users cannot change their own role.
+- **Multiple owners**: A workspace can have multiple owners. Any owner can promote any member to owner.
+- **Owners cannot demote other owners**: An owner can only demote themselves, not another owner.
+- **Last owner protection**: The last remaining owner cannot demote themselves or leave the workspace. At least one owner must always exist.
+- **Admins cannot promote to admin**: Only an owner can make someone an admin. Admins can only assign the "member" role.
+- **Self-removal**: Any member can leave a workspace. Owners can leave if at least one other owner exists.
 
 ### Permission Functions (Go)
 

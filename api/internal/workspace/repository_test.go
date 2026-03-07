@@ -188,7 +188,7 @@ func TestRepository_RemoveMember(t *testing.T) {
 	}
 }
 
-func TestRepository_RemoveMember_CannotRemoveOwner(t *testing.T) {
+func TestRepository_RemoveMember_CannotRemoveLastOwner(t *testing.T) {
 	db := testutil.TestDB(t)
 	repo := NewRepository(db)
 	ctx := context.Background()
@@ -201,6 +201,57 @@ func TestRepository_RemoveMember_CannotRemoveOwner(t *testing.T) {
 	err := repo.RemoveMember(ctx, owner.ID, ws.ID)
 	if !errors.Is(err, ErrCannotRemoveOwner) {
 		t.Errorf("RemoveMember() error = %v, want %v", err, ErrCannotRemoveOwner)
+	}
+}
+
+func TestRepository_RemoveMember_CanRemoveOwnerWhenMultiple(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	owner1 := testutil.CreateTestUser(t, db, "owner1@example.com", "Owner1")
+	owner2 := testutil.CreateTestUser(t, db, "owner2@example.com", "Owner2")
+
+	ws := &Workspace{Name: "Test WS", Settings: "{}"}
+	repo.Create(ctx, ws, owner1.ID)
+	repo.AddMember(ctx, owner2.ID, ws.ID, RoleMember)
+	repo.UpdateMemberRole(ctx, owner2.ID, ws.ID, RoleOwner)
+
+	err := repo.RemoveMember(ctx, owner1.ID, ws.ID)
+	if err != nil {
+		t.Errorf("RemoveMember() error = %v, want nil", err)
+	}
+}
+
+func TestRepository_CountOwners(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	ctx := context.Background()
+
+	owner := testutil.CreateTestUser(t, db, "owner@example.com", "Owner")
+	member := testutil.CreateTestUser(t, db, "member@example.com", "Member")
+
+	ws := &Workspace{Name: "Test WS", Settings: "{}"}
+	repo.Create(ctx, ws, owner.ID)
+	repo.AddMember(ctx, member.ID, ws.ID, RoleMember)
+
+	count, err := repo.CountOwners(ctx, ws.ID)
+	if err != nil {
+		t.Fatalf("CountOwners() error = %v", err)
+	}
+	if count != 1 {
+		t.Errorf("CountOwners() = %d, want 1", count)
+	}
+
+	// Promote member to owner
+	repo.UpdateMemberRole(ctx, member.ID, ws.ID, RoleOwner)
+
+	count, err = repo.CountOwners(ctx, ws.ID)
+	if err != nil {
+		t.Fatalf("CountOwners() error = %v", err)
+	}
+	if count != 2 {
+		t.Errorf("CountOwners() = %d, want 2", count)
 	}
 }
 

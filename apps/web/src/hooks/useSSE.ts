@@ -574,6 +574,12 @@ export function useSSE(workspaceId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });
     });
 
+    // Handle member role changed
+    connection.on('member.role_changed', () => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+    });
+
     // Handle typing events
     connection.on('typing.start', (event) => {
       addTypingUser(event.data.channel_id, event.data);
