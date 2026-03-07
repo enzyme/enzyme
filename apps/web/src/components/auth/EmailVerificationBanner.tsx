@@ -27,6 +27,17 @@ export function EmailVerificationBanner() {
           'Sending verification email...'
         ) : resend.isSuccess ? (
           'We re-sent the verification email.'
+        ) : resend.isError ? (
+          <>
+            Failed to send.{' '}
+            <AriaButton
+              onPress={() => resend.mutate()}
+              className="cursor-pointer font-medium underline"
+            >
+              Try again
+            </AriaButton>
+            .
+          </>
         ) : (
           <>
             Check your inbox or{' '}

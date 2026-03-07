@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"net/url"
 	"time"
 
 	"github.com/enzyme/api/internal/auth"
-	"github.com/enzyme/api/internal/email"
 	"github.com/enzyme/api/internal/gravatar"
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/user"
@@ -49,20 +47,19 @@ func (h *Handler) Register(ctx context.Context, request openapi.RegisterRequestO
 		return nil, err
 	}
 
-	// Send verification email (don't fail registration if this fails)
-	go func() {
-		sendCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		verifyToken, err := h.authService.CreateEmailVerificationToken(sendCtx, u.ID)
-		if err != nil {
-			slog.Error("failed to create email verification token", "error", err)
-			return
-		}
-		verifyURL := h.publicURL + "/verify-email?" + url.Values{"token": {verifyToken}}.Encode()
-		if err := h.emailService.SendEmailVerification(sendCtx, u.Email, email.VerifyEmailData{VerifyURL: verifyURL}); err != nil {
-			slog.Error("failed to send verification email", "error", err)
-		}
-	}()
+	// Create verification token synchronously, send email async
+	verifyToken, err := h.authService.CreateEmailVerificationToken(ctx, u.ID)
+	if err != nil {
+		slog.Error("failed to create email verification token", "user_id", u.ID, "error", err)
+	} else {
+		go func() {
+			sendCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := h.emailService.SendEmailVerification(sendCtx, u.Email, verifyToken); err != nil {
+				slog.Error("failed to send verification email", "user_id", u.ID, "error", err)
+			}
+		}()
+	}
 
 	return openapi.Register200JSONResponse{
 		User:  userToAPI(u),
@@ -261,17 +258,13 @@ func (h *Handler) ResendVerification(ctx context.Context, request openapi.Resend
 	go func() {
 		sendCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		verifyURL := h.publicURL + "/verify-email?" + url.Values{"token": {token}}.Encode()
-		if err := h.emailService.SendEmailVerification(sendCtx, u.Email, email.VerifyEmailData{VerifyURL: verifyURL}); err != nil {
-			slog.Error("failed to send verification email", "error", err)
+		if err := h.emailService.SendEmailVerification(sendCtx, u.Email, token); err != nil {
+			slog.Error("failed to send verification email", "user_id", userID, "error", err)
 		}
 	}()
 
-	success := true
-	msg := "Verification email sent"
 	return openapi.ResendVerification200JSONResponse{
-		Success: &success,
-		Message: &msg,
+		Success: true,
 	}, nil
 }
 

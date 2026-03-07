@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"testing"
 	"time"
@@ -100,7 +101,7 @@ func (m *mockEmailVerificationRepository) GetByToken(ctx context.Context, token 
 	}
 	ev, ok := m.Verifications[token]
 	if !ok {
-		return nil, ErrInvalidVerificationToken
+		return nil, sql.ErrNoRows
 	}
 	return ev, nil
 }

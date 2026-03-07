@@ -4734,10 +4734,7 @@ type ResendVerificationResponseObject interface {
 	VisitResendVerificationResponse(w http.ResponseWriter) error
 }
 
-type ResendVerification200JSONResponse struct {
-	Message *string `json:"message,omitempty"`
-	Success *bool   `json:"success,omitempty"`
-}
+type ResendVerification200JSONResponse SuccessResponse
 
 func (response ResendVerification200JSONResponse) VisitResendVerificationResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")

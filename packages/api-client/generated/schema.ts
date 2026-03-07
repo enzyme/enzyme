@@ -2569,10 +2569,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        success?: boolean;
-                        message?: string;
-                    };
+                    "application/json": components["schemas"]["SuccessResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];

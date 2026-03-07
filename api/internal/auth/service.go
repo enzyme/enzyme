@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/enzyme/api/internal/user"
@@ -183,7 +184,9 @@ func (s *Service) VerifyEmail(ctx context.Context, token string) error {
 		return err
 	}
 
-	_ = s.emailVerifications.DeleteForUser(ctx, ev.UserID)
+	if err := s.emailVerifications.DeleteForUser(ctx, ev.UserID); err != nil {
+		slog.Error("failed to delete verification tokens after verification", "user_id", ev.UserID, "error", err)
+	}
 
 	return nil
 }

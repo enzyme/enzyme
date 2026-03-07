@@ -30,13 +30,13 @@ func NewEmailVerificationRepo(db *sql.DB) *EmailVerificationRepo {
 func (r *EmailVerificationRepo) Create(ctx context.Context, userID string, token string, expiresAt time.Time) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback()
 
 	// Delete existing tokens for this user (only one active at a time)
 	if _, err := tx.ExecContext(ctx, `DELETE FROM email_verifications WHERE user_id = ?`, userID); err != nil {
-		return err
+		return fmt.Errorf("deleting existing tokens: %w", err)
 	}
 
 	now := time.Now().UTC()
@@ -46,10 +46,13 @@ func (r *EmailVerificationRepo) Create(ctx context.Context, userID string, token
 		VALUES (?, ?, ?, ?)
 	`, token, userID, expiresAt.Format(time.RFC3339), now.Format(time.RFC3339))
 	if err != nil {
-		return err
+		return fmt.Errorf("inserting verification token: %w", err)
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("committing verification token: %w", err)
+	}
+	return nil
 }
 
 func (r *EmailVerificationRepo) GetByToken(ctx context.Context, token string) (*EmailVerification, error) {
@@ -74,11 +77,15 @@ func (r *EmailVerificationRepo) GetByToken(ctx context.Context, token string) (*
 }
 
 func (r *EmailVerificationRepo) DeleteForUser(ctx context.Context, userID string) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM email_verifications WHERE user_id = ?`, userID)
-	return err
+	if _, err := r.db.ExecContext(ctx, `DELETE FROM email_verifications WHERE user_id = ?`, userID); err != nil {
+		return fmt.Errorf("deleting verification tokens for user: %w", err)
+	}
+	return nil
 }
 
 func (r *EmailVerificationRepo) DeleteExpired(ctx context.Context) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM email_verifications WHERE expires_at < ?`, time.Now().UTC().Format(time.RFC3339))
-	return err
+	if _, err := r.db.ExecContext(ctx, `DELETE FROM email_verifications WHERE expires_at < ?`, time.Now().UTC().Format(time.RFC3339)); err != nil {
+		return fmt.Errorf("deleting expired verification tokens: %w", err)
+	}
+	return nil
 }

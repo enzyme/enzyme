@@ -50,7 +50,7 @@ type App struct {
 	EmailWorker           *notification.EmailWorker
 	RateLimiter           *ratelimit.Limiter
 	SessionStore          *auth.SessionStore
-	EmailVerificationRepo *auth.EmailVerificationRepo
+	emailVerificationRepo *auth.EmailVerificationRepo
 	LinkPreviewRepo       *linkpreview.Repository
 	ScheduledWorker       *scheduled.Worker
 	passwordResetRepo     *auth.PasswordResetRepo
@@ -255,7 +255,7 @@ func New(cfg *config.Config) (*App, error) {
 		EmailWorker:           emailWorker,
 		RateLimiter:           limiter,
 		SessionStore:          sessionStore,
-		EmailVerificationRepo: emailVerificationRepo,
+		emailVerificationRepo: emailVerificationRepo,
 		LinkPreviewRepo:       linkPreviewRepo,
 		ScheduledWorker:       scheduledWorker,
 		passwordResetRepo:     passwordResetRepo,
@@ -292,7 +292,7 @@ func (a *App) Start(ctx context.Context) error {
 	s.Register(scheduler.Task{Name: "expired-ban-cleanup", Interval: time.Hour, Fn: a.moderationRepo.CleanupExpiredBans})
 	s.Register(scheduler.Task{Name: "sqlite-optimize", Interval: 24 * time.Hour, Fn: func(ctx context.Context) error { _, err := a.DB.Exec("PRAGMA optimize(0x10002)"); return err }})
 
-	s.Register(scheduler.Task{Name: "email-verification-cleanup", Interval: 24 * time.Hour, Fn: a.EmailVerificationRepo.DeleteExpired})
+	s.Register(scheduler.Task{Name: "email-verification-cleanup", Interval: 24 * time.Hour, Fn: a.emailVerificationRepo.DeleteExpired})
 
 	s.Start(ctx)
 

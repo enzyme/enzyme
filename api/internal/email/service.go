@@ -82,19 +82,17 @@ func (s *Service) SendPasswordReset(ctx context.Context, to string, token string
 	return s.sender.Send(ctx, to, subject, body, "")
 }
 
-type VerifyEmailData struct {
-	VerifyURL string
-}
+func (s *Service) SendEmailVerification(ctx context.Context, to string, token string) error {
+	verifyURL := s.publicURL + "/verify-email?" + url.Values{"token": {token}}.Encode()
 
-func (s *Service) SendEmailVerification(ctx context.Context, to string, data VerifyEmailData) error {
 	if !s.enabled {
-		slog.Debug("would send email verification", "component", "email", "to", to)
+		slog.Debug("would send email verification", "component", "email", "to", to, "url", verifyURL)
 		return nil
 	}
 
 	subject := "Verify your email address"
 	body := "Please verify your email address by clicking the link below:\n\n"
-	body += data.VerifyURL + "\n"
+	body += verifyURL + "\n"
 
 	return s.sender.Send(ctx, to, subject, body, "")
 }
