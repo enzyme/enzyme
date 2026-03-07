@@ -284,7 +284,9 @@ export function MessageItem({ message, channelId, channels, isAdmin }: MessageIt
       )}
       style={isDeleting ? { marginTop: 0, marginBottom: 0 } : undefined}
       onContextMenu={msgCtx.onContextMenu}
-      onMouseEnter={() => setShowActions(true)}
+      onPointerMove={() => {
+        if (!showActions) setShowActions(true);
+      }}
       onMouseLeave={() => {
         if (!showDropdown && !reactionPickerOpen && !msgCtx.isOpen) {
           setShowActions(false);

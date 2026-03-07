@@ -112,7 +112,9 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
         'hover:bg-gray-100 dark:hover:bg-gray-800',
         showDropdown && 'bg-gray-100 dark:bg-gray-800',
       )}
-      onMouseEnter={() => setShowActions(true)}
+      onPointerMove={() => {
+        if (!showActions) setShowActions(true);
+      }}
       onMouseLeave={() => {
         if (!showDropdown && !reactionPickerOpen) {
           setShowActions(false);
