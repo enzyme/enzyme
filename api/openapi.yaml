@@ -3329,6 +3329,7 @@ components:
         - member.banned
         - member.unbanned
         - member.left
+        - member.role_changed
         - scheduled_message.created
         - scheduled_message.updated
         - scheduled_message.deleted
@@ -3366,6 +3367,7 @@ components:
         - $ref: '#/components/schemas/SSEEventMemberBanned'
         - $ref: '#/components/schemas/SSEEventMemberUnbanned'
         - $ref: '#/components/schemas/SSEEventMemberLeft'
+        - $ref: '#/components/schemas/SSEEventMemberRoleChanged'
       discriminator:
         propertyName: type
         mapping:
@@ -3398,6 +3400,7 @@ components:
           member.banned: '#/components/schemas/SSEEventMemberBanned'
           member.unbanned: '#/components/schemas/SSEEventMemberUnbanned'
           member.left: '#/components/schemas/SSEEventMemberLeft'
+          member.role_changed: '#/components/schemas/SSEEventMemberRoleChanged'
 
     SSEEventConnected:
       type: object
@@ -3818,6 +3821,26 @@ components:
             user_id:
               type: string
             workspace_id:
+              type: string
+
+    SSEEventMemberRoleChanged:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [member.role_changed]
+        data:
+          type: object
+          required: [user_id, old_role, new_role]
+          properties:
+            user_id:
+              type: string
+            old_role:
+              type: string
+            new_role:
               type: string
 
     NotificationData:

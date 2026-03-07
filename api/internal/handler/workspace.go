@@ -227,17 +227,23 @@ func (h *Handler) LeaveWorkspace(ctx context.Context, request openapi.LeaveWorks
 		return nil, err
 	}
 
-	// Owners must transfer ownership before leaving
-	if membership.Role == workspace.RoleOwner {
-		return openapi.LeaveWorkspace403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Workspace owners must transfer ownership before leaving")}, nil
-	}
-
-	// Begin transaction: remove channel memberships then workspace membership
+	// Begin transaction: check owner count + remove memberships atomically
 	tx, err := h.workspaceRepo.BeginTx(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
+
+	// Last owner cannot leave
+	if membership.Role == workspace.RoleOwner {
+		ownerCount, err := h.workspaceRepo.CountOwnersTx(ctx, tx, workspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if ownerCount <= 1 {
+			return openapi.LeaveWorkspace403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Workspace owners must transfer ownership before leaving")}, nil
+		}
+	}
 
 	removedChannelIDs, err := h.channelRepo.RemoveAllNonDMMemberships(ctx, tx, userID, workspaceID)
 	if err != nil {
@@ -296,20 +302,19 @@ func (h *Handler) UpdateWorkspaceMemberRole(ctx context.Context, request openapi
 		return openapi.UpdateWorkspaceMemberRole403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Permission denied")}, nil
 	}
 
-	// Validate role
 	newRole := string(request.Body.Role)
-	if newRole != workspace.RoleAdmin && newRole != workspace.RoleMember && newRole != workspace.RoleGuest {
+	workspaceID := string(request.Wid)
+	targetUserID := request.Body.UserId
+	isSelf := userID == targetUserID
+
+	// Validate role
+	if newRole != workspace.RoleOwner && newRole != workspace.RoleAdmin && newRole != workspace.RoleMember && newRole != workspace.RoleGuest {
 		return openapi.UpdateWorkspaceMemberRole400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Invalid role")}, nil
 	}
 
-	// Can't change owner role
-	targetMembership, err := h.workspaceRepo.GetMembership(ctx, request.Body.UserId, string(request.Wid))
-	if err != nil {
-		return nil, err
-	}
-
-	if targetMembership.Role == workspace.RoleOwner {
-		return openapi.UpdateWorkspaceMemberRole403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Cannot change owner's role")}, nil
+	// Only owners can promote to owner
+	if newRole == workspace.RoleOwner && membership.Role != workspace.RoleOwner {
+		return openapi.UpdateWorkspaceMemberRole403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Only owners can promote to owner")}, nil
 	}
 
 	// Admins can't promote to admin
@@ -317,15 +322,60 @@ func (h *Handler) UpdateWorkspaceMemberRole(ctx context.Context, request openapi
 		return openapi.UpdateWorkspaceMemberRole403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Admins cannot promote to admin")}, nil
 	}
 
-	if err := h.workspaceRepo.UpdateMemberRole(ctx, request.Body.UserId, string(request.Wid), newRole); err != nil {
+	targetMembership, err := h.workspaceRepo.GetMembership(ctx, targetUserID, workspaceID)
+	if err != nil {
 		return nil, err
 	}
 
+	// Cannot change another owner's role
+	if targetMembership.Role == workspace.RoleOwner && !isSelf {
+		return openapi.UpdateWorkspaceMemberRole403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Cannot change another owner's role")}, nil
+	}
+
+	// Self-demotion from owner: check + update in a transaction to prevent TOCTOU race
+	if isSelf && targetMembership.Role == workspace.RoleOwner && newRole != workspace.RoleOwner {
+		tx, err := h.workspaceRepo.BeginTx(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer tx.Rollback()
+
+		ownerCount, err := h.workspaceRepo.CountOwnersTx(ctx, tx, workspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if ownerCount <= 1 {
+			return openapi.UpdateWorkspaceMemberRole403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Cannot demote yourself: you are the only owner")}, nil
+		}
+		if err := h.workspaceRepo.UpdateMemberRoleTx(ctx, tx, targetUserID, workspaceID, newRole); err != nil {
+			return nil, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := h.workspaceRepo.UpdateMemberRole(ctx, targetUserID, workspaceID, newRole); err != nil {
+			return nil, err
+		}
+	}
+
 	// Audit log: role change
-	_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, string(request.Wid), userID, "member.role_changed", "user", request.Body.UserId, map[string]interface{}{
+	_ = h.moderationRepo.CreateAuditLogEntryWithMetadata(ctx, workspaceID, userID, "member.role_changed", "user", targetUserID, map[string]interface{}{
 		"old_role": targetMembership.Role,
 		"new_role": newRole,
 	})
+
+	// SSE broadcast: role changed
+	if h.hub != nil {
+		h.hub.BroadcastToWorkspace(workspaceID, sse.Event{
+			Type: sse.EventMemberRoleChanged,
+			Data: map[string]string{
+				"user_id":  targetUserID,
+				"old_role": targetMembership.Role,
+				"new_role": newRole,
+			},
+		})
+	}
 
 	return openapi.UpdateWorkspaceMemberRole200JSONResponse{
 		Success: true,

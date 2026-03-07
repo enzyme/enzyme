@@ -275,6 +275,139 @@ func TestUpdateWorkspaceMemberRole_CannotChangeOwner(t *testing.T) {
 	}
 }
 
+func TestUpdateWorkspaceMemberRole_PromoteToOwner(t *testing.T) {
+	h, db := testHandler(t)
+
+	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
+	member := testutil.CreateTestUser(t, db, "member@test.com", "Member")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "WS")
+	addWorkspaceMember(t, db, member.ID, ws.ID, "member")
+
+	ctx := ctxWithUser(t, h, owner.ID)
+	resp, err := h.UpdateWorkspaceMemberRole(ctx, openapi.UpdateWorkspaceMemberRoleRequestObject{
+		Wid: ws.ID,
+		Body: &openapi.UpdateWorkspaceMemberRoleJSONRequestBody{
+			UserId: member.ID,
+			Role:   openapi.WorkspaceRole("owner"),
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := resp.(openapi.UpdateWorkspaceMemberRole200JSONResponse); !ok {
+		t.Fatalf("expected 200 response, got %T", resp)
+	}
+
+	// Verify the member is now an owner
+	m, _ := h.workspaceRepo.GetMembership(context.Background(), member.ID, ws.ID)
+	if m.Role != "owner" {
+		t.Errorf("role = %q, want %q", m.Role, "owner")
+	}
+}
+
+func TestUpdateWorkspaceMemberRole_AdminCannotPromoteToOwner(t *testing.T) {
+	h, db := testHandler(t)
+
+	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
+	admin := testutil.CreateTestUser(t, db, "admin@test.com", "Admin")
+	member := testutil.CreateTestUser(t, db, "member@test.com", "Member")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "WS")
+	addWorkspaceMember(t, db, admin.ID, ws.ID, "admin")
+	addWorkspaceMember(t, db, member.ID, ws.ID, "member")
+
+	ctx := ctxWithUser(t, h, admin.ID)
+	resp, err := h.UpdateWorkspaceMemberRole(ctx, openapi.UpdateWorkspaceMemberRoleRequestObject{
+		Wid: ws.ID,
+		Body: &openapi.UpdateWorkspaceMemberRoleJSONRequestBody{
+			UserId: member.ID,
+			Role:   openapi.WorkspaceRole("owner"),
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := resp.(openapi.UpdateWorkspaceMemberRole403JSONResponse); !ok {
+		t.Fatalf("expected 403 response, got %T", resp)
+	}
+}
+
+func TestUpdateWorkspaceMemberRole_SelfDemoteFromOwner(t *testing.T) {
+	h, db := testHandler(t)
+
+	owner1 := testutil.CreateTestUser(t, db, "owner1@test.com", "Owner1")
+	owner2 := testutil.CreateTestUser(t, db, "owner2@test.com", "Owner2")
+	ws := testutil.CreateTestWorkspace(t, db, owner1.ID, "WS")
+	addWorkspaceMember(t, db, owner2.ID, ws.ID, "owner")
+
+	// Owner1 demotes themselves to admin — should succeed because owner2 exists
+	ctx := ctxWithUser(t, h, owner1.ID)
+	resp, err := h.UpdateWorkspaceMemberRole(ctx, openapi.UpdateWorkspaceMemberRoleRequestObject{
+		Wid: ws.ID,
+		Body: &openapi.UpdateWorkspaceMemberRoleJSONRequestBody{
+			UserId: owner1.ID,
+			Role:   openapi.WorkspaceRole("admin"),
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := resp.(openapi.UpdateWorkspaceMemberRole200JSONResponse); !ok {
+		t.Fatalf("expected 200 response, got %T", resp)
+	}
+
+	m, _ := h.workspaceRepo.GetMembership(context.Background(), owner1.ID, ws.ID)
+	if m.Role != "admin" {
+		t.Errorf("role = %q, want %q", m.Role, "admin")
+	}
+}
+
+func TestUpdateWorkspaceMemberRole_LastOwnerCannotDemoteSelf(t *testing.T) {
+	h, db := testHandler(t)
+
+	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
+	ws := testutil.CreateTestWorkspace(t, db, owner.ID, "WS")
+
+	ctx := ctxWithUser(t, h, owner.ID)
+	resp, err := h.UpdateWorkspaceMemberRole(ctx, openapi.UpdateWorkspaceMemberRoleRequestObject{
+		Wid: ws.ID,
+		Body: &openapi.UpdateWorkspaceMemberRoleJSONRequestBody{
+			UserId: owner.ID,
+			Role:   openapi.WorkspaceRole("admin"),
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := resp.(openapi.UpdateWorkspaceMemberRole403JSONResponse); !ok {
+		t.Fatalf("expected 403 response, got %T", resp)
+	}
+}
+
+func TestUpdateWorkspaceMemberRole_CannotDemoteAnotherOwner(t *testing.T) {
+	h, db := testHandler(t)
+
+	owner1 := testutil.CreateTestUser(t, db, "owner1@test.com", "Owner1")
+	owner2 := testutil.CreateTestUser(t, db, "owner2@test.com", "Owner2")
+	ws := testutil.CreateTestWorkspace(t, db, owner1.ID, "WS")
+	addWorkspaceMember(t, db, owner2.ID, ws.ID, "owner")
+
+	// Owner1 tries to demote owner2 — should be forbidden
+	ctx := ctxWithUser(t, h, owner1.ID)
+	resp, err := h.UpdateWorkspaceMemberRole(ctx, openapi.UpdateWorkspaceMemberRoleRequestObject{
+		Wid: ws.ID,
+		Body: &openapi.UpdateWorkspaceMemberRoleJSONRequestBody{
+			UserId: owner2.ID,
+			Role:   openapi.WorkspaceRole("admin"),
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := resp.(openapi.UpdateWorkspaceMemberRole403JSONResponse); !ok {
+		t.Fatalf("expected 403 response, got %T", resp)
+	}
+}
+
 func TestCreateWorkspaceInvite_Success(t *testing.T) {
 	h, db := testHandler(t)
 
@@ -414,7 +547,7 @@ func TestLeaveWorkspace_MemberSuccess(t *testing.T) {
 	}
 }
 
-func TestLeaveWorkspace_OwnerForbidden(t *testing.T) {
+func TestLeaveWorkspace_LastOwnerForbidden(t *testing.T) {
 	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
@@ -429,6 +562,26 @@ func TestLeaveWorkspace_OwnerForbidden(t *testing.T) {
 	}
 	if _, ok := resp.(openapi.LeaveWorkspace403JSONResponse); !ok {
 		t.Fatalf("expected 403 response, got %T", resp)
+	}
+}
+
+func TestLeaveWorkspace_OwnerAllowedWhenMultipleOwners(t *testing.T) {
+	h, db := testHandler(t)
+
+	owner1 := testutil.CreateTestUser(t, db, "owner1@test.com", "Owner1")
+	owner2 := testutil.CreateTestUser(t, db, "owner2@test.com", "Owner2")
+	ws := testutil.CreateTestWorkspace(t, db, owner1.ID, "WS")
+	addWorkspaceMember(t, db, owner2.ID, ws.ID, "owner")
+
+	ctx := ctxWithUser(t, h, owner1.ID)
+	resp, err := h.LeaveWorkspace(ctx, openapi.LeaveWorkspaceRequestObject{
+		Wid: ws.ID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := resp.(openapi.LeaveWorkspace200JSONResponse); !ok {
+		t.Fatalf("expected 200 response, got %T", resp)
 	}
 }
 

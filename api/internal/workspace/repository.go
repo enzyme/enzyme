@@ -141,6 +141,40 @@ func (r *Repository) AddMember(ctx context.Context, userID, workspaceID, role st
 	}, nil
 }
 
+func (r *Repository) CountOwners(ctx context.Context, workspaceID string) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM workspace_memberships WHERE workspace_id = ? AND role = 'owner'
+	`, workspaceID).Scan(&count)
+	return count, err
+}
+
+// CountOwnersTx counts owners within a transaction
+func (r *Repository) CountOwnersTx(ctx context.Context, tx *sql.Tx, workspaceID string) (int, error) {
+	var count int
+	err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM workspace_memberships WHERE workspace_id = ? AND role = 'owner'
+	`, workspaceID).Scan(&count)
+	return count, err
+}
+
+// UpdateMemberRoleTx updates a member's role within a transaction
+func (r *Repository) UpdateMemberRoleTx(ctx context.Context, tx *sql.Tx, userID, workspaceID, newRole string) error {
+	now := time.Now().UTC()
+	result, err := tx.ExecContext(ctx, `
+		UPDATE workspace_memberships SET role = ?, updated_at = ?
+		WHERE user_id = ? AND workspace_id = ?
+	`, newRole, now.Format(time.RFC3339), userID, workspaceID)
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrNotAMember
+	}
+	return nil
+}
+
 func (r *Repository) RemoveMember(ctx context.Context, userID, workspaceID string) error {
 	// Check if owner
 	var role string
@@ -154,7 +188,14 @@ func (r *Repository) RemoveMember(ctx context.Context, userID, workspaceID strin
 		return err
 	}
 	if role == RoleOwner {
-		return ErrCannotRemoveOwner
+		// Allow removal if there are other owners
+		count, err := r.CountOwners(ctx, workspaceID)
+		if err != nil {
+			return err
+		}
+		if count <= 1 {
+			return ErrCannotRemoveOwner
+		}
 	}
 
 	_, err = r.db.ExecContext(ctx, `

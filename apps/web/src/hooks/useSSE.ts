@@ -574,6 +574,17 @@ export function useSSE(workspaceId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });
     });
 
+    // Handle member role changed
+    connection.on('member.role_changed', (event) => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });
+
+      // Only refresh auth if the current user's role changed
+      const authData = queryClient.getQueryData<{ user?: { id: string } }>(['auth', 'me']);
+      if (authData?.user?.id === event.data.user_id) {
+        queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+      }
+    });
+
     // Handle typing events
     connection.on('typing.start', (event) => {
       addTypingUser(event.data.channel_id, event.data);

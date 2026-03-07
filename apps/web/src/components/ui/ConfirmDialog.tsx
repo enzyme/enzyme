@@ -31,6 +31,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   variant?: 'default' | 'destructive';
   isLoading?: boolean;
+  isConfirmDisabled?: boolean;
 }
 
 export function ConfirmDialog({
@@ -42,6 +43,7 @@ export function ConfirmDialog({
   confirmLabel = 'Confirm',
   variant = 'default',
   isLoading = false,
+  isConfirmDisabled = false,
 }: ConfirmDialogProps) {
   const styles = confirmDialog();
 
@@ -66,6 +68,7 @@ export function ConfirmDialog({
               variant={variant === 'destructive' ? 'danger' : 'primary'}
               onPress={onConfirm}
               isLoading={isLoading}
+              isDisabled={isConfirmDisabled}
               autoFocus
             >
               {confirmLabel}

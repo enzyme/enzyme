@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Cog6ToothIcon,
   UsersIcon,
@@ -84,10 +84,18 @@ export function WorkspaceSettingsModal({
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
+  const [promoteTarget, setPromoteTarget] = useState<{
+    userId: string;
+    displayName: string;
+  } | null>(null);
+  const [promoteConfirmText, setPromoteConfirmText] = useState('');
+  const [demoteSelfRole, setDemoteSelfRole] = useState<WorkspaceRole | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const members = membersData?.members ?? [];
+  const members = useMemo(() => membersData?.members ?? [], [membersData?.members]);
   const isLoading = workspaceLoading || membersLoading;
+  const isOwner = workspaceMembership?.role === 'owner';
+  const ownerCount = useMemo(() => members.filter((m) => m.role === 'owner').length, [members]);
   const isBlockedUser = (userId: string) =>
     blocksData?.blocks?.some((b) => b.blocked_id === userId) ?? false;
 
@@ -106,6 +114,9 @@ export function WorkspaceSettingsModal({
     setIsEditingName(false);
     setEditName('');
     setMemberToRemove(null);
+    setPromoteTarget(null);
+    setPromoteConfirmText('');
+    setDemoteSelfRole(null);
   }
   if (!isOpen && prevOpen) {
     setPrevOpen(false);
@@ -141,9 +152,49 @@ export function WorkspaceSettingsModal({
   };
 
   const handleRoleChange = async (userId: string, role: WorkspaceRole) => {
+    // Intercept: promoting to owner requires confirmation
+    if (role === 'owner') {
+      const target = members.find((m) => m.user_id === userId);
+      setPromoteTarget({
+        userId,
+        displayName: target?.display_name || 'this user',
+      });
+      setPromoteConfirmText('');
+      return;
+    }
+
+    // Intercept: owner demoting themselves requires confirmation
+    if (userId === user?.id && workspaceMembership?.role === 'owner') {
+      setDemoteSelfRole(role);
+      return;
+    }
+
     try {
       await updateRole.mutateAsync({ userId, role });
       toast('Role updated', 'success');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to update role', 'error');
+    }
+  };
+
+  const handleConfirmPromote = async () => {
+    if (!promoteTarget) return;
+    try {
+      await updateRole.mutateAsync({ userId: promoteTarget.userId, role: 'owner' });
+      toast(`${promoteTarget.displayName} is now an owner`, 'success');
+      setPromoteTarget(null);
+      setPromoteConfirmText('');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to promote to owner', 'error');
+    }
+  };
+
+  const handleConfirmDemoteSelf = async () => {
+    if (!demoteSelfRole || !user) return;
+    try {
+      await updateRole.mutateAsync({ userId: user.id, role: demoteSelfRole });
+      toast('Your role has been updated', 'success');
+      setDemoteSelfRole(null);
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Failed to update role', 'error');
     }
@@ -465,12 +516,70 @@ export function WorkspaceSettingsModal({
                           )
                         ) : (
                           <>
-                            {canManage ? (
-                              member.role === 'owner' ? (
-                                <span className="rounded bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 capitalize dark:bg-yellow-900/30 dark:text-yellow-400">
-                                  Owner
-                                </span>
-                              ) : (
+                            {(() => {
+                              const isSelf = member.user_id === user?.id;
+                              const memberIsOwner = member.role === 'owner';
+                              const roleSelectClass =
+                                'rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+
+                              // Non-managers see a static badge
+                              if (!canManage) {
+                                return (
+                                  <span
+                                    className={cn(
+                                      'rounded px-2 py-0.5 text-xs font-medium capitalize',
+                                      memberIsOwner
+                                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                        : member.role === 'admin'
+                                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+                                    )}
+                                  >
+                                    {member.role}
+                                  </span>
+                                );
+                              }
+
+                              // Other owners: show static badge (can't change their role)
+                              if (memberIsOwner && !isSelf) {
+                                return (
+                                  <span className="rounded bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 capitalize dark:bg-yellow-900/30 dark:text-yellow-400">
+                                    Owner
+                                  </span>
+                                );
+                              }
+
+                              // Self as sole owner: show static badge
+                              if (memberIsOwner && isSelf && ownerCount <= 1) {
+                                return (
+                                  <span className="rounded bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 capitalize dark:bg-yellow-900/30 dark:text-yellow-400">
+                                    Owner
+                                  </span>
+                                );
+                              }
+
+                              // Self as owner with other owners: can step down
+                              if (memberIsOwner && isSelf) {
+                                return (
+                                  <select
+                                    value={member.role}
+                                    onChange={(e) =>
+                                      handleRoleChange(
+                                        member.user_id,
+                                        e.target.value as WorkspaceRole,
+                                      )
+                                    }
+                                    className={roleSelectClass}
+                                  >
+                                    <option value="owner">Owner</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="member">Member</option>
+                                  </select>
+                                );
+                              }
+
+                              // Non-owner members: role dropdown
+                              return (
                                 <select
                                   value={member.role}
                                   onChange={(e) =>
@@ -479,27 +588,15 @@ export function WorkspaceSettingsModal({
                                       e.target.value as WorkspaceRole,
                                     )
                                   }
-                                  disabled={member.user_id === user?.id}
-                                  className="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                  disabled={isSelf}
+                                  className={`${roleSelectClass} disabled:opacity-50`}
                                 >
+                                  {isOwner && <option value="owner">Owner</option>}
                                   <option value="admin">Admin</option>
                                   <option value="member">Member</option>
                                 </select>
-                              )
-                            ) : (
-                              <span
-                                className={cn(
-                                  'rounded px-2 py-0.5 text-xs font-medium capitalize',
-                                  member.role === 'owner'
-                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                    : member.role === 'admin'
-                                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                                      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
-                                )}
-                              >
-                                {member.role}
-                              </span>
-                            )}
+                              );
+                            })()}
 
                             {canManage && member.user_id !== user?.id && (
                               <Button
@@ -637,6 +734,54 @@ export function WorkspaceSettingsModal({
           confirmLabel="Remove"
           variant="destructive"
           isLoading={removeMember.isPending}
+        />
+      )}
+
+      {promoteTarget && (
+        <ConfirmDialog
+          isOpen
+          onClose={() => {
+            setPromoteTarget(null);
+            setPromoteConfirmText('');
+          }}
+          onConfirm={handleConfirmPromote}
+          title="Promote to owner"
+          description={
+            <div className="space-y-3">
+              <p>
+                This will give <strong>{promoteTarget.displayName}</strong> full control of this
+                workspace, including the ability to delete it and manage all members.
+              </p>
+              <p>
+                Type <strong>{promoteTarget.displayName}</strong> to confirm:
+              </p>
+              <input
+                type="text"
+                value={promoteConfirmText}
+                onChange={(e) => setPromoteConfirmText(e.target.value)}
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                placeholder={promoteTarget.displayName}
+                autoFocus
+              />
+            </div>
+          }
+          confirmLabel="Promote to Owner"
+          variant="destructive"
+          isLoading={updateRole.isPending}
+          isConfirmDisabled={promoteConfirmText !== promoteTarget.displayName}
+        />
+      )}
+
+      {demoteSelfRole && (
+        <ConfirmDialog
+          isOpen
+          onClose={() => setDemoteSelfRole(null)}
+          onConfirm={handleConfirmDemoteSelf}
+          title="Step down from owner"
+          description={`You will lose owner privileges and become ${demoteSelfRole === 'admin' ? 'an admin' : 'a member'}. Another owner will need to promote you back if you change your mind.`}
+          confirmLabel="Step Down"
+          variant="destructive"
+          isLoading={updateRole.isPending}
         />
       )}
     </>
