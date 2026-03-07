@@ -1,0 +1,37 @@
+---
+layout: layouts/page.njk
+title: Blog
+description: "News and updates from the Enzyme project."
+permalink: /blog/
+---
+
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <div class="mb-10 flex items-end justify-between">
+    <div>
+      <h1 class="text-4xl font-bold text-gray-900 dark:text-white">Blog</h1>
+      <p class="mt-3 text-lg text-gray-600 dark:text-gray-400">News and updates from the Enzyme project.</p>
+    </div>
+    <img src="/assets/illustrations/5.svg" alt="Decorative illustration" class="hidden sm:block w-24 h-24" />
+  </div>
+
+  <div class="space-y-8">
+    {% for post in collections.posts %}
+    <article class="group">
+      <a href="{{ post.url }}" class="block p-6 -mx-6 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+        <time class="text-sm text-gray-500 dark:text-gray-400" datetime="{{ post.date | dateFormat }}">{{ post.date | dateFormat }}</time>
+        <h2 class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{{ post.data.title }}</h2>
+        {% if post.data.description %}
+          <p class="mt-2 text-gray-600 dark:text-gray-400">{{ post.data.description }}</p>
+        {% endif %}
+        {% if post.data.author %}
+          <p class="mt-3 text-sm text-gray-500 dark:text-gray-500">By {{ post.data.author }}</p>
+        {% endif %}
+      </a>
+    </article>
+    {% endfor %}
+  </div>
+
+  {% if collections.posts.length == 0 %}
+  <p class="text-gray-500 dark:text-gray-400 text-center py-12">No posts yet. Check back soon!</p>
+  {% endif %}
+</div>

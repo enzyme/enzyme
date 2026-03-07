@@ -1,0 +1,29 @@
+---
+layout: layouts/page.njk
+title: Documentation
+description: "Learn how to deploy, configure, and manage Enzyme."
+permalink: /docs/
+---
+
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <div class="mb-10">
+    <h1 class="text-4xl font-bold text-gray-900 dark:text-white">Documentation</h1>
+    <p class="mt-3 text-lg text-gray-600 dark:text-gray-400">Everything you need to deploy, configure, and manage your Enzyme instance.</p>
+  </div>
+
+  <div class="grid sm:grid-cols-2 gap-4">
+    {% for doc in collections.docs %}
+    <a href="{{ doc.url }}" class="group block p-5 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md transition-all bg-white dark:bg-gray-800">
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{{ doc.data.title }}</h2>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ doc.data.description }}</p>
+        </div>
+        <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-500 mt-0.5 shrink-0 transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+        </svg>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>

@@ -1,11 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ title }} - Enzyme</title>
+    <title>{{ title }}{% if title %} - {% endif %}Enzyme</title>
+    <meta name="description" content="{{ description or 'Enzyme is a self-hostable team chat platform. Own your data, deploy anywhere.' }}" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="{{ title }}{% if title %} - {% endif %}Enzyme" />
+    <meta property="og:description" content="{{ description or 'Enzyme is a self-hostable team chat platform. Own your data, deploy anywhere.' }}" />
+    <meta property="og:type" content="website" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/main.css" />
+
+    <!-- Dark mode: prevent flash -->
+    <script>
+      (function () {
+        const stored = localStorage.getItem('theme');
+        if (stored === 'dark' || (!stored && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
-  <body>
+  <body class="min-h-screen flex flex-col">
     {{ content | safe }}
   </body>
 </html>

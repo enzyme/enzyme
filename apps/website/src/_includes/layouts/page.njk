@@ -1,0 +1,11 @@
+---
+layout: base.njk
+---
+
+{% include "components/header.njk" %}
+
+<main class="flex-1">
+  {{ content | safe }}
+</main>
+
+{% include "components/footer.njk" %}
