@@ -224,9 +224,6 @@ export function MessageList({
             itemKey: itemData.key,
             offsetFromContainerTop: vItem.start - scrollTop,
           };
-          console.debug(
-            `[scroll:saveAnchor] ${JSON.stringify({ itemKey: itemData.key, offset: vItem.start - scrollTop, scrollTop })}`,
-          );
         }
         return;
       }
@@ -241,9 +238,6 @@ export function MessageList({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        console.debug(
-          `[scroll:observer] ${JSON.stringify({ isIntersecting: entry.isIntersecting, hasNext: hasNextPageRef.current, isFetching: isFetchingNextRef.current, blocked: programmaticScrollRef.current, scrollTop: container.scrollTop })}`,
-        );
         if (
           entry.isIntersecting &&
           hasNextPageRef.current &&
@@ -291,9 +285,6 @@ export function MessageList({
         const containerRect = container.getBoundingClientRect();
         const sentinelRect = sentinel.getBoundingClientRect();
         const sentinelVisible = sentinelRect.bottom > containerRect.top - 500;
-        console.debug(
-          `[scroll:postFetchRecheck] ${JSON.stringify({ blocked: programmaticScrollRef.current, sentinelVisible })}`,
-        );
         if (sentinelVisible && !programmaticScrollRef.current) {
           saveScrollAnchor();
           fetchNextPage();
@@ -334,9 +325,6 @@ export function MessageList({
     scrollAnchorRef.current = null;
 
     if (newIndex !== -1) {
-      console.debug(
-        `[scroll:restoreAnchor] ${JSON.stringify({ itemKey, newIndex, offset: offsetFromContainerTop })}`,
-      );
       // Use getOffsetForIndex (read-only) + direct scrollTop assignment.
       // scrollToIndex has a persistent retry loop that "undoes" the offset adjustment.
       const offsetInfo = virtualizerRef.current.getOffsetForIndex(newIndex, 'start');
@@ -376,18 +364,12 @@ export function MessageList({
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               programmaticScrollRef.current = false;
-              console.debug(
-                `[scroll:settled:deeplink] ${JSON.stringify({ scrollTop: container.scrollTop, scrollHeight: container.scrollHeight })}`,
-              );
             });
           });
         });
         return;
       }
 
-      console.debug(
-        `[scroll:initialScroll] ${JSON.stringify({ count: virtualItems.length, scrollTop: container.scrollTop, scrollHeight: container.scrollHeight })}`,
-      );
       virtualizer.scrollToOffset(virtualizer.getTotalSize());
 
       let prevHeight = -1;
@@ -401,9 +383,6 @@ export function MessageList({
             settle();
           } else {
             programmaticScrollRef.current = false;
-            console.debug(
-              `[scroll:settled] ${JSON.stringify({ scrollTop: container.scrollTop, scrollHeight: container.scrollHeight, gap: container.scrollHeight - container.scrollTop - container.clientHeight, attempts })}`,
-            );
           }
         });
       };
@@ -526,9 +505,6 @@ export function MessageList({
 
   // Handle jump to latest button click
   const handleJumpToLatest = useCallback(() => {
-    console.debug(
-      `[scroll:jumpToLatest] ${JSON.stringify({ isDetached, hasPreviousPage, path: isDetached || hasPreviousPage ? 'detached' : 'local' })}`,
-    );
     if (isDetached || hasPreviousPage) {
       programmaticScrollRef.current = true; // Block observer — cleared by initial scroll rAF chain
       jumpToLatest();
@@ -550,9 +526,6 @@ export function MessageList({
             settle();
           } else {
             programmaticScrollRef.current = false;
-            console.debug(
-              `[scroll:settled:jumpLocal] ${JSON.stringify({ scrollTop: container?.scrollTop, scrollHeight: container?.scrollHeight, attempts })}`,
-            );
           }
         });
       };
