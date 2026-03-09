@@ -8,14 +8,14 @@ layout: layouts/page.njk
     <!-- Sidebar -->
     <aside class="hidden lg:block">
       <nav class="sticky top-24 space-y-1">
-        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Documentation</h3>
+        <h3 class="text-sm font-semibold text-gray-1000 dark:text-gray-400 uppercase tracking-wider mb-3">Documentation</h3>
         {% for doc in collections.docs %}
           <a href="{{ doc.url }}"
              class="block px-3 py-2 rounded-lg transition-colors
                {% if doc.url == page.url %}
                  bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium
                {% else %}
-                 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800
+                 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800
                {% endif %}">
             {{ doc.data.title }}
           </a>
@@ -26,7 +26,7 @@ layout: layouts/page.njk
     <!-- Mobile sidebar toggle -->
     <div class="lg:hidden mb-6">
       <details class="group">
-        <summary class="flex items-center gap-2 px-3 py-2 font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg cursor-pointer">
+        <summary class="flex items-center gap-2 px-3 py-2 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg cursor-pointer">
           <svg class="w-4 h-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
           </svg>
@@ -39,7 +39,7 @@ layout: layouts/page.njk
                  {% if doc.url == page.url %}
                    bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium
                  {% else %}
-                   text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800
+                   text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800
                  {% endif %}">
               {{ doc.data.title }}
             </a>
