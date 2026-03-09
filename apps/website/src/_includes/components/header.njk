@@ -1,4 +1,4 @@
-<header class="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800">
+<header class="sticky top-0 z-50 bg-white dark:bg-gray-900 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
 
@@ -14,21 +14,8 @@
         </svg>
       </a>
 
-      <!-- Desktop nav -->
-      <nav class="hidden md:flex items-center gap-1">
-        <a href="/features/" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Features</a>
-        <a href="/docs/" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Docs</a>
-        <a href="/blog/" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Blog</a>
-        <a href="{{ site.githubUrl }}" rel="noopener noreferrer" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-          <span class="flex items-center gap-1.5">
-            <svg class="w-4 h-4"><use href="#icon-github"/></svg>
-            GitHub
-          </span>
-        </a>
-      </nav>
-
-      <!-- Right side: dark mode toggle + CTA -->
-      <div class="flex items-center gap-3">
+      <!-- Right side: dark mode toggle, nav, GitHub, CTA -->
+      <div class="flex items-center gap-1">
         <!-- Dark mode toggle -->
         <button data-action="toggle-dark" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Toggle dark mode">
           <!-- Sun icon (shown in dark mode) -->
@@ -41,8 +28,22 @@
           </svg>
         </button>
 
+        <!-- Desktop nav -->
+        <nav class="hidden md:flex items-center gap-1">
+          <a href="/features/" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Features</a>
+          <a href="/pricing/" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Pricing</a>
+          <a href="/docs/" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Docs</a>
+          <a href="/blog/" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Blog</a>
+          <a href="{{ site.githubUrl }}" rel="noopener noreferrer" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+            <span class="flex items-center gap-1.5">
+              <svg class="w-4 h-4"><use href="#icon-github"/></svg>
+              GitHub
+            </span>
+          </a>
+        </nav>
+
         <!-- Demo CTA -->
-        <a href="{{ site.appUrl }}" rel="noopener noreferrer" class="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors">
+        <a href="{{ site.appUrl }}" rel="noopener noreferrer" class="hidden sm:inline-flex items-center gap-1.5 ml-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
           Try the demo
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
@@ -61,10 +62,11 @@
     <!-- Mobile menu -->
     <nav id="mobile-menu" class="hidden md:hidden pb-4 border-t border-gray-200 dark:border-gray-800 pt-3 space-y-1">
       <a href="/features/" class="block px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Features</a>
+      <a href="/pricing/" class="block px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Pricing</a>
       <a href="/docs/" class="block px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Docs</a>
       <a href="/blog/" class="block px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Blog</a>
       <a href="{{ site.githubUrl }}" rel="noopener noreferrer" class="block px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">GitHub</a>
-      <a href="{{ site.appUrl }}" rel="noopener noreferrer" class="block px-3 py-2 font-medium text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">Try the demo &rarr;</a>
+      <a href="{{ site.appUrl }}" rel="noopener noreferrer" class="block px-3 py-2 font-medium text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors">Try the demo &rarr;</a>
     </nav>
   </div>
 </header>
