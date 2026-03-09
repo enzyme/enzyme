@@ -1,3 +1,10 @@
+---
+title: 'Permissions & Roles'
+description: 'Role-based access control and permission matrix'
+section: 'Administration'
+order: 32
+---
+
 # Permissions & Roles
 
 Enzyme uses role-based access control at two levels: **workspace** and **channel**. There are no server-level admin roles — all permissions are scoped to individual workspaces.
@@ -13,7 +20,7 @@ Every workspace member has exactly one role. Roles are ordered by privilege:
 | **Member** | 2    | Standard participant                      |
 | **Guest**  | 1    | Limited access, cannot create channels    |
 
-See [Workspace Administration](administration.md) for the operational guide on managing members, invites, and settings.
+See [Workspace Administration](/docs/administration/) for the operational guide on managing members, invites, and settings.
 
 ### Permission Matrix
 

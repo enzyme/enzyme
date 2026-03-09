@@ -1,8 +1,15 @@
+---
+title: 'Moderation'
+description: 'Moderation tools, bans, blocks, and audit logs'
+section: 'Administration'
+order: 33
+---
+
 # Moderation
 
 Enzyme provides workspace-level moderation tools for managing disruptive behavior and giving users control over their experience. This guide covers banning, blocking, message pinning, and the audit log.
 
-See [Permissions & Roles](permissions.md#moderation) for the permission matrix.
+See [Permissions & Roles](/docs/permissions/#moderation) for the permission matrix.
 
 ## Banning
 

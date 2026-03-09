@@ -1,3 +1,10 @@
+---
+title: 'Observability'
+description: 'Monitoring, logging, metrics, and tracing'
+section: 'Self-Hosting & Operations'
+order: 45
+---
+
 # Observability Guide
 
 Enzyme has built-in OpenTelemetry (OTel) instrumentation for traces and metrics. When enabled, telemetry data is exported via OTLP to any compatible backend — Datadog, Honeycomb, HyperDX, Grafana Cloud, etc. Disabled by default with zero overhead.
@@ -40,7 +47,7 @@ Enzyme pushes data to the configured OTLP endpoint. You need a collector or back
 | `telemetry.metrics`      | `ENZYME_TELEMETRY_METRICS`      | `true`           | Export metrics. Disable to keep only traces and/or logs.             |
 | `telemetry.logs`         | `ENZYME_TELEMETRY_LOGS`         | `true`           | Export logs via OTLP. Disable to keep only traces and/or metrics.    |
 
-See the full [Configuration Reference](configuration.md#telemetry-opentelemetry) for details.
+See the full [Configuration Reference](/docs/configuration/#telemetry-opentelemetry) for details.
 
 ---
 

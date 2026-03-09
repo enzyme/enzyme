@@ -1,3 +1,9 @@
+---
+title: 'Alternatives Comparison'
+description: 'How Enzyme compares to other team chat platforms'
+order: 1
+---
+
 # Alternatives
 
 Enzyme isn't the first open-source chat app, and you might be wondering how it compares to the alternatives. This page tries to be fair about the landscape — what each option does well, where the tradeoffs are, and where Enzyme fits.

@@ -1,0 +1,64 @@
+<header class="sticky top-0 z-50 bg-white dark:bg-gray-900 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+
+      <!-- Logo -->
+      <a href="/" class="flex items-center text-gray-900 dark:text-white">
+        <svg class="h-7" viewBox="0 0 1649 323" fill="currentColor" aria-label="Enzyme">
+          <path d="M177.273 177.273C192.335 162.21 192.335 137.79 177.273 122.727C162.21 107.665 137.789 107.665 122.727 122.727C107.665 137.79 107.665 162.21 122.727 177.273C137.789 192.335 162.21 192.335 177.273 177.273Z"/>
+          <path d="M190.91 190.91C160.784 221.034 160.784 269.874 190.91 300L300 190.91C269.874 160.784 221.033 160.784 190.91 190.91Z"/>
+          <path d="M109.091 109.091C139.215 78.9662 139.215 30.1246 109.091 0L0 109.091C30.1246 139.216 78.9662 139.216 109.091 109.091Z"/>
+          <path d="M190.91 109.091C221.033 139.215 269.874 139.215 300 109.091L190.91 0C160.784 30.1246 160.784 78.9662 190.91 109.091Z"/>
+          <path d="M109.091 190.91C78.9662 160.784 30.1246 160.784 0 190.91L109.091 300C139.216 269.874 139.216 221.034 109.091 190.91Z"/>
+          <path d="M596.5 258H444.7V44.1H591.4V78H482.8V132.9H574.9V167.1H482.8V222.9H596.5V258ZM665.02 258H625.42V85.5H658.72L662.32 120C671.62 96.3 691.12 81.3 720.82 81.3C762.52 81.3 784.72 108.9 784.72 151.8V258H745.12V161.4C745.12 133.2 736.12 115.5 707.92 115.5C678.52 115.5 665.02 135.9 665.02 168V258ZM810.916 258V228.3L914.416 118.2H817.216V85.5H962.116V116.7L861.316 224.7H962.716V258H810.916ZM985.246 322.5V288.3H1005.35C1012.85 288.3 1019.15 287.4 1023.65 286.2C1032.95 283.5 1038.05 276.6 1044.95 261.6L1048.25 253.5L976.846 85.5H1018.85L1065.65 202.2L1067.15 210L1069.25 202.5L1114.85 85.5H1156.25L1080.65 267.9C1070.75 291.9 1062.95 305.7 1052.75 313.2C1042.25 320.7 1028.45 322.5 1005.05 322.5H985.246ZM1213.16 258H1173.86V85.5H1206.86L1210.46 117C1219.76 95.4 1237.76 81.3 1265.06 81.3C1294.76 81.3 1311.86 94.8 1319.36 117.3C1328.06 95.1 1346.96 81.3 1375.16 81.3C1415.66 81.3 1436.36 107.1 1436.36 150V258H1397.06V160.8C1397.06 133.5 1387.46 115.5 1361.06 115.5C1335.26 115.5 1325.06 134.1 1325.06 160.2V258H1286.06V159.3C1286.06 151.2 1285.16 144 1282.76 137.1C1278.86 123.9 1268.96 115.5 1250.96 115.5C1225.16 115.5 1213.16 135.9 1213.16 165.6V258ZM1634.69 207C1624.79 242.1 1596.89 262.5 1551.59 262.5C1493.39 262.5 1464.89 228.9 1464.89 175.5V171.3C1464.89 152.7 1468.49 137.4 1475.69 123.6C1490.09 96.6 1516.49 81.3 1552.79 81.3C1582.49 81.3 1603.49 91.5 1617.29 108C1631.09 124.5 1637.09 145.8 1637.09 168V186.3H1503.89C1507.19 214.5 1524.59 230.1 1553.09 230.1C1574.09 230.1 1586.39 222 1592.39 207H1634.69ZM1553.09 112.5C1525.79 112.5 1508.69 128.1 1504.19 155.4H1597.79C1595.09 129 1580.69 112.5 1553.09 112.5Z"/>
+        </svg>
+      </a>
+
+      <!-- Right side: dark mode toggle, nav, GitHub, CTA -->
+      <div class="flex items-center gap-1">
+        <!-- Dark mode toggle -->
+        <button data-action="toggle-dark" class="p-2 rounded-lg text-gray-1000 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Toggle dark mode">
+          <!-- Sun icon (shown in dark mode) -->
+          <svg class="w-5 h-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+          </svg>
+          <!-- Moon icon (shown in light mode) -->
+          <svg class="w-5 h-5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+          </svg>
+        </button>
+
+        <!-- Desktop nav -->
+        <nav class="hidden md:flex items-center gap-1">
+          <a href="/features/" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Features</a>
+          <a href="/pricing/" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Pricing</a>
+          <a href="/docs/" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Docs</a>
+          <a href="/blog/" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Blog</a>
+          <a href="/docs/self-hosting/" class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Self-Hosting</a>
+        </nav>
+
+        <!-- Cloud CTA -->
+        <a href="{{ site.appUrl }}" rel="noopener noreferrer" class="hidden sm:inline-flex items-center gap-1.5 ml-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+          Try Enzyme Cloud Free
+        </a>
+
+        <!-- Mobile menu button -->
+        <button data-action="toggle-menu" data-target="mobile-menu" class="md:hidden p-2 rounded-lg text-gray-1000 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Toggle menu">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile menu -->
+    <nav id="mobile-menu" class="hidden md:hidden pb-4 border-t border-gray-200 dark:border-gray-800 pt-3 space-y-1">
+      <a href="/features/" class="block px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Features</a>
+      <a href="/pricing/" class="block px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Pricing</a>
+      <a href="/docs/" class="block px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Docs</a>
+      <a href="/blog/" class="block px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Blog</a>
+      <a href="/docs/self-hosting/" class="block px-3 py-2 font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Self-Hosting</a>
+      <a href="{{ site.appUrl }}" rel="noopener noreferrer" class="block px-3 py-2 font-medium text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors">Try Enzyme Cloud Free</a>
+    </nav>
+  </div>
+</header>

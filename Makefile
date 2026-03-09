@@ -21,6 +21,7 @@ generate-types:
 # Build all (web first so it can be embedded into the Go binary)
 build: generate-types
 	pnpm --filter @enzyme/web build
+	pnpm --filter @enzyme/website build
 	cd api && make build
 	pnpm --filter @enzyme/desktop build
 	pnpm --filter @enzyme/desktop make
@@ -35,6 +36,7 @@ test:
 clean:
 	cd api && make clean
 	pnpm -r exec rm -rf dist
+	pnpm --filter @enzyme/website exec rm -rf _site
 
 # Lint all
 lint:

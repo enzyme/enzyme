@@ -1,3 +1,10 @@
+---
+title: 'Self-Hosting Guide'
+description: 'Deploy Enzyme on your own server'
+section: 'Self-Hosting & Operations'
+order: 41
+---
+
 # Self-Hosting Guide
 
 This guide covers everything you need to deploy Enzyme on your own server.
@@ -49,7 +56,7 @@ data/
 └── certs/           # TLS certificates (if using auto TLS)
 ```
 
-You can customize these paths via [configuration](./configuration.md). For production, use absolute paths:
+You can customize these paths via [configuration](/docs/configuration/). For production, use absolute paths:
 
 ```yaml
 database:
@@ -61,7 +68,7 @@ files:
 
 ## Configuration
 
-Create a `config.yaml` in the same directory as the binary (or pass `--config /path/to/config.yaml`). See the [Configuration Reference](./configuration.md) for all options.
+Create a `config.yaml` in the same directory as the binary (or pass `--config /path/to/config.yaml`). See the [Configuration Reference](/docs/configuration/) for all options.
 
 A minimal production config with automatic TLS (Let's Encrypt):
 
@@ -87,7 +94,7 @@ email:
 
 When using auto TLS, Enzyme automatically redirects HTTP (port 80) to HTTPS (port 443).
 
-Configuration can also be set via environment variables with the `ENZYME_` prefix or CLI flags. See the [Configuration Reference](./configuration.md) for details.
+Configuration can also be set via environment variables with the `ENZYME_` prefix or CLI flags. See the [Configuration Reference](/docs/configuration/) for details.
 
 ## Advanced: Reverse Proxy
 
@@ -242,7 +249,7 @@ sudo journalctl -u enzyme -f
 
 ## Scaling
 
-The default configuration is tuned for a small server (2 GB RAM / 1 vCPU, ~100 users). If you're running on larger hardware or expect more users, see the [Scaling Guide](./scaling.md) for SQLite, HTTP, SSE, and OS-level tuning recommendations with example configs for small, medium, and large deployments.
+The default configuration is tuned for a small server (2 GB RAM / 1 vCPU, ~100 users). If you're running on larger hardware or expect more users, see the [Scaling Guide](/docs/scaling/) for SQLite, HTTP, SSE, and OS-level tuning recommendations with example configs for small, medium, and large deployments.
 
 ## Telemetry (Optional)
 
@@ -262,7 +269,7 @@ Enzyme captures application-level telemetry: HTTP request traces, database query
 
 For **system-level metrics** (CPU, memory, disk, network), run an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) alongside Enzyme with the `hostmetrics` receiver. The Collector acts as a local agent that scrapes host metrics and forwards everything (both Enzyme's app telemetry and system metrics) to your backend.
 
-See the [Observability Guide](./observability.md) for full setup examples, what's captured, and sample Collector configs.
+See the [Observability Guide](/docs/observability/) for full setup examples, what's captured, and sample Collector configs.
 
 ## Logs
 
@@ -294,7 +301,7 @@ log:
 
 Set `format: 'json'` for machine-parseable output (useful with log aggregation tools). Set `level: 'debug'` to see detailed output including per-request logs and email diagnostics. When running under systemd, log rotation is handled automatically by journald.
 
-See the [Configuration Reference](./configuration.md#logging) for all logging options.
+See the [Configuration Reference](/docs/configuration/#logging) for all logging options.
 
 ## Firewall
 

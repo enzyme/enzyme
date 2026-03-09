@@ -57,7 +57,6 @@ enzyme/
 │   └── website/                # Marketing site (Eleventy)
 ├── packages/
 │   └── api-client/             # Shared TypeScript types (generated from OpenAPI)
-├── docs/                       # Documentation
 └── Makefile                    # Build orchestration
 ```
 

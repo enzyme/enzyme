@@ -1,3 +1,10 @@
+---
+title: 'Security'
+description: 'Security architecture and best practices'
+section: 'Self-Hosting & Operations'
+order: 43
+---
+
 # Security
 
 Enzyme is designed to be self-hosted: the operator owns the infrastructure, the database, and the files. The security model assumes trust in the server operator and focuses on protecting data in transit, enforcing access control between users, and minimizing the attack surface of the application itself. This document covers what Enzyme does, what it intentionally does not do, and why.
@@ -21,7 +28,7 @@ In `auto` mode:
 
 In `manual` mode, Go's default TLS configuration applies (TLS 1.2 minimum in Go 1.18+).
 
-Enzyme does not set security response headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options). If you need these, add them via a reverse proxy. See [self-hosting.md](self-hosting.md) for TLS setup and [configuration.md](configuration.md) for all TLS options.
+Enzyme does not set security response headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options). If you need these, add them via a reverse proxy. See [Self-Hosting Guide](/docs/self-hosting/) for TLS setup and [Configuration](/docs/configuration/) for all TLS options.
 
 ## Authentication
 
@@ -54,7 +61,7 @@ Per-IP rate limiting is enabled by default on all authentication endpoints:
 | Forgot password | 5 requests  | 15 minutes |
 | Reset password  | 10 requests | 15 minutes |
 
-When a limit is exceeded, the server returns HTTP 429 with a `Retry-After` header. Rate limits are configurable — see [configuration.md](configuration.md).
+When a limit is exceeded, the server returns HTTP 429 with a `Retry-After` header. Rate limits are configurable — see [Configuration](/docs/configuration/).
 
 Note: rate limiting uses the remote IP address after applying `X-Forwarded-For` / `X-Real-IP` headers. If Enzyme is behind a reverse proxy, ensure the proxy is configured to set these headers correctly.
 
@@ -62,7 +69,7 @@ Note: rate limiting uses the remote IP address after applying `X-Forwarded-For` 
 
 Authorization is role-based and scoped to individual workspaces. There are no server-level admin roles — each workspace has its own owner, admins, members, and guests. All data access (messages, files, channels, SSE events) is scoped to workspace and channel membership.
 
-See [permissions.md](permissions.md) for the full RBAC permission matrix.
+See [Permissions](/docs/permissions/) for the full RBAC permission matrix.
 
 ## File Security and Signed URLs
 
@@ -79,7 +86,7 @@ The signing secret is 32 bytes from `crypto/rand` (hex-encoded). On first startu
 ### Upload Protections
 
 - **Filename sanitization**: `filepath.Base` strips directory components; forward slashes, backslashes, and null bytes are removed; filenames are truncated to 255 characters. Files are stored on disk using a generated ULID, not the user-supplied name.
-- **Size limits**: 10 MB for file uploads by default (configurable via [`files.max_upload_size`](configuration.md#file-storage)), 5 MB for avatars and workspace icons, 256 KB for custom emoji.
+- **Size limits**: 10 MB for file uploads by default (configurable via [`files.max_upload_size`](/docs/configuration/#file-storage)), 5 MB for avatars and workspace icons, 256 KB for custom emoji.
 
 ### Download Access Control
 
@@ -153,6 +160,6 @@ There is no server-level admin role to gate signups. Restrict network access to 
 
 ## Reporting Vulnerabilities
 
-If you discover a security vulnerability in Enzyme, please report it responsibly by opening a security advisory on the [GitHub repository](https://github.com/anthropics/enzyme). Do not open a public issue for security vulnerabilities.
+If you discover a security vulnerability in Enzyme, please report it responsibly by opening a security advisory on the [GitHub repository](https://github.com/enzyme/enzyme). Do not open a public issue for security vulnerabilities.
 
 Include a description of the vulnerability, steps to reproduce, and the potential impact. We will acknowledge receipt and work on a fix promptly.

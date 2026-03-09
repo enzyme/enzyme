@@ -1,6 +1,13 @@
+---
+title: 'Administration'
+description: 'Workspace administration and member management'
+section: 'Administration'
+order: 31
+---
+
 # Workspace Administration
 
-This guide covers workspace settings, invites, member management, and channel administration. See [Permissions & Roles](permissions.md) for the full permission matrix.
+This guide covers workspace settings, invites, member management, and channel administration. See [Permissions & Roles](/docs/permissions/) for the full permission matrix.
 
 ## Workspace Settings
 
@@ -31,7 +38,7 @@ Owners and admins can create invite links to add new members.
 2. They are automatically added to the #general channel.
 3. DMs are auto-created with up to 5 existing workspace members (earliest joined first).
 
-To send invites via email, configure SMTP first. See [Email configuration](configuration.md#email).
+To send invites via email, configure SMTP first. See [Email configuration](/docs/configuration/#email).
 
 ## Managing Members
 
@@ -43,7 +50,7 @@ Owners and admins can list members, change roles, and remove members. Key rules:
 - Any member can **remove themselves** from a workspace (except the owner).
 - Users **cannot change their own role**.
 
-See [Permissions & Roles](permissions.md) for the complete permission matrix and special rules.
+See [Permissions & Roles](/docs/permissions/) for the complete permission matrix and special rules.
 
 ## Channels
 
@@ -70,7 +77,7 @@ Channels have their own role system independent of workspace roles:
 | **poster** |   yes    |                    |
 | **viewer** |          |                    |
 
-See [Channel Roles](permissions.md#channel-roles) for details.
+See [Channel Roles](/docs/permissions/#channel-roles) for details.
 
 ### Archiving
 
@@ -92,4 +99,4 @@ DMs and group DMs are created automatically when users start a conversation.
 - **Group DMs** have 3-8 participants.
 - Visibility cannot be changed (they are always private to participants).
 - They cannot be archived.
-- Group DMs can be **converted to channels** by members, admins, or owners (guests cannot). See [Permission Matrix](permissions.md#permission-matrix). This gives the channel a name and makes it appear in the channel list.
+- Group DMs can be **converted to channels** by members, admins, or owners (guests cannot). See [Permission Matrix](/docs/permissions/#permission-matrix). This gives the channel a name and makes it appear in the channel list.

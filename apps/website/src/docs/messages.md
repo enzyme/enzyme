@@ -1,3 +1,10 @@
+---
+title: 'Message Formatting'
+description: 'Formatting syntax, mentions, emoji, and attachments'
+section: 'Using Enzyme'
+order: 13
+---
+
 # Message Formatting
 
 This guide covers Enzyme's message formatting syntax, mentions, links, attachments, and related features.
@@ -83,7 +90,7 @@ The first URL in a message automatically generates a link preview.
 
 Syntax: `<@userId>`
 
-Renders as a clickable blue badge showing `@Display Name`. Clicking opens a profile popover with a "View profile" button. Triggers a notification for the mentioned user. See [Notifications](notifications.md) for notification preferences and delivery behavior.
+Renders as a clickable blue badge showing `@Display Name`. Clicking opens a profile popover with a "View profile" button. Triggers a notification for the mentioned user. See [Notifications](/docs/notifications/) for notification preferences and delivery behavior.
 
 When composing via the API, use the user's ULID (not their display name).
 
@@ -130,7 +137,7 @@ Messages have a maximum length of **40,000 characters** (counted as UTF-8 runes,
 
 ### File Uploads
 
-- Maximum file size: **10 MB** (configurable via [`files.max_upload_size`](configuration.md#file-storage))
+- Maximum file size: **10 MB** (configurable via [`files.max_upload_size`](/docs/configuration/#file-storage))
 - All file types are accepted
 - Multiple files can be attached to a single message
 

@@ -1,3 +1,10 @@
+---
+title: 'Notifications & Presence'
+description: 'Notification settings, email digests, presence, and typing indicators'
+section: 'Using Enzyme'
+order: 20
+---
+
 # Notifications & Presence
 
 This guide covers how notifications are triggered, delivered, and configured, as well as the real-time presence and typing indicator systems.
@@ -19,14 +26,14 @@ Preferences are set per channel via the channel notification settings UI or the 
 
 ## What Triggers Notifications
 
-| Trigger                                        | Who is notified                | Respects "none" (muted)?   |
-| ---------------------------------------------- | ------------------------------ | -------------------------- |
-| [User mention](messages.md#mentions) (`@user`) | The mentioned user             | Yes                        |
-| `@here`                                        | Online members of the channel  | Yes                        |
-| `@channel`                                     | All members of the channel     | Yes                        |
-| `@everyone`                                    | All members of the workspace   | Yes                        |
-| DM / group DM message                          | All other participants         | N/A (DMs default to `all`) |
-| Thread reply                                   | Users subscribed to the thread | No (overrides mute)        |
+| Trigger                                            | Who is notified                | Respects "none" (muted)?   |
+| -------------------------------------------------- | ------------------------------ | -------------------------- |
+| [User mention](/docs/messages/#mentions) (`@user`) | The mentioned user             | Yes                        |
+| `@here`                                            | Online members of the channel  | Yes                        |
+| `@channel`                                         | All members of the channel     | Yes                        |
+| `@everyone`                                        | All members of the workspace   | Yes                        |
+| DM / group DM message                              | All other participants         | N/A (DMs default to `all`) |
+| Thread reply                                       | Users subscribed to the thread | No (overrides mute)        |
 
 A user is auto-subscribed to a thread when they post a reply. The parent message author is also auto-subscribed when the first reply is posted. Users can explicitly unsubscribe from a thread, and auto-subscribe respects that choice.
 
@@ -41,7 +48,7 @@ When a user is offline and has `email_enabled` turned on for a channel, notifica
 3. Notifications are grouped by workspace into a single digest email.
 4. If the user comes back online before the delay expires, the pending notification is cancelled automatically.
 
-Email notifications require SMTP to be configured. See [Email configuration](configuration.md#email) for setup.
+Email notifications require SMTP to be configured. See [Email configuration](/docs/configuration/#email) for setup.
 
 ## Presence
 
@@ -54,7 +61,7 @@ Enzyme tracks two presence states per user per workspace:
 
 When a user disconnects (closes the tab, loses network), the server waits 30 seconds before marking them offline. This grace period absorbs brief interruptions like page refreshes.
 
-Presence changes are broadcast to all connected workspace members via SSE. For SSE tuning options, see [SSE configuration](configuration.md#sse-real-time-events).
+Presence changes are broadcast to all connected workspace members via SSE. For SSE tuning options, see [SSE configuration](/docs/configuration/#sse-real-time-events).
 
 ## Typing Indicators
 

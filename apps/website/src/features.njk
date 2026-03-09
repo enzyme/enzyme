@@ -1,0 +1,239 @@
+---
+layout: layouts/page.njk
+title: Features
+description: "Everything Enzyme offers for team communication — messaging, threads, file sharing, permissions, and more."
+permalink: /features/
+---
+
+<!-- Hero -->
+<section class="bg-gradient-to-b from-gray-100 to-white dark:from-gray-900 dark:to-gray-900 py-16 sm:py-24">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <h1 class="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white leading-tight">Everything your team needs to communicate</h1>
+    <p class="mt-6 text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">Enzyme gives you the features you rely on from tools like Slack, without the vendor lock-in or per-seat pricing.</p>
+  </div>
+</section>
+
+<!-- Real-time messaging -->
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+  <div class="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-center">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-sm font-medium rounded-full mb-4">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" /></svg>
+        Messaging
+      </div>
+      <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Real-time messaging</h2>
+      <p class="text-gray-600 dark:text-gray-400 leading-relaxed mb-6">Messages arrive instantly via Server-Sent Events. See typing indicators, online presence, and unread counts — all updating in real time without polling.</p>
+      <ul class="space-y-3 text-gray-600 dark:text-gray-400">
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          Markdown formatting with code blocks and inline code
+        </li>
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          Emoji reactions on any message
+        </li>
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          Edit and delete messages with full history
+        </li>
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          @mentions with notifications
+        </li>
+      </ul>
+    </div>
+    <div class="mt-10 lg:mt-0 flex justify-center">
+      <img src="/assets/placeholder.svg" alt="Screenshot of Enzyme's real-time messaging interface showing messages, typing indicators, and emoji reactions" class="rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-lg" width="800" height="450" loading="lazy" />
+    </div>
+  </div>
+</section>
+
+<!-- Threads -->
+<section class="bg-gray-100 dark:bg-gray-800 py-16">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-center">
+      <div class="lg:order-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-sm font-medium rounded-full mb-4">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" /></svg>
+          Threads
+        </div>
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Threaded conversations</h2>
+        <p class="text-gray-600 dark:text-gray-400 leading-relaxed mb-6">Keep discussions organized with threaded replies. Dive into a topic without derailing the main channel. Thread replies can optionally be broadcast back to the channel.</p>
+        <ul class="space-y-3 text-gray-600 dark:text-gray-400">
+          <li class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-amber-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+            Side panel that doesn't interrupt your reading flow
+          </li>
+          <li class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-amber-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+            Reply count shown inline on the parent message
+          </li>
+          <li class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-amber-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+            Deep-linkable — share a thread URL directly
+          </li>
+        </ul>
+      </div>
+      <div class="mt-10 lg:mt-0 lg:order-1 flex justify-center">
+        <img src="/assets/placeholder.svg" alt="Screenshot of Enzyme's thread panel open alongside the main channel, showing a focused discussion with multiple replies" class="rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-lg" width="800" height="450" loading="lazy" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- File sharing -->
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+  <div class="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-center">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-rose-50 dark:bg-rose-900 text-rose-700 dark:text-rose-300 text-sm font-medium rounded-full mb-4">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" /></svg>
+        Files
+      </div>
+      <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">File sharing</h2>
+      <p class="text-gray-600 dark:text-gray-400 leading-relaxed mb-6">Drag and drop or click to upload files directly into conversations. Images render inline with lightbox preview. All files stored on your own servers.</p>
+      <ul class="space-y-3 text-gray-600 dark:text-gray-400">
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-rose-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          Image previews rendered inline in messages
+        </li>
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-rose-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          Configurable upload size limits
+        </li>
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-rose-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          Files stored on your server's filesystem — no cloud storage required
+        </li>
+      </ul>
+    </div>
+    <div class="mt-10 lg:mt-0 flex justify-center">
+      <img src="/assets/placeholder.svg" alt="Screenshot of file sharing in Enzyme" class="w-full max-w-sm rounded-xl shadow-lg" width="384" height="265" loading="lazy" />
+    </div>
+  </div>
+</section>
+
+<!-- Permissions -->
+<section class="bg-gray-100 dark:bg-gray-800 py-16">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-center">
+      <div class="lg:order-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-cyan-50 dark:bg-cyan-900 text-cyan-700 dark:text-cyan-300 text-sm font-medium rounded-full mb-4">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" /></svg>
+          Permissions
+        </div>
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Role-based access control</h2>
+        <p class="text-gray-600 dark:text-gray-400 leading-relaxed mb-6">Four workspace roles — owner, admin, member, guest — with distinct capabilities. Channel-level roles add another layer of control for who can post, moderate, or manage specific channels.</p>
+        <ul class="space-y-3 text-gray-600 dark:text-gray-400">
+          <li class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-cyan-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+            Public and private channels
+          </li>
+          <li class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-cyan-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+            Guest users with limited workspace access
+          </li>
+          <li class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-cyan-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+            Detailed <a href="/docs/permissions/" class="text-blue-600 dark:text-blue-400 underline">permission matrix</a>
+          </li>
+        </ul>
+      </div>
+      <div class="mt-10 lg:mt-0 lg:order-1 flex justify-center">
+        <img src="/assets/placeholder.svg" alt="Screenshot of Enzyme's workspace settings showing role management and permission controls" class="rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-lg" width="800" height="450" loading="lazy" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Self-hosting -->
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+  <div class="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-center">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-full mb-4">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z" /></svg>
+        Self-hosting
+      </div>
+      <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Simple to deploy and operate</h2>
+      <p class="text-gray-600 dark:text-gray-400 leading-relaxed mb-6">Enzyme is a single Go binary backed by SQLite. No external databases, no message queues, no container orchestration. Download, configure a YAML file, and start the service.</p>
+      <ul class="space-y-3 text-gray-600 dark:text-gray-400">
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          Automatic TLS via Let's Encrypt or manual certificates
+        </li>
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          Cross-compiled for Linux, macOS, and Windows
+        </li>
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          Built-in observability with structured logging and metrics
+        </li>
+      </ul>
+      <div class="mt-6">
+        <a href="/docs/self-hosting/" class="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium hover:underline">
+          Read the self-hosting guide
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
+        </a>
+      </div>
+    </div>
+    <div class="mt-10 lg:mt-0 flex justify-center">
+      <img src="/assets/placeholder.svg" alt="Screenshot of Enzyme deployment configuration" class="w-full max-w-sm rounded-xl shadow-lg" width="384" height="265" loading="lazy" />
+    </div>
+  </div>
+</section>
+
+<!-- Moderation & Customization -->
+<section class="bg-gray-100 dark:bg-gray-800 py-16">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-bold text-gray-900 dark:text-white">And much more</h2>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+        <div class="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900 flex items-center justify-center mb-4 text-purple-600 dark:text-purple-400">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Zm0 13.036h.008v.008H12v-.008Z" /></svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Moderation tools</h3>
+        <p class="text-gray-600 dark:text-gray-400">Ban users, block accounts, review audit logs. Keep your workspace safe with built-in moderation.</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+        <div class="w-10 h-10 rounded-lg bg-yellow-50 dark:bg-yellow-900 flex items-center justify-center mb-4 text-yellow-600 dark:text-yellow-400">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Notifications</h3>
+        <p class="text-gray-600 dark:text-gray-400">Per-channel notification preferences. Get notified about @mentions and direct messages, mute noisy channels.</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+        <div class="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-900 flex items-center justify-center mb-4 text-teal-600 dark:text-teal-400">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Observability</h3>
+        <p class="text-gray-600 dark:text-gray-400">Structured JSON logging, Prometheus metrics, OpenTelemetry tracing. Know exactly what your server is doing.</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+        <div class="w-10 h-10 rounded-lg bg-violet-50 dark:bg-violet-900 flex items-center justify-center mb-4 text-violet-600 dark:text-violet-400">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" /></svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Dark mode</h3>
+        <p class="text-gray-600 dark:text-gray-400">Full dark mode support with system preference detection or manual toggle. Easy on the eyes, day or night.</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+        <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900 flex items-center justify-center mb-4 text-blue-600 dark:text-blue-400">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" /></svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Desktop app</h3>
+        <p class="text-gray-600 dark:text-gray-400">Native Electron app for macOS, Windows, and Linux. Same web experience with desktop integration.</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+        <div class="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-900 flex items-center justify-center mb-4 text-orange-600 dark:text-orange-400">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Fully configurable</h3>
+        <p class="text-gray-600 dark:text-gray-400">YAML config, environment variables, or CLI flags. Configure CORS, TLS, logging, file storage, and more.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+{% include "components/cta.njk" %}

@@ -1,3 +1,10 @@
+---
+title: 'Configuration'
+description: 'Server configuration options and environment variables'
+section: 'Self-Hosting & Operations'
+order: 42
+---
+
 # Configuration Reference
 
 Enzyme is configured through a YAML config file, environment variables, or CLI flags. Settings are loaded in the following order, where later sources override earlier ones:
@@ -76,7 +83,7 @@ Run `./enzyme --help` for all available flags.
 | `database.cache_size`     | `ENZYME_DATABASE_CACHE_SIZE`     |                   | `-2000`            | SQLite page cache size. Negative values = KB (e.g., `-2000` = ~2 MB). Positive values = number of pages. |
 | `database.mmap_size`      | `ENZYME_DATABASE_MMAP_SIZE`      |                   | `0`                | Memory-mapped I/O size in bytes. `0` disables mmap. Set higher for large databases on capable hardware.  |
 
-Enzyme uses SQLite in WAL mode. No external database server is needed. See [Scaling Guide](scaling.md) for tuning guidance.
+Enzyme uses SQLite in WAL mode. No external database server is needed. See [Scaling Guide](/docs/scaling/) for tuning guidance.
 
 ## Authentication
 
@@ -149,7 +156,7 @@ Optional observability via OpenTelemetry. When enabled, Enzyme exports traces an
 | `telemetry.logs`              | `ENZYME_TELEMETRY_LOGS`              | `--telemetry.logs`              | `true`           | Export logs via OTLP. Set to `false` to disable log export while keeping other signals.              |
 | `telemetry.frontend_endpoint` | `ENZYME_TELEMETRY_FRONTEND_ENDPOINT` | `--telemetry.frontend_endpoint` |                  | OTLP/HTTP endpoint for the browser trace proxy. Auto-derived from `endpoint` if empty.               |
 
-See the [Observability Guide](observability.md) for details on what's captured (traces, metrics, log correlation) and setup examples.
+See the [Observability Guide](/docs/observability/) for details on what's captured (traces, metrics, log correlation) and setup examples.
 
 ### Example: Local development with Jaeger
 

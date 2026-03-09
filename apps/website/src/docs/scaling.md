@@ -1,8 +1,15 @@
+---
+title: 'Scaling'
+description: 'Performance tuning and scaling considerations'
+section: 'Self-Hosting & Operations'
+order: 44
+---
+
 # Scaling Guide
 
 Enzyme is designed for single-server deployment with SQLite. The default configuration is tuned for a 2 GB / 1 vCPU box (~100 concurrent users). This guide explains how to scale up.
 
-For a full list of configurable options, see [Configuration Reference](configuration.md).
+For a full list of configurable options, see [Configuration Reference](/docs/configuration/).
 
 ---
 
@@ -93,7 +100,7 @@ Add to `/etc/sysctl.conf` to persist across reboots.
 
 ## Reverse Proxy Tuning
 
-See the [Self-Hosting Guide](self-hosting.md#advanced-reverse-proxy) for nginx and Caddy configuration examples. The key considerations for scaling:
+See the [Self-Hosting Guide](/docs/self-hosting/#advanced-reverse-proxy) for nginx and Caddy configuration examples. The key considerations for scaling:
 
 - **Disable response buffering** for SSE endpoints (`proxy_buffering off` in nginx, `flush_interval -1` in Caddy)
 - **Set long read timeouts** on SSE paths (e.g., `proxy_read_timeout 86400s`) to prevent the proxy from killing idle SSE connections
@@ -153,7 +160,7 @@ Also set `LimitNOFILE=65536` in the systemd unit for this profile.
 
 ## Telemetry Sampling
 
-If [OpenTelemetry is enabled](observability.md), the default `sample_rate` of `1.0` traces every request. This is fine for small deployments but adds overhead at scale — each trace generates spans for the HTTP request, database queries, and SSE operations.
+If [OpenTelemetry is enabled](/docs/observability/), the default `sample_rate` of `1.0` traces every request. This is fine for small deployments but adds overhead at scale — each trace generates spans for the HTTP request, database queries, and SSE operations.
 
 For the Medium profile (~1,000 users), `0.5` (50%) is a reasonable starting point. For the Large profile (~10,000 users), drop to `0.1` (10%) or lower. You can also disable tracing entirely (`0.0`) and keep only metrics, which are always aggregated and cheap regardless of traffic volume.
 
