@@ -82,7 +82,7 @@ func (s *Service) SendPasswordReset(ctx context.Context, to string, token string
 	resetURL := s.publicURL + "/reset-password?" + url.Values{"token": {token}}.Encode()
 
 	if !s.enabled {
-		slog.Debug("would send password reset", "component", "email", "to", to, "url", resetURL)
+		slog.Debug("would send password reset", "component", "email", "to", to)
 		return nil
 	}
 
@@ -98,7 +98,7 @@ func (s *Service) SendEmailVerification(ctx context.Context, to string, token st
 	verifyURL := s.publicURL + "/verify-email?" + url.Values{"token": {token}}.Encode()
 
 	if !s.enabled {
-		slog.Debug("would send email verification", "component", "email", "to", to, "url", verifyURL)
+		slog.Debug("would send email verification", "component", "email", "to", to)
 		return nil
 	}
 
