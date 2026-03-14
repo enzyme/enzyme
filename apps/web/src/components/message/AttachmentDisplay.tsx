@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Attachment } from '@enzyme/api-client';
-import { AuthImage, UnstyledButton, Dialog, Heading, RawModal, ModalOverlay } from '../ui';
+import { AuthImage, UnstyledButton, Dialog, Heading, AriaModal, ModalOverlay } from '../ui';
 import { useSignedUrl } from '../../hooks/useSignedUrl';
 import { cn } from '../../lib/utils';
 
@@ -88,8 +88,8 @@ function ImageCarousel({ images, initialIndex, isOpen, onClose }: ImageCarouselP
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
       isDismissable
     >
-      <RawModal className="max-h-[90vh] max-w-[90vw] outline-none">
-        <Dialog className="outline-none" aria-label="Image viewer">
+      <AriaModal className="max-h-[90vh] max-w-[90vw] outline-none">
+        <Dialog aria-label="Image viewer">
           <div className="relative flex items-center justify-center">
             {images.length > 1 && (
               <UnstyledButton
@@ -164,7 +164,7 @@ function ImageCarousel({ images, initialIndex, isOpen, onClose }: ImageCarouselP
             </div>
           </div>
         </Dialog>
-      </RawModal>
+      </AriaModal>
     </ModalOverlay>
   );
 }

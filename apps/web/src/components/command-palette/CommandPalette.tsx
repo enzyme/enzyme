@@ -13,7 +13,7 @@ import {
   UserPlusIcon,
   CommandLineIcon,
 } from '@heroicons/react/24/outline';
-import { Avatar, AvatarStack, Dialog, RawModal, ModalOverlay } from '../ui';
+import { Avatar, AvatarStack, Dialog, AriaModal, ModalOverlay } from '../ui';
 import { useProfilePanel } from '../../hooks/usePanel';
 import { cn } from '../../lib/utils';
 import { useCommandPaletteItems, type CommandPaletteItem } from './useCommandPaletteItems';
@@ -172,8 +172,8 @@ export function CommandPalette({
       isDismissable
       className="entering:animate-in entering:fade-in exiting:animate-out exiting:fade-out entering:duration-200 exiting:duration-150 fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-[15vh]"
     >
-      <RawModal className="entering:animate-in entering:zoom-in-95 exiting:animate-out exiting:zoom-out-95 entering:duration-200 exiting:duration-150 relative mx-4 w-full max-w-xl rounded-lg bg-white shadow-xl dark:bg-gray-800">
-        <Dialog className="outline-none">
+      <AriaModal className="entering:animate-in entering:zoom-in-95 exiting:animate-out exiting:zoom-out-95 entering:duration-200 exiting:duration-150 relative mx-4 w-full max-w-xl rounded-lg bg-white shadow-xl dark:bg-gray-800">
+        <Dialog>
           <div className="flex flex-col">
             {/* Input */}
             <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
@@ -241,7 +241,7 @@ export function CommandPalette({
             </div>
           </div>
         </Dialog>
-      </RawModal>
+      </AriaModal>
     </ModalOverlay>
   );
 }

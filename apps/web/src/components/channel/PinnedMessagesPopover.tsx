@@ -35,7 +35,7 @@ export function PinnedMessagesPopover({ channelId }: PinnedMessagesPopoverProps)
         placement="bottom end"
         className="w-96 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
       >
-        <Dialog className="outline-none">
+        <Dialog>
           <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
             <h3 className="font-semibold text-gray-900 dark:text-white">
               Pinned Messages {pinnedCount > 0 && `(${pinnedCount})`}

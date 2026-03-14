@@ -1,11 +1,10 @@
 export { Button } from './Button';
-export { UnstyledButton } from './UnstyledButton';
 export { IconButton } from './IconButton';
 export { Input } from './Input';
 export { Spinner } from './Spinner';
 export { Avatar } from './Avatar';
 export { AvatarStack } from './AvatarStack';
-export { Modal, DialogTrigger, ModalOverlay, RawModal } from './Modal';
+export { Modal, DialogTrigger, ModalOverlay, AriaModal } from './Modal';
 export { ConfirmDialog } from './ConfirmDialog';
 export { Skeleton, MessageSkeleton, ChannelListSkeleton } from './Skeleton';
 export { toast } from './toast-store';
@@ -34,11 +33,18 @@ export { DatePicker } from './DatePicker';
 export { TimeField } from './TimeField';
 export { DisclosureCaret } from './DisclosureCaret';
 export { PinOutlineIcon, PinSolidIcon } from './icons';
-export { Popover } from './Popover';
 export { Dialog } from './Dialog';
-export { ToggleButton } from './ToggleButton';
-export { DropZone } from './DropZone';
-export { FileTrigger } from './FileTrigger';
-export { Heading } from './Heading';
-export { Select, Label, SelectValue, ListBox, ListBoxItem } from './Select';
+export {
+  Button as UnstyledButton,
+  Popover,
+  ToggleButton,
+  DropZone,
+  FileTrigger,
+  Heading,
+  Label,
+  Select,
+  SelectValue,
+  ListBox,
+  ListBoxItem,
+} from 'react-aria-components';
 export type { DateValue, TimeValue } from 'react-aria-components';
