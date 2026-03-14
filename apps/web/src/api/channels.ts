@@ -1,5 +1,6 @@
 import { apiClient, throwIfError } from '@enzyme/api-client';
 import type {
+  ChannelRole,
   CreateChannelInput,
   UpdateChannelInput,
   NotificationPreferences,
@@ -54,7 +55,7 @@ export const channelsApi = {
       apiClient.POST('/channels/{id}/archive', { params: { path: { id: channelId } } }),
     ),
 
-  addMember: (channelId: string, userId: string, role?: string) =>
+  addMember: (channelId: string, userId: string, role?: ChannelRole) =>
     throwIfError(
       apiClient.POST('/channels/{id}/members/add', {
         params: { path: { id: channelId } },

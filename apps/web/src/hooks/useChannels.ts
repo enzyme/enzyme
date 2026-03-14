@@ -6,7 +6,7 @@ import {
   type UpdateChannelInput,
   type ConvertGroupDMInput,
 } from '../api/channels';
-import type { ChannelWithMembership } from '@enzyme/api-client';
+import type { ChannelRole, ChannelWithMembership } from '@enzyme/api-client';
 
 export function useChannels(workspaceId: string | undefined) {
   return useQuery({
@@ -136,7 +136,7 @@ export function useAddChannelMember(channelId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role?: string }) =>
+    mutationFn: ({ userId, role }: { userId: string; role?: ChannelRole }) =>
       channelsApi.addMember(channelId, userId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['channel', channelId, 'members'] });

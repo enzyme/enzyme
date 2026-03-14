@@ -124,6 +124,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [success, message]
                 properties:
                   success:
                     type: boolean
@@ -241,6 +242,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [workspace]
                 properties:
                   workspace:
                     $ref: '#/components/schemas/Workspace'
@@ -265,6 +267,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [workspace]
                 properties:
                   workspace:
                     $ref: '#/components/schemas/Workspace'
@@ -295,6 +298,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [workspace]
                 properties:
                   workspace:
                     $ref: '#/components/schemas/Workspace'
@@ -323,6 +327,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [members]
                 properties:
                   members:
                     type: array
@@ -448,6 +453,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [invite]
                 properties:
                   invite:
                     $ref: '#/components/schemas/Invite'
@@ -524,6 +530,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [workspace]
                 properties:
                   workspace:
                     $ref: '#/components/schemas/Workspace'
@@ -557,6 +564,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [channel]
                 properties:
                   channel:
                     $ref: '#/components/schemas/Channel'
@@ -583,6 +591,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [channels]
                 properties:
                   channels:
                     type: array
@@ -619,6 +628,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [channel]
                 properties:
                   channel:
                     $ref: '#/components/schemas/Channel'
@@ -649,6 +659,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [channel]
                 properties:
                   channel:
                     $ref: '#/components/schemas/Channel'
@@ -693,6 +704,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [channel]
                 properties:
                   channel:
                     $ref: '#/components/schemas/Channel'
@@ -781,6 +793,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [members]
                 properties:
                   members:
                     type: array
@@ -923,6 +936,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [preferences]
                 properties:
                   preferences:
                     $ref: '#/components/schemas/NotificationPreferences'
@@ -951,6 +965,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [preferences]
                 properties:
                   preferences:
                     $ref: '#/components/schemas/NotificationPreferences'
@@ -1086,6 +1101,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [message]
                 properties:
                   message:
                     $ref: '#/components/schemas/MessageWithUser'
@@ -1116,6 +1132,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [message]
                 properties:
                   message:
                     $ref: '#/components/schemas/MessageWithUser'
@@ -1183,6 +1200,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [message]
                 properties:
                   message:
                     $ref: '#/components/schemas/MessageWithUser'
@@ -1267,6 +1285,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [reaction]
                 properties:
                   reaction:
                     $ref: '#/components/schemas/Reaction'
@@ -1491,6 +1510,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [message]
                 properties:
                   message:
                     $ref: '#/components/schemas/MessageWithUser'
@@ -1526,6 +1546,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [message]
                 properties:
                   message:
                     $ref: '#/components/schemas/MessageWithUser'
@@ -1570,6 +1591,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [messages, has_more]
                 properties:
                   messages:
                     type: array
@@ -1614,9 +1636,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [file]
                 properties:
                   file:
                     type: object
+                    required: [id, filename, size, content_type]
                     properties:
                       id:
                         type: string
@@ -1897,6 +1921,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [scheduled_message]
                 properties:
                   scheduled_message:
                     $ref: '#/components/schemas/ScheduledMessage'
@@ -1928,6 +1953,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [scheduled_messages, count]
                 properties:
                   scheduled_messages:
                     type: array
@@ -1958,6 +1984,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [scheduled_message]
                 properties:
                   scheduled_message:
                     $ref: '#/components/schemas/ScheduledMessage'
@@ -1992,6 +2019,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [scheduled_message]
                 properties:
                   scheduled_message:
                     $ref: '#/components/schemas/ScheduledMessage'
@@ -2055,6 +2083,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [message]
                 properties:
                   message:
                     $ref: '#/components/schemas/MessageWithUser'
@@ -2091,6 +2120,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [user]
                 properties:
                   user:
                     $ref: '#/components/schemas/UserProfile'
@@ -2119,6 +2149,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [user]
                 properties:
                   user:
                     $ref: '#/components/schemas/User'
@@ -2256,6 +2287,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [ban]
                 properties:
                   ban:
                     $ref: '#/components/schemas/Ban'
@@ -2347,6 +2379,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [bans, has_more]
                 properties:
                   bans:
                     type: array
@@ -2463,6 +2496,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [blocks]
                 properties:
                   blocks:
                     type: array
@@ -2506,6 +2540,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [entries, has_more]
                 properties:
                   entries:
                     type: array
@@ -4028,7 +4063,19 @@ components:
         name:
           type: string
         settings:
-          $ref: '#/components/schemas/WorkspaceSettings'
+          type: object
+          description: Partial workspace settings to update. Only provided fields are changed.
+          properties:
+            show_join_leave_messages:
+              type: boolean
+            who_can_create_channels:
+              $ref: '#/components/schemas/PermissionLevel'
+            who_can_create_invites:
+              $ref: '#/components/schemas/PermissionLevel'
+            who_can_pin_messages:
+              $ref: '#/components/schemas/PermissionLevel'
+            who_can_manage_custom_emoji:
+              $ref: '#/components/schemas/PermissionLevel'
 
     CreateInviteInput:
       type: object
@@ -4178,7 +4225,7 @@ components:
     # Moderation schemas
     BanUserInput:
       type: object
-      required: [user_id]
+      required: [user_id, hide_messages]
       properties:
         user_id:
           type: string

@@ -2208,7 +2208,14 @@ export interface components {
         };
         UpdateWorkspaceInput: {
             name?: string;
-            settings?: components["schemas"]["WorkspaceSettings"];
+            /** @description Partial workspace settings to update. Only provided fields are changed. */
+            settings?: {
+                show_join_leave_messages?: boolean;
+                who_can_create_channels?: components["schemas"]["PermissionLevel"];
+                who_can_create_invites?: components["schemas"]["PermissionLevel"];
+                who_can_pin_messages?: components["schemas"]["PermissionLevel"];
+                who_can_manage_custom_emoji?: components["schemas"]["PermissionLevel"];
+            };
         };
         CreateInviteInput: {
             /** Format: email */
@@ -2506,8 +2513,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        success?: boolean;
-                        message?: string;
+                        success: boolean;
+                        message: string;
                     };
                 };
             };
@@ -2632,7 +2639,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        workspace?: components["schemas"]["Workspace"];
+                        workspace: components["schemas"]["Workspace"];
                     };
                 };
             };
@@ -2659,7 +2666,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        workspace?: components["schemas"]["Workspace"];
+                        workspace: components["schemas"]["Workspace"];
                     };
                 };
             };
@@ -2690,7 +2697,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        workspace?: components["schemas"]["Workspace"];
+                        workspace: components["schemas"]["Workspace"];
                     };
                 };
             };
@@ -2719,7 +2726,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        members?: components["schemas"]["WorkspaceMemberWithUser"][];
+                        members: components["schemas"]["WorkspaceMemberWithUser"][];
                     };
                 };
             };
@@ -2842,7 +2849,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        invite?: components["schemas"]["Invite"];
+                        invite: components["schemas"]["Invite"];
                     };
                 };
             };
@@ -2917,7 +2924,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        workspace?: components["schemas"]["Workspace"];
+                        workspace: components["schemas"]["Workspace"];
                     };
                 };
             };
@@ -2949,7 +2956,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        channel?: components["schemas"]["Channel"];
+                        channel: components["schemas"]["Channel"];
                     };
                 };
             };
@@ -2977,7 +2984,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        channels?: components["schemas"]["ChannelWithMembership"][];
+                        channels: components["schemas"]["ChannelWithMembership"][];
                     };
                 };
             };
@@ -3009,7 +3016,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        channel?: components["schemas"]["Channel"];
+                        channel: components["schemas"]["Channel"];
                     };
                 };
             };
@@ -3040,7 +3047,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        channel?: components["schemas"]["Channel"];
+                        channel: components["schemas"]["Channel"];
                     };
                 };
             };
@@ -3081,7 +3088,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        channel?: components["schemas"]["Channel"];
+                        channel: components["schemas"]["Channel"];
                     };
                 };
             };
@@ -3170,7 +3177,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        members?: components["schemas"]["ChannelMember"][];
+                        members: components["schemas"]["ChannelMember"][];
                     };
                 };
             };
@@ -3331,7 +3338,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        preferences?: components["schemas"]["NotificationPreferences"];
+                        preferences: components["schemas"]["NotificationPreferences"];
                     };
                 };
             };
@@ -3362,7 +3369,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        preferences?: components["schemas"]["NotificationPreferences"];
+                        preferences: components["schemas"]["NotificationPreferences"];
                     };
                 };
             };
@@ -3508,7 +3515,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        message?: components["schemas"]["MessageWithUser"];
+                        message: components["schemas"]["MessageWithUser"];
                     };
                 };
             };
@@ -3539,7 +3546,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        message?: components["schemas"]["MessageWithUser"];
+                        message: components["schemas"]["MessageWithUser"];
                     };
                 };
             };
@@ -3604,7 +3611,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        message?: components["schemas"]["MessageWithUser"];
+                        message: components["schemas"]["MessageWithUser"];
                     };
                 };
             };
@@ -3691,7 +3698,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        reaction?: components["schemas"]["Reaction"];
+                        reaction: components["schemas"]["Reaction"];
                     };
                 };
             };
@@ -3920,7 +3927,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        message?: components["schemas"]["MessageWithUser"];
+                        message: components["schemas"]["MessageWithUser"];
                     };
                 };
             };
@@ -3949,7 +3956,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        message?: components["schemas"]["MessageWithUser"];
+                        message: components["schemas"]["MessageWithUser"];
                     };
                 };
             };
@@ -3985,8 +3992,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        messages?: components["schemas"]["MessageWithUser"][];
-                        has_more?: boolean;
+                        messages: components["schemas"]["MessageWithUser"][];
+                        has_more: boolean;
                         next_cursor?: string;
                     };
                 };
@@ -4022,11 +4029,11 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        file?: {
-                            id?: string;
-                            filename?: string;
-                            size?: number;
-                            content_type?: string;
+                        file: {
+                            id: string;
+                            filename: string;
+                            size: number;
+                            content_type: string;
                         };
                     };
                 };
@@ -4257,7 +4264,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        scheduled_message?: components["schemas"]["ScheduledMessage"];
+                        scheduled_message: components["schemas"]["ScheduledMessage"];
                     };
                 };
             };
@@ -4285,8 +4292,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        scheduled_messages?: components["schemas"]["ScheduledMessage"][];
-                        count?: number;
+                        scheduled_messages: components["schemas"]["ScheduledMessage"][];
+                        count: number;
                     };
                 };
             };
@@ -4311,7 +4318,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        scheduled_message?: components["schemas"]["ScheduledMessage"];
+                        scheduled_message: components["schemas"]["ScheduledMessage"];
                     };
                 };
             };
@@ -4341,7 +4348,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        scheduled_message?: components["schemas"]["ScheduledMessage"];
+                        scheduled_message: components["schemas"]["ScheduledMessage"];
                     };
                 };
             };
@@ -4396,7 +4403,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        message?: components["schemas"]["MessageWithUser"];
+                        message: components["schemas"]["MessageWithUser"];
                     };
                 };
             };
@@ -4426,7 +4433,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        user?: components["schemas"]["UserProfile"];
+                        user: components["schemas"]["UserProfile"];
                     };
                 };
             };
@@ -4454,7 +4461,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        user?: components["schemas"]["User"];
+                        user: components["schemas"]["User"];
                     };
                 };
             };
@@ -4593,7 +4600,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        ban?: components["schemas"]["Ban"];
+                        ban: components["schemas"]["Ban"];
                     };
                 };
             };
@@ -4671,8 +4678,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        bans?: components["schemas"]["BanWithUser"][];
-                        has_more?: boolean;
+                        bans: components["schemas"]["BanWithUser"][];
+                        has_more: boolean;
                         next_cursor?: string;
                     };
                 };
@@ -4764,7 +4771,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        blocks?: components["schemas"]["BlockWithUser"][];
+                        blocks: components["schemas"]["BlockWithUser"][];
                     };
                 };
             };
@@ -4799,8 +4806,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        entries?: components["schemas"]["ModerationLogEntryWithActor"][];
-                        has_more?: boolean;
+                        entries: components["schemas"]["ModerationLogEntryWithActor"][];
+                        has_more: boolean;
                         next_cursor?: string;
                     };
                 };

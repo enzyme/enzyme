@@ -19,7 +19,7 @@ export const moderationApi = {
   // Banning
   banUser: (
     workspaceId: string,
-    input: { user_id: string; reason?: string; duration_hours?: number; hide_messages?: boolean },
+    input: { user_id: string; reason?: string; duration_hours?: number; hide_messages: boolean },
   ) =>
     throwIfError(
       apiClient.POST('/workspaces/{wid}/bans/create', {

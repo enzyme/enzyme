@@ -84,7 +84,7 @@ export function useBanUser(workspaceId: string) {
       user_id: string;
       reason?: string;
       duration_hours?: number;
-      hide_messages?: boolean;
+      hide_messages: boolean;
     }) => moderationApi.banUser(workspaceId, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId, 'bans'] });
