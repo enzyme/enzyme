@@ -10,6 +10,10 @@ export default mergeConfig(
       environment: 'jsdom',
       setupFiles: ['./src/test-utils/setup.ts'],
       include: ['src/**/*.{test,spec}.{ts,tsx}'],
+      // Node 25+ enables --experimental-webstorage by default, which provides
+      // a built-in localStorage that shadows jsdom's implementation. Disable it
+      // so jsdom's full Storage API is available in tests.
+      execArgv: ['--no-experimental-webstorage'],
       coverage: {
         provider: 'v8',
         reporter: ['text', 'html', 'lcov'],
