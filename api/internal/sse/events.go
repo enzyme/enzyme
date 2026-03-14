@@ -29,6 +29,8 @@ const (
 	EventMemberLeft        = "member.left"
 	EventMemberRoleChanged = "member.role_changed"
 
+	EventWorkspaceUpdated = "workspace.updated"
+
 	EventScheduledMessageCreated = "scheduled_message.created"
 	EventScheduledMessageUpdated = "scheduled_message.updated"
 	EventScheduledMessageDeleted = "scheduled_message.deleted"

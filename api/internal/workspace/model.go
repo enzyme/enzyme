@@ -31,6 +31,20 @@ func ParseSettings(settingsJSON string) WorkspaceSettings {
 	if settingsJSON != "" && settingsJSON != "{}" {
 		_ = json.Unmarshal([]byte(settingsJSON), &settings)
 	}
+	// Reset invalid permission levels to defaults
+	defaults := DefaultSettings()
+	if !IsValidPermissionLevel(settings.WhoCanCreateChannels) {
+		settings.WhoCanCreateChannels = defaults.WhoCanCreateChannels
+	}
+	if !IsValidPermissionLevel(settings.WhoCanCreateInvites) {
+		settings.WhoCanCreateInvites = defaults.WhoCanCreateInvites
+	}
+	if !IsValidPermissionLevel(settings.WhoCanPinMessages) {
+		settings.WhoCanPinMessages = defaults.WhoCanPinMessages
+	}
+	if !IsValidPermissionLevel(settings.WhoCanManageCustomEmoji) {
+		settings.WhoCanManageCustomEmoji = defaults.WhoCanManageCustomEmoji
+	}
 	return settings
 }
 

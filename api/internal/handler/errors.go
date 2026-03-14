@@ -2,7 +2,6 @@ package handler
 
 import (
 	"github.com/enzyme/api/internal/openapi"
-	"github.com/enzyme/api/internal/workspace"
 )
 
 // newError creates an ApiError with the given code and message
@@ -57,8 +56,4 @@ func notAMemberResponse(msg string) openapi.ForbiddenJSONResponse {
 
 func conflictResponse(msg string) openapi.ConflictJSONResponse {
 	return openapi.ConflictJSONResponse(newErrorResponse(ErrCodeConflict, msg))
-}
-
-func isValidPermissionLevel(level workspace.PermissionLevel) bool {
-	return workspace.IsValidPermissionLevel(level)
 }

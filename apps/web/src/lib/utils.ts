@@ -1,5 +1,6 @@
 // Re-export cn from tailwind-variants for class name merging
 export { cn } from 'tailwind-variants';
+import type { WorkspaceRole, PermissionLevel } from '@enzyme/api-client';
 
 export function formatTime(dateString: string): string {
   const date = new Date(dateString);
@@ -67,8 +68,6 @@ export function groupReactions(
   });
   return grouped;
 }
-
-import type { WorkspaceRole, PermissionLevel } from '@enzyme/api-client';
 
 /**
  * Returns true if the given workspace role satisfies the required permission level.

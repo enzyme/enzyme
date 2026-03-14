@@ -125,28 +125,28 @@ func (h *Handler) UpdateWorkspace(ctx context.Context, request openapi.UpdateWor
 		}
 		if request.Body.Settings.WhoCanCreateChannels != nil {
 			v := workspace.PermissionLevel(*request.Body.Settings.WhoCanCreateChannels)
-			if !isValidPermissionLevel(v) {
+			if !workspace.IsValidPermissionLevel(v) {
 				return openapi.UpdateWorkspace400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Invalid value for who_can_create_channels")}, nil
 			}
 			settings.WhoCanCreateChannels = v
 		}
 		if request.Body.Settings.WhoCanCreateInvites != nil {
 			v := workspace.PermissionLevel(*request.Body.Settings.WhoCanCreateInvites)
-			if !isValidPermissionLevel(v) {
+			if !workspace.IsValidPermissionLevel(v) {
 				return openapi.UpdateWorkspace400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Invalid value for who_can_create_invites")}, nil
 			}
 			settings.WhoCanCreateInvites = v
 		}
 		if request.Body.Settings.WhoCanPinMessages != nil {
 			v := workspace.PermissionLevel(*request.Body.Settings.WhoCanPinMessages)
-			if !isValidPermissionLevel(v) {
+			if !workspace.IsValidPermissionLevel(v) {
 				return openapi.UpdateWorkspace400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Invalid value for who_can_pin_messages")}, nil
 			}
 			settings.WhoCanPinMessages = v
 		}
 		if request.Body.Settings.WhoCanManageCustomEmoji != nil {
 			v := workspace.PermissionLevel(*request.Body.Settings.WhoCanManageCustomEmoji)
-			if !isValidPermissionLevel(v) {
+			if !workspace.IsValidPermissionLevel(v) {
 				return openapi.UpdateWorkspace400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Invalid value for who_can_manage_custom_emoji")}, nil
 			}
 			settings.WhoCanManageCustomEmoji = v
@@ -161,6 +161,15 @@ func (h *Handler) UpdateWorkspace(ctx context.Context, request openapi.UpdateWor
 	}
 
 	apiWs := workspaceToAPI(ws)
+
+	// Broadcast workspace update so all connected clients refresh permission-gated UI
+	if h.hub != nil {
+		h.hub.BroadcastToWorkspace(string(request.Wid), sse.Event{
+			Type: sse.EventWorkspaceUpdated,
+			Data: apiWs,
+		})
+	}
+
 	return openapi.UpdateWorkspace200JSONResponse{
 		Workspace: &apiWs,
 	}, nil
@@ -444,7 +453,7 @@ func (h *Handler) CreateWorkspaceInvite(ctx context.Context, request openapi.Cre
 
 	// Non-admins cannot create invites with admin role
 	if role == workspace.RoleAdmin && !workspace.CanManageMembers(membership.Role) {
-		role = workspace.RoleMember
+		return openapi.CreateWorkspaceInvite403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Only admins and owners can create admin invites")}, nil
 	}
 
 	invite := &workspace.Invite{

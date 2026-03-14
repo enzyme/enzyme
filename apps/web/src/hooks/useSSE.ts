@@ -470,6 +470,11 @@ export function useSSE(workspaceId: string | undefined) {
       );
     });
 
+    // Handle workspace updated (permission settings changes, name changes, etc.)
+    connection.on('workspace.updated', () => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] });
+    });
+
     // Handle scheduled message events
     connection.on('scheduled_message.created', () => {
       queryClient.invalidateQueries({ queryKey: ['scheduled-messages', workspaceId] });

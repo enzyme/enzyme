@@ -134,7 +134,7 @@ export function MessageItem({
   const isEdited = !!message.edited_at;
   const isOwnMessage = user?.id === message.user_id;
   const isPinned = !!message.pinned_at;
-  const canPin = canPinProp ?? !!isAdmin;
+  const canPin = canPinProp ?? false;
   const canDelete = isOwnMessage || !!isAdmin;
 
   const handleReactionClick = (emoji: string, hasOwn: boolean) => {

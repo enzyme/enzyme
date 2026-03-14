@@ -3397,6 +3397,7 @@ components:
         - member.unbanned
         - member.left
         - member.role_changed
+        - workspace.updated
         - scheduled_message.created
         - scheduled_message.updated
         - scheduled_message.deleted

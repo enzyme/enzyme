@@ -128,7 +128,12 @@ export function WorkspaceSettingsModal({
   if ((isOpen && !prevOpen) || (isOpen && defaultTab !== prevDefaultTab)) {
     setPrevOpen(isOpen);
     setPrevDefaultTab(defaultTab);
-    setSelectedTab(!canManage && defaultTab === 'invite' && !canInvite ? 'general' : defaultTab);
+    setSelectedTab(() => {
+      if (defaultTab === 'invite' && !canInvite) return 'general';
+      if ((defaultTab === 'permissions' || defaultTab === 'moderation') && !canManage)
+        return 'general';
+      return defaultTab;
+    });
     setSelectedFile(null);
     setPreviewUrl(null);
     setInviteLink(null);
@@ -751,7 +756,6 @@ export function WorkspaceSettingsModal({
                   <PermissionSelect
                     label="Who can create channels"
                     value={parsedSettings?.who_can_create_channels ?? 'members'}
-                    includeEveryone
                     onChange={(value) =>
                       updateWorkspace.mutate(
                         { settings: { who_can_create_channels: value } },
@@ -763,7 +767,6 @@ export function WorkspaceSettingsModal({
                   <PermissionSelect
                     label="Who can create invites"
                     value={parsedSettings?.who_can_create_invites ?? 'admins'}
-                    includeEveryone
                     onChange={(value) =>
                       updateWorkspace.mutate(
                         { settings: { who_can_create_invites: value } },
@@ -775,7 +778,6 @@ export function WorkspaceSettingsModal({
                   <PermissionSelect
                     label="Who can pin messages"
                     value={parsedSettings?.who_can_pin_messages ?? 'members'}
-                    includeEveryone
                     onChange={(value) =>
                       updateWorkspace.mutate(
                         { settings: { who_can_pin_messages: value } },
@@ -787,7 +789,6 @@ export function WorkspaceSettingsModal({
                   <PermissionSelect
                     label="Who can manage custom emoji"
                     value={parsedSettings?.who_can_manage_custom_emoji ?? 'members'}
-                    includeEveryone
                     onChange={(value) =>
                       updateWorkspace.mutate(
                         { settings: { who_can_manage_custom_emoji: value } },
@@ -879,17 +880,13 @@ const permissionLabels: Record<PermissionLevel, string> = {
 function PermissionSelect({
   label,
   value,
-  includeEveryone,
   onChange,
 }: {
   label: string;
   value: PermissionLevel;
-  includeEveryone?: boolean;
   onChange: (value: PermissionLevel) => void;
 }) {
-  const items: PermissionLevel[] = includeEveryone
-    ? ['everyone', 'members', 'admins']
-    : ['members', 'admins'];
+  const items: PermissionLevel[] = ['everyone', 'members', 'admins'];
 
   return (
     <Select

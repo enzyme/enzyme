@@ -91,7 +91,7 @@ func TestDeleteCustomEmoji_Admin(t *testing.T) {
 	}
 }
 
-func TestDeleteCustomEmoji_MemberCanDeleteOthers(t *testing.T) {
+func TestDeleteCustomEmoji_MemberCannotDeleteOthers(t *testing.T) {
 	h, db := testHandler(t)
 
 	owner := testutil.CreateTestUser(t, db, "owner@test.com", "Owner")
@@ -102,7 +102,7 @@ func TestDeleteCustomEmoji_MemberCanDeleteOthers(t *testing.T) {
 	addWorkspaceMember(t, db, other.ID, ws.ID, "member")
 	em := testutil.CreateTestEmoji(t, db, ws.ID, creator.ID, "not-yours")
 
-	// Default who_can_manage_custom_emoji is "members", so member can delete
+	// Members cannot delete other members' emoji — only creator or admin/owner can
 	ctx := ctxWithUser(t, h, other.ID)
 	resp, err := h.DeleteCustomEmoji(ctx, openapi.DeleteCustomEmojiRequestObject{
 		Id: em.ID,
@@ -110,8 +110,8 @@ func TestDeleteCustomEmoji_MemberCanDeleteOthers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, ok := resp.(openapi.DeleteCustomEmoji200JSONResponse); !ok {
-		t.Fatalf("expected 200 response, got %T", resp)
+	if _, ok := resp.(openapi.DeleteCustomEmoji403JSONResponse); !ok {
+		t.Fatalf("expected 403 response, got %T", resp)
 	}
 }
 

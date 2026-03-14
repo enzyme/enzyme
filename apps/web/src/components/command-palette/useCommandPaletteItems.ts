@@ -32,7 +32,6 @@ interface ActionDef {
   key: string;
   label: string;
   shortcut?: string;
-  adminOnly?: boolean;
 }
 
 const MOD_KEY =
@@ -67,9 +66,6 @@ export function useCommandPaletteItems(query: string): CommandPaletteItem[] {
       }
       if (action.key === 'invite') {
         return hasPermission(role, parsedSettings?.who_can_create_invites);
-      }
-      if (action.adminOnly) {
-        return role === 'owner' || role === 'admin';
       }
       return true;
     };

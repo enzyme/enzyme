@@ -6,10 +6,9 @@ import {
   useDeleteCustomEmoji,
 } from '../../hooks/useCustomEmojis';
 import { useAuth } from '../../hooks';
-import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
+import { useWorkspaceMembers, useWorkspace } from '../../hooks/useWorkspaces';
 import { Button, Spinner, toast, CustomEmojiImg, ConfirmDialog } from '../ui';
 import { resolveStandardShortcode } from '../../lib/emoji';
-import { useWorkspace } from '../../hooks/useWorkspaces';
 import { hasPermission } from '../../lib/utils';
 
 const NAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$/;

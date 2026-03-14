@@ -70,12 +70,12 @@ Workspace owners and admins can adjust who can perform certain actions via the *
 
 The four configurable permissions and their defaults:
 
-| Setting                         | Default | Controls                                            |
-| ------------------------------- | ------- | --------------------------------------------------- |
-| **Who can create channels**     | Members | Creating channels, converting group DMs to channels |
-| **Who can create invites**      | Admins  | Generating workspace invite links                   |
-| **Who can pin messages**        | Members | Pinning and unpinning messages                      |
-| **Who can manage custom emoji** | Members | Uploading custom emoji                              |
+| Setting                         | Default | Controls                                                                |
+| ------------------------------- | ------- | ----------------------------------------------------------------------- |
+| **Who can create channels**     | Members | Creating channels, converting group DMs to channels                     |
+| **Who can create invites**      | Admins  | Generating workspace invite links                                       |
+| **Who can pin messages**        | Members | Pinning and unpinning messages                                          |
+| **Who can manage custom emoji** | Members | Uploading custom emoji (deletion of others' emoji is always admin-only) |
 
 Changes take effect immediately. Existing workspaces that haven't configured these settings use the defaults, preserving backward compatibility.
 

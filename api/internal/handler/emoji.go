@@ -228,17 +228,13 @@ func (h *Handler) DeleteCustomEmoji(ctx context.Context, request openapi.DeleteC
 		return nil, err
 	}
 
-	// Check permission: creator, or has manage emoji permission
+	// Check permission: creator can always delete their own, otherwise admin/owner only
 	canDelete := e.CreatedBy == userID
 
 	if !canDelete {
 		membership, err := h.workspaceRepo.GetMembership(ctx, userID, e.WorkspaceID)
 		if err == nil {
-			ws, wsErr := h.workspaceRepo.GetByID(ctx, e.WorkspaceID)
-			if wsErr == nil {
-				wsSettings := ws.ParsedSettings()
-				canDelete = workspace.HasPermission(membership.Role, wsSettings.WhoCanManageCustomEmoji)
-			}
+			canDelete = workspace.CanManageMembers(membership.Role)
 		}
 	}
 
