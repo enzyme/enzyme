@@ -1,4 +1,14 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, type Key } from 'react';
+import {
+  Select,
+  Label,
+  Button as AriaButton,
+  SelectValue,
+  Popover,
+  ListBox,
+  ListBoxItem,
+} from 'react-aria-components';
+import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import {
   Cog6ToothIcon,
   UsersIcon,
@@ -313,7 +323,7 @@ export function WorkspaceSettingsModal({
         ) : (
           <div className="flex h-full">
             {/* Left sidebar nav */}
-            <nav className="flex w-56 flex-shrink-0 flex-col gap-1 border-r border-gray-200 p-2 dark:border-gray-700 dark:bg-gray-900">
+            <nav className="flex w-56 flex-shrink-0 flex-col gap-1 border-r border-gray-200 p-2 dark:border-gray-700">
               {visibleNavItems.map((item) => (
                 <button
                   key={item.id}
@@ -322,7 +332,7 @@ export function WorkspaceSettingsModal({
                     'flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-left transition-colors',
                     selectedTab === item.id
                       ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
+                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700',
                   )}
                 >
                   <item.icon className="h-4 w-4 flex-shrink-0" />
@@ -860,6 +870,12 @@ export function WorkspaceSettingsModal({
   );
 }
 
+const permissionLabels: Record<PermissionLevel, string> = {
+  everyone: 'Everyone',
+  members: 'Members',
+  admins: 'Admins',
+};
+
 function PermissionSelect({
   label,
   value,
@@ -871,20 +887,39 @@ function PermissionSelect({
   includeEveryone?: boolean;
   onChange: (value: PermissionLevel) => void;
 }) {
+  const items: PermissionLevel[] = includeEveryone
+    ? ['everyone', 'members', 'admins']
+    : ['members', 'admins'];
+
   return (
-    <div>
-      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+    <Select
+      selectedKey={value}
+      onSelectionChange={(key: Key) => onChange(key as PermissionLevel)}
+      className="max-w-xs"
+    >
+      <Label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
         {label}
-      </label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value as PermissionLevel)}
-        className="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+      </Label>
+      <AriaButton className="flex w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+        <SelectValue />
+        <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+      </AriaButton>
+      <Popover
+        offset={4}
+        className="w-(--trigger-width) rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
       >
-        {includeEveryone && <option value="everyone">Everyone</option>}
-        <option value="members">Members</option>
-        <option value="admins">Admins</option>
-      </select>
-    </div>
+        <ListBox className="py-1 outline-none">
+          {items.map((level) => (
+            <ListBoxItem
+              key={level}
+              id={level}
+              className="cursor-pointer px-3 py-1.5 text-sm text-gray-700 outline-none focus:bg-gray-100 dark:text-gray-200 dark:focus:bg-gray-700"
+            >
+              {permissionLabels[level]}
+            </ListBoxItem>
+          ))}
+        </ListBox>
+      </Popover>
+    </Select>
   );
 }

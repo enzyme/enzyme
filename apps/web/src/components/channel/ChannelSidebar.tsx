@@ -15,6 +15,7 @@ import {
   FaceSmileIcon,
   EnvelopeOpenIcon,
   ShieldExclamationIcon,
+  KeyIcon,
   ArrowRightStartOnRectangleIcon,
   InformationCircleIcon,
   XMarkIcon,
@@ -315,6 +316,14 @@ export function ChannelSidebar({
                 >
                   Custom Emoji
                 </MenuItem>
+                {isAdminOrOwner && (
+                  <MenuItem
+                    onAction={() => onOpenWorkspaceSettings(workspaceId, 'permissions')}
+                    icon={<KeyIcon className="h-4 w-4" />}
+                  >
+                    Permissions
+                  </MenuItem>
+                )}
                 {isAdminOrOwner && (
                   <MenuItem
                     onAction={() => onOpenWorkspaceSettings(workspaceId, 'moderation')}
