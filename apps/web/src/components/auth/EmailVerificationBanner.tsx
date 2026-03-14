@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Button as AriaButton } from 'react-aria-components';
+import { UnstyledButton } from '../ui';
 import { authApi } from '../../api';
 
 export function EmailVerificationBanner() {
@@ -30,28 +30,28 @@ export function EmailVerificationBanner() {
         ) : resend.isError ? (
           <>
             Failed to send.{' '}
-            <AriaButton
+            <UnstyledButton
               onPress={() => resend.mutate()}
               className="cursor-pointer font-medium underline"
             >
               Try again
-            </AriaButton>
+            </UnstyledButton>
             .
           </>
         ) : (
           <>
             Check your inbox or{' '}
-            <AriaButton
+            <UnstyledButton
               onPress={() => resend.mutate()}
               className="cursor-pointer font-medium underline"
             >
               resend verification email
-            </AriaButton>
+            </UnstyledButton>
             .
           </>
         )}
       </span>
-      <AriaButton
+      <UnstyledButton
         onPress={handleDismiss}
         className="ml-2 cursor-pointer rounded p-0.5 hover:bg-amber-200 dark:hover:bg-amber-800"
         aria-label="Dismiss"
@@ -64,7 +64,7 @@ export function EmailVerificationBanner() {
             d="M6 18L18 6M6 6l12 12"
           />
         </svg>
-      </AriaButton>
+      </UnstyledButton>
     </div>
   );
 }

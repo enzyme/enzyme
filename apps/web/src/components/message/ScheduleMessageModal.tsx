@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { today, getLocalTimeZone, Time } from '@internationalized/date';
-import type { DateValue, TimeValue } from 'react-aria-components';
-import { Modal, Button, DatePicker, TimeField } from '../ui';
+import { Modal, Button, DatePicker, TimeField, type DateValue, type TimeValue } from '../ui';
 
 interface ScheduleMessageModalProps {
   isOpen: boolean;

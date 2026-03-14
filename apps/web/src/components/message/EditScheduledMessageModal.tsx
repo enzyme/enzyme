@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { getLocalTimeZone, today, Time, CalendarDate } from '@internationalized/date';
-import type { DateValue, TimeValue } from 'react-aria-components';
-import { Modal, Button, DatePicker, TimeField } from '../ui';
+import { Modal, Button, DatePicker, TimeField, type DateValue, type TimeValue } from '../ui';
 import { useUpdateScheduledMessage } from '../../hooks/useScheduledMessages';
 import type { ScheduledMessage } from '@enzyme/api-client';
 

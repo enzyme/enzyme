@@ -102,3 +102,4 @@ export function Modal({ isOpen, onClose, title, children, size }: ModalProps) {
 }
 
 export { DialogTrigger };
+export { ModalOverlay, AriaModal as RawModal };

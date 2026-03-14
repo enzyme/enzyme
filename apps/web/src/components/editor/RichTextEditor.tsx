@@ -22,8 +22,16 @@ import {
   PaperAirplaneIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import { Button as AriaButton, FileTrigger, Popover, DialogTrigger } from 'react-aria-components';
-import { IconButton, Menu, MenuItem, DisclosureCaret } from '../ui';
+import {
+  IconButton,
+  Menu,
+  MenuItem,
+  DisclosureCaret,
+  UnstyledButton,
+  FileTrigger,
+  Popover,
+  DialogTrigger,
+} from '../ui';
 import { Toolbar } from './Toolbar';
 import { LinkModal } from './LinkModal';
 import type { LinkModalData } from './LinkModal';
@@ -830,14 +838,14 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
               {submitLabel ? (
                 <div className="flex items-center gap-1.5">
                   {onEscape && (
-                    <AriaButton
+                    <UnstyledButton
                       className="cursor-pointer rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
                       onPress={onEscape}
                     >
                       Cancel
-                    </AriaButton>
+                    </UnstyledButton>
                   )}
-                  <AriaButton
+                  <UnstyledButton
                     isDisabled={!canSend}
                     className={cn(
                       'rounded px-2 py-1 text-xs font-medium transition-colors',
@@ -848,12 +856,12 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
                     onPress={handleSubmit}
                   >
                     {isPending ? 'Saving...' : submitLabel}
-                  </AriaButton>
+                  </UnstyledButton>
                 </div>
               ) : (
                 <div className="flex items-center">
                   <Tooltip content="Send message">
-                    <AriaButton
+                    <UnstyledButton
                       isDisabled={!canSchedule}
                       className={cn(
                         s.sendButton(),
@@ -865,12 +873,12 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
                       onPress={handleSubmit}
                     >
                       <PaperAirplaneIcon className="h-4 w-4" />
-                    </AriaButton>
+                    </UnstyledButton>
                   </Tooltip>
                   {onScheduleClick && (
                     <Menu
                       trigger={
-                        <AriaButton
+                        <UnstyledButton
                           isDisabled={!canSchedule}
                           className={cn(
                             'rounded-r px-1.5 py-2 transition-colors',
@@ -881,7 +889,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
                           aria-label="Schedule message"
                         >
                           <DisclosureCaret isExpanded className="h-3 w-3" />
-                        </AriaButton>
+                        </UnstyledButton>
                       }
                       align="end"
                     >

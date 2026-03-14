@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Dialog, Modal as AriaModal, ModalOverlay } from 'react-aria-components';
 import {
   MagnifyingGlassIcon,
   HashtagIcon,
@@ -14,7 +13,7 @@ import {
   UserPlusIcon,
   CommandLineIcon,
 } from '@heroicons/react/24/outline';
-import { Avatar, AvatarStack } from '../ui';
+import { Avatar, AvatarStack, Dialog, RawModal, ModalOverlay } from '../ui';
 import { useProfilePanel } from '../../hooks/usePanel';
 import { cn } from '../../lib/utils';
 import { useCommandPaletteItems, type CommandPaletteItem } from './useCommandPaletteItems';
@@ -173,7 +172,7 @@ export function CommandPalette({
       isDismissable
       className="entering:animate-in entering:fade-in exiting:animate-out exiting:fade-out entering:duration-200 exiting:duration-150 fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-[15vh]"
     >
-      <AriaModal className="entering:animate-in entering:zoom-in-95 exiting:animate-out exiting:zoom-out-95 entering:duration-200 exiting:duration-150 relative mx-4 w-full max-w-xl rounded-lg bg-white shadow-xl dark:bg-gray-800">
+      <RawModal className="entering:animate-in entering:zoom-in-95 exiting:animate-out exiting:zoom-out-95 entering:duration-200 exiting:duration-150 relative mx-4 w-full max-w-xl rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <Dialog className="outline-none">
           <div className="flex flex-col">
             {/* Input */}
@@ -242,7 +241,7 @@ export function CommandPalette({
             </div>
           </div>
         </Dialog>
-      </AriaModal>
+      </RawModal>
     </ModalOverlay>
   );
 }

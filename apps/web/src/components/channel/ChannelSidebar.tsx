@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { Button as AriaButton } from 'react-aria-components';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   PlusIcon,
@@ -40,6 +39,7 @@ import {
   ChannelListSkeleton,
   Modal,
   Button,
+  UnstyledButton,
   IconButton,
   Input,
   toast,
@@ -279,12 +279,12 @@ export function ChannelSidebar({
           </IconButton>
           <Menu
             trigger={
-              <AriaButton className="flex min-w-0 cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-left outline-none hover:bg-gray-100 dark:hover:bg-gray-800">
+              <UnstyledButton className="flex min-w-0 cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-left outline-none hover:bg-gray-100 dark:hover:bg-gray-800">
                 <h2 className="truncate font-semibold text-gray-900 dark:text-white">
                   {workspaceData?.workspace.name || 'Loading...'}
                 </h2>
                 <DisclosureCaret isExpanded className="text-gray-500 dark:text-gray-400" />
-              </AriaButton>
+              </UnstyledButton>
             }
             align="start"
           >

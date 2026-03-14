@@ -17,7 +17,6 @@ import {
   EnvelopeOpenIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
-import { Button as AriaButton } from 'react-aria-components';
 import {
   useChannels,
   useArchiveChannel,
@@ -41,6 +40,7 @@ import {
   Spinner,
   Modal,
   Button,
+  UnstyledButton,
   IconButton,
   Menu,
   MenuItem,
@@ -315,7 +315,7 @@ export function ChannelPage() {
             )}
             <Menu
               trigger={
-                <AriaButton className="-ml-1.5 flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
+                <UnstyledButton className="-ml-1.5 flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
                   {isDM ? (
                     <>
                       {channel.type === 'group_dm' &&
@@ -358,7 +358,7 @@ export function ChannelPage() {
                     </>
                   )}
                   <DisclosureCaret isExpanded className="text-gray-500 dark:text-gray-400" />
-                </AriaButton>
+                </UnstyledButton>
               }
               align="start"
             >
@@ -446,13 +446,13 @@ export function ChannelPage() {
             {channel.description &&
               (isDescriptionTruncated ? (
                 <Tooltip content={channel.description} placement="bottom">
-                  <AriaButton
+                  <UnstyledButton
                     ref={descriptionRef as React.RefObject<HTMLButtonElement>}
                     className="max-w-md min-w-0 cursor-default truncate border-none bg-transparent p-0 text-left text-sm text-gray-400 outline-none dark:text-gray-500"
                     excludeFromTabOrder
                   >
                     {channel.description}
-                  </AriaButton>
+                  </UnstyledButton>
                 </Tooltip>
               ) : (
                 <span

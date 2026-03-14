@@ -1,13 +1,6 @@
 import { useState, useEffect } from 'react';
-import {
-  Button as AriaButton,
-  Dialog,
-  Heading,
-  Modal as AriaModal,
-  ModalOverlay,
-} from 'react-aria-components';
 import type { Attachment } from '@enzyme/api-client';
-import { AuthImage } from '../ui';
+import { AuthImage, UnstyledButton, Dialog, Heading, RawModal, ModalOverlay } from '../ui';
 import { useSignedUrl } from '../../hooks/useSignedUrl';
 import { cn } from '../../lib/utils';
 
@@ -95,11 +88,11 @@ function ImageCarousel({ images, initialIndex, isOpen, onClose }: ImageCarouselP
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
       isDismissable
     >
-      <AriaModal className="max-h-[90vh] max-w-[90vw] outline-none">
+      <RawModal className="max-h-[90vh] max-w-[90vw] outline-none">
         <Dialog className="outline-none" aria-label="Image viewer">
           <div className="relative flex items-center justify-center">
             {images.length > 1 && (
-              <AriaButton
+              <UnstyledButton
                 onPress={() => setCurrentIndex((i) => (i === 0 ? images.length - 1 : i - 1))}
                 className="absolute left-2 z-10 cursor-pointer rounded-full bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
                 aria-label="Previous image"
@@ -112,7 +105,7 @@ function ImageCarousel({ images, initialIndex, isOpen, onClose }: ImageCarouselP
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-              </AriaButton>
+              </UnstyledButton>
             )}
 
             <AuthImage
@@ -122,7 +115,7 @@ function ImageCarousel({ images, initialIndex, isOpen, onClose }: ImageCarouselP
             />
 
             {images.length > 1 && (
-              <AriaButton
+              <UnstyledButton
                 onPress={() => setCurrentIndex((i) => (i === images.length - 1 ? 0 : i + 1))}
                 className="absolute right-2 z-10 cursor-pointer rounded-full bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
                 aria-label="Next image"
@@ -135,7 +128,7 @@ function ImageCarousel({ images, initialIndex, isOpen, onClose }: ImageCarouselP
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
-              </AriaButton>
+              </UnstyledButton>
             )}
 
             <div className="absolute top-2 right-2 flex gap-2">
@@ -171,7 +164,7 @@ function ImageCarousel({ images, initialIndex, isOpen, onClose }: ImageCarouselP
             </div>
           </div>
         </Dialog>
-      </AriaModal>
+      </RawModal>
     </ModalOverlay>
   );
 }
@@ -255,7 +248,7 @@ function ImageGrid({ images }: ImageGridProps) {
 
 function ImageAttachment({ attachment, onClick }: { attachment: Attachment; onClick: () => void }) {
   return (
-    <AriaButton
+    <UnstyledButton
       onPress={onClick}
       className="block cursor-pointer overflow-hidden rounded-lg border border-gray-200 transition-colors hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
       aria-label={`View ${attachment.filename}`}
@@ -266,7 +259,7 @@ function ImageAttachment({ attachment, onClick }: { attachment: Attachment; onCl
         className="max-h-64 max-w-full object-contain"
         loading="lazy"
       />
-    </AriaButton>
+    </UnstyledButton>
   );
 }
 

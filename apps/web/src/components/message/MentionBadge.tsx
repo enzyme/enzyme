@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Button as AriaButton, Popover, DialogTrigger } from 'react-aria-components';
 import { tv } from 'tailwind-variants';
-import { Avatar } from '../ui';
+import { Avatar, UnstyledButton, Popover, DialogTrigger } from '../ui';
 import { useProfilePanel } from '../../hooks/usePanel';
 import type { WorkspaceMemberWithUser } from '@enzyme/api-client';
 
@@ -55,7 +54,7 @@ export function UserMentionBadge({ userId, member }: UserMentionBadgeProps) {
 
   return (
     <DialogTrigger isOpen={isOpen} onOpenChange={setIsOpen}>
-      <AriaButton className={mentionBadge()}>@{displayName}</AriaButton>
+      <UnstyledButton className={mentionBadge()}>@{displayName}</UnstyledButton>
       <Popover placement="top" className={styles.popover()}>
         <div className={styles.header()}>
           <Avatar
@@ -91,7 +90,7 @@ export function SpecialMentionBadge({ type }: SpecialMentionBadgeProps) {
 
   return (
     <DialogTrigger>
-      <AriaButton className={mentionBadge()}>@{type}</AriaButton>
+      <UnstyledButton className={mentionBadge()}>@{type}</UnstyledButton>
       <Popover placement="top" className={popoverStyles().popover()}>
         <div className="text-sm">
           <div className="mb-1 font-medium text-gray-900 dark:text-white">@{type}</div>

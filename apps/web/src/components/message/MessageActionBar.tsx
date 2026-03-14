@@ -1,4 +1,3 @@
-import { DialogTrigger, Popover } from 'react-aria-components';
 import {
   FaceSmileIcon,
   ChatBubbleBottomCenterTextIcon,
@@ -8,7 +7,16 @@ import {
   PencilSquareIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
-import { IconButton, Tooltip, Menu, MenuItem, EmojiGrid, PinOutlineIcon } from '../ui';
+import {
+  IconButton,
+  Tooltip,
+  Menu,
+  MenuItem,
+  EmojiGrid,
+  PinOutlineIcon,
+  DialogTrigger,
+  Popover,
+} from '../ui';
 import { cn } from '../../lib/utils';
 import type { CustomEmoji } from '@enzyme/api-client';
 

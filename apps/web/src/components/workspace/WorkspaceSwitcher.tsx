@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button as AriaButton } from 'react-aria-components';
 import {
   DndContext,
   closestCenter,
@@ -33,6 +32,7 @@ import {
   Avatar,
   Modal,
   Button,
+  UnstyledButton,
   Input,
   toast,
   Tooltip,
@@ -162,7 +162,7 @@ export function WorkspaceSwitcher({ onOpenWorkspaceSettings }: WorkspaceSwitcher
 
         {/* Add Workspace Button */}
         <Tooltip content="Add workspace" placement="right">
-          <AriaButton
+          <UnstyledButton
             onPress={() => setIsCreateModalOpen(true)}
             className="flex h-10 cursor-pointer items-center gap-3 rounded-lg px-2 py-1 text-gray-500 transition-colors hover:bg-gray-100 md:h-auto md:justify-center md:p-0 dark:text-gray-400 dark:hover:bg-gray-800"
           >
@@ -170,7 +170,7 @@ export function WorkspaceSwitcher({ onOpenWorkspaceSettings }: WorkspaceSwitcher
               <PlusIcon className="h-4 w-4" />
             </span>
             <span className="text-sm font-medium md:hidden">Add Workspace</span>
-          </AriaButton>
+          </UnstyledButton>
         </Tooltip>
       </div>
 
@@ -215,7 +215,7 @@ function SortableWorkspaceItem({
   };
 
   // Only forward pointer listeners from dnd-kit — keyboard Enter/Space
-  // should navigate (via AriaButton onPress), not start a drag.
+  // should navigate (via UnstyledButton onPress), not start a drag.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { onKeyDown: _dndKeyDown, ...pointerListeners } = (listeners || {}) as Record<
     string,
@@ -233,7 +233,7 @@ function SortableWorkspaceItem({
     >
       {(onContextMenu, isMenuOpen) => (
         <Tooltip content={workspace.name} placement="right">
-          <AriaButton
+          <UnstyledButton
             ref={setNodeRef}
             style={style}
             onPress={onPress}
@@ -255,7 +255,7 @@ function SortableWorkspaceItem({
             <span className="truncate text-sm font-medium text-gray-900 md:hidden dark:text-white">
               {workspace.name}
             </span>
-          </AriaButton>
+          </UnstyledButton>
         </Tooltip>
       )}
     </WorkspaceContextMenu>
@@ -359,7 +359,7 @@ function UserMenu() {
       align="start"
       placement="top"
       trigger={
-        <AriaButton className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-1 transition-colors outline-none hover:bg-gray-100 hover:opacity-80 md:w-auto md:p-0 dark:hover:bg-gray-800">
+        <UnstyledButton className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-1 transition-colors outline-none hover:bg-gray-100 hover:opacity-80 md:w-auto md:p-0 dark:hover:bg-gray-800">
           <Avatar
             src={user?.avatar_url}
             gravatarSrc={user?.gravatar_url}
@@ -371,7 +371,7 @@ function UserMenu() {
           <span className="truncate text-sm font-medium text-gray-900 md:hidden dark:text-white">
             {user?.display_name}
           </span>
-        </AriaButton>
+        </UnstyledButton>
       }
     >
       <MenuSection>

@@ -1,5 +1,4 @@
-import { Button as AriaButton } from 'react-aria-components';
-import { Tooltip, CustomEmojiImg } from '../ui';
+import { UnstyledButton, Tooltip, CustomEmojiImg } from '../ui';
 import { cn } from '../../lib/utils';
 import { resolveStandardShortcode } from '../../lib/emoji';
 import type { ReactionGroup } from './reactionUtils';
@@ -59,7 +58,7 @@ export function ReactionsDisplay({
         const userNames = userIds.map((id) => memberNames[id] || 'Unknown').join(', ');
         return (
           <Tooltip key={emoji} content={userNames}>
-            <AriaButton
+            <UnstyledButton
               onPress={() => onReactionClick(emoji, hasOwn)}
               className={cn(
                 'inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-sm transition-colors',
@@ -72,7 +71,7 @@ export function ReactionsDisplay({
                 <EmojiDisplay emoji={emoji} customEmojiMap={customEmojiMap} size="md" />
               </span>
               <span className="text-xs text-gray-600 dark:text-gray-300">{count}</span>
-            </AriaButton>
+            </UnstyledButton>
           </Tooltip>
         );
       })}

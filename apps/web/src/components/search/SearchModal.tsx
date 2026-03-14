@@ -7,12 +7,11 @@ import {
   LockClosedIcon,
   ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
-import { Dialog, Modal as AriaModal, ModalOverlay } from 'react-aria-components';
 import { type DateValue } from '@internationalized/date';
 import { useSearch } from '../../hooks/useSearch';
 import { useChannels } from '../../hooks/useChannels';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
-import { DatePicker, IconButton, Spinner } from '../ui';
+import { DatePicker, IconButton, Spinner, Dialog, RawModal, ModalOverlay } from '../ui';
 import { formatRelativeTime } from '../../lib/utils';
 import type { SearchMessage } from '@enzyme/api-client';
 
@@ -120,7 +119,7 @@ export function SearchModal({ isOpen, onClose, initialChannelId, initialQuery }:
       isDismissable
       className="entering:animate-in entering:fade-in exiting:animate-out exiting:fade-out entering:duration-200 exiting:duration-150 fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-[15vh]"
     >
-      <AriaModal className="entering:animate-in entering:zoom-in-95 exiting:animate-out exiting:zoom-out-95 entering:duration-200 exiting:duration-150 relative mx-4 w-full max-w-2xl rounded-lg bg-white shadow-xl dark:bg-gray-800">
+      <RawModal className="entering:animate-in entering:zoom-in-95 exiting:animate-out exiting:zoom-out-95 entering:duration-200 exiting:duration-150 relative mx-4 w-full max-w-2xl rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <Dialog className="outline-none">
           <div className="flex flex-col">
             {/* Search input */}
@@ -250,7 +249,7 @@ export function SearchModal({ isOpen, onClose, initialChannelId, initialQuery }:
             </div>
           </div>
         </Dialog>
-      </AriaModal>
+      </RawModal>
     </ModalOverlay>
   );
 }

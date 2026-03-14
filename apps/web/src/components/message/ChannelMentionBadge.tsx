@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button as AriaButton, Popover, DialogTrigger } from 'react-aria-components';
 import { HashtagIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import { tv } from 'tailwind-variants';
+import { UnstyledButton, Popover, DialogTrigger } from '../ui';
 import type { ChannelWithMembership } from '@enzyme/api-client';
 
 const mentionBadge = tv({
@@ -80,14 +80,14 @@ export function ChannelMentionBadge({ channelId, channels }: ChannelMentionBadge
 
   return (
     <DialogTrigger>
-      <AriaButton className={mentionBadge({ variant: 'known' })}>
+      <UnstyledButton className={mentionBadge({ variant: 'known' })}>
         {isPrivate ? (
           <LockClosedIcon className={inlineIcon} />
         ) : (
           <HashtagIcon className={inlineIcon} />
         )}
         {channel.name}
-      </AriaButton>
+      </UnstyledButton>
       <Popover placement="top" className={styles.popover()}>
         <div className={styles.header()}>
           {isPrivate ? (

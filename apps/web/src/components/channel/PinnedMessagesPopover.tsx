@@ -1,6 +1,13 @@
 import { useState } from 'react';
-import { DialogTrigger, Popover, Dialog } from 'react-aria-components';
-import { IconButton, Tooltip, Spinner, PinOutlineIcon } from '../ui';
+import {
+  IconButton,
+  Tooltip,
+  Spinner,
+  PinOutlineIcon,
+  DialogTrigger,
+  Popover,
+  Dialog,
+} from '../ui';
 import { MessageContent } from '../message/MessageContent';
 import { usePinnedMessages } from '../../hooks/useModeration';
 import { formatTime } from '../../lib/utils';

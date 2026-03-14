@@ -6,7 +6,7 @@ import {
   useImperativeHandle,
   type FormEvent,
 } from 'react';
-import { DropZone } from 'react-aria-components';
+import { DropZone } from '../ui';
 import { DocumentIcon, ExclamationCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useQueryClient } from '@tanstack/react-query';
 import {

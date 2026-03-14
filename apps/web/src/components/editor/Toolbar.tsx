@@ -1,7 +1,7 @@
 import type { Editor } from '@tiptap/react';
 import { useEditorState } from '@tiptap/react';
-import { ToggleButton } from 'react-aria-components';
 import { tv } from 'tailwind-variants';
+import { ToggleButton } from '../ui';
 import {
   BoldIcon,
   ItalicIcon,

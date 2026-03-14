@@ -1,5 +1,4 @@
-import { Button as AriaButton } from 'react-aria-components';
-import { AvatarStack, Spinner } from '../ui';
+import { AvatarStack, Spinner, UnstyledButton } from '../ui';
 import { useChannelMembers } from '../../hooks/useChannels';
 import type { ChannelType } from '@enzyme/api-client';
 
@@ -44,7 +43,7 @@ export function ChannelMembersButton({
   }));
 
   return (
-    <AriaButton
+    <UnstyledButton
       onPress={onPress}
       className="group flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 outline-none hover:bg-gray-100 hover:[--avatar-ring:var(--color-gray-100)] focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-gray-800 dark:hover:[--avatar-ring:var(--color-gray-800)]"
       aria-label={`View ${members.length} channel members`}
@@ -53,6 +52,6 @@ export function ChannelMembersButton({
       <span className="text-sm text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-200">
         {members.length}
       </span>
-    </AriaButton>
+    </UnstyledButton>
   );
 }

@@ -1,6 +1,5 @@
-import { Button as AriaButton } from 'react-aria-components';
 import { BellAlertIcon, BellIcon, BellSlashIcon } from '@heroicons/react/24/outline';
-import { SelectMenu, SelectMenuItem, Spinner } from '../ui';
+import { SelectMenu, SelectMenuItem, Spinner, UnstyledButton } from '../ui';
 import { useChannelNotifications, useUpdateChannelNotifications } from '../../hooks';
 import type { ChannelType, NotifyLevel } from '@enzyme/api-client';
 import { cn } from '../../lib/utils';
@@ -52,7 +51,7 @@ export function ChannelNotificationButton({
       selectedKey={currentLevel}
       onSelectionChange={handleSelect}
       trigger={
-        <AriaButton
+        <UnstyledButton
           className={cn(
             'cursor-pointer rounded p-1.5 outline-none hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-gray-800 dark:hover:text-gray-200',
             isMuted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400',
@@ -66,7 +65,7 @@ export function ChannelNotificationButton({
           ) : (
             <BellAlertIcon className="h-4 w-4" />
           )}
-        </AriaButton>
+        </UnstyledButton>
       }
       align="end"
     >
