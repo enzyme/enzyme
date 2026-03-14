@@ -13,6 +13,7 @@ import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
 import {
   DatePicker,
   IconButton,
+  UnstyledButton,
   Spinner,
   Dialog,
   BaseModal,
@@ -243,12 +244,12 @@ export function SearchModal({ isOpen, onClose, initialChannelId, initialQuery }:
 
                   {data?.has_more && (
                     <div className="p-4 text-center">
-                      <button
-                        onClick={handleLoadMore}
+                      <UnstyledButton
+                        onPress={handleLoadMore}
                         className="cursor-pointer text-sm text-blue-600 hover:underline dark:text-blue-400"
                       >
                         Load more results
-                      </button>
+                      </UnstyledButton>
                     </div>
                   )}
                 </>
@@ -263,8 +264,8 @@ export function SearchModal({ isOpen, onClose, initialChannelId, initialQuery }:
 
 function SearchResultItem({ message, onClick }: { message: SearchMessage; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
+    <UnstyledButton
+      onPress={onClick}
       className="block w-full cursor-pointer border-b border-gray-100 p-4 text-left last:border-b-0 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
     >
       <div className="flex items-start gap-3">
@@ -303,6 +304,6 @@ function SearchResultItem({ message, onClick }: { message: SearchMessage; onClic
           </div>
         </div>
       </div>
-    </button>
+    </UnstyledButton>
   );
 }

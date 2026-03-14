@@ -557,15 +557,15 @@ function DroppableChannelSection({
       className={cn('py-2 transition-colors', showDropHighlight && 'bg-blue-100 dark:bg-blue-900')}
     >
       <div className="flex w-full items-center justify-between px-2 py-1 text-sm text-gray-700 dark:text-gray-300">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
+        <UnstyledButton
+          onPress={() => setIsExpanded(!isExpanded)}
           className="flex cursor-pointer items-center gap-2 px-2"
         >
           <span className="flex w-5 items-center justify-center">
             <DisclosureCaret isExpanded={isExpanded} />
           </span>
           <span>{title}</span>
-        </button>
+        </UnstyledButton>
         {onAddClick && (
           <IconButton
             onPress={onAddClick}
@@ -634,15 +634,15 @@ function DroppableDMSection({
       className={cn('py-2 transition-colors', showDropHighlight && 'bg-blue-100 dark:bg-blue-900')}
     >
       <div className="flex w-full items-center justify-between px-2 py-1 text-sm text-gray-700 dark:text-gray-300">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
+        <UnstyledButton
+          onPress={() => setIsExpanded(!isExpanded)}
           className="flex cursor-pointer items-center gap-2 px-2"
         >
           <span className="flex w-5 items-center justify-center">
             <DisclosureCaret isExpanded={isExpanded} />
           </span>
           <span>Direct Messages</span>
-        </button>
+        </UnstyledButton>
         {onAddClick && (
           <IconButton
             onPress={onAddClick}
@@ -1022,13 +1022,12 @@ function NewDMModal({
                   className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-sm text-blue-700 dark:bg-blue-900 dark:text-blue-300"
                 >
                   {displayName}
-                  <button
-                    type="button"
-                    onClick={() => removeUser(member.user_id)}
+                  <UnstyledButton
+                    onPress={() => removeUser(member.user_id)}
                     className="ml-0.5 cursor-pointer rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-800"
                   >
                     <XMarkIcon className="h-3 w-3" />
-                  </button>
+                  </UnstyledButton>
                 </span>
               );
             })}
@@ -1047,10 +1046,9 @@ function NewDMModal({
             const isSelected = selectedUserIds.has(member.user_id);
 
             return (
-              <button
+              <UnstyledButton
                 key={member.user_id}
-                type="button"
-                onClick={() => toggleUser(member.user_id)}
+                onPress={() => toggleUser(member.user_id)}
                 className={cn(
                   'flex w-full cursor-pointer items-center gap-3 rounded px-3 py-2 text-left',
                   isSelected
@@ -1072,7 +1070,7 @@ function NewDMModal({
                 )}
                 <span className="flex-1 text-gray-900 dark:text-white">{displayName}</span>
                 {isSelected && <CheckIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
-              </button>
+              </UnstyledButton>
             );
           })}
           {otherMembers.length === 0 && (

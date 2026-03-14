@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { HashtagIcon, LockClosedIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import { useAllUnreads } from '../hooks/useAllUnreads';
 import { usePageTitle } from '../hooks';
-import { Spinner } from '../components/ui';
+import { Spinner, UnstyledButton } from '../components/ui';
 import { formatRelativeTime } from '../lib/utils';
 import type { UnreadMessage } from '@enzyme/api-client';
 
@@ -135,13 +135,13 @@ export function AllUnreadsPage() {
             ))}
             {hasNextPage && (
               <div className="p-4 text-center">
-                <button
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
+                <UnstyledButton
+                  onPress={() => fetchNextPage()}
+                  isDisabled={isFetchingNextPage}
                   className="text-sm text-blue-600 hover:underline disabled:opacity-50 dark:text-blue-400"
                 >
                   {isFetchingNextPage ? 'Loading...' : 'Load more'}
-                </button>
+                </UnstyledButton>
               </div>
             )}
           </>

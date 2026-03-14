@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Avatar, toast } from '../ui';
+import { Avatar, UnstyledButton, toast } from '../ui';
 import { ThreadRepliesIndicator } from './ThreadRepliesIndicator';
 import { MessageActionBar } from './MessageActionBar';
 import { ReactionsDisplay } from './ReactionsDisplay';
@@ -136,16 +136,15 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
         <div className="min-w-0 flex-1">
           {/* Header */}
           <div className="flex items-baseline gap-2">
-            <button
-              type="button"
-              onClick={message.user_id ? () => openProfile(message.user_id!) : undefined}
+            <UnstyledButton
+              onPress={message.user_id ? () => openProfile(message.user_id!) : undefined}
               className={cn(
                 'font-medium text-gray-900 dark:text-white',
                 message.user_id && 'cursor-pointer hover:underline',
               )}
             >
               {message.user_display_name || systemEvent?.user_display_name || 'System'}
-            </button>
+            </UnstyledButton>
             <span className="text-xs text-gray-500 dark:text-gray-400">
               {formatTime(message.created_at)}
             </span>
@@ -156,9 +155,8 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
 
           {/* Inline preview of pinned/unpinned message */}
           {referencedMessage?.message && (
-            <button
-              type="button"
-              onClick={() =>
+            <UnstyledButton
+              onPress={() =>
                 navigate(
                   `/workspaces/${workspaceId}/channels/${channelId}?msg=${referencedMessage.message.id}`,
                 )
@@ -192,7 +190,7 @@ export function SystemMessage({ message, channelId }: SystemMessageProps) {
                   )}
                 </div>
               </div>
-            </button>
+            </UnstyledButton>
           )}
 
           {/* Reactions */}

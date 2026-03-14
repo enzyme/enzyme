@@ -13,6 +13,7 @@ import {
   Avatar,
   Modal,
   Button,
+  UnstyledButton,
   toast,
   ContextMenu,
   useContextMenu,
@@ -66,14 +67,13 @@ function ClickableName({
   }
 
   return (
-    <button
-      type="button"
-      onClick={() => openProfile(userId)}
+    <UnstyledButton
+      onPress={() => openProfile(userId)}
       onContextMenu={onContextMenu}
       className="cursor-pointer font-medium text-gray-900 hover:underline dark:text-white"
     >
       {displayName}
-    </button>
+    </UnstyledButton>
   );
 }
 
@@ -340,13 +340,12 @@ export function MessageItem({
 
           {/* Broadcast thread reply indicator */}
           {message.thread_parent_id && message.also_send_to_channel && !isEditing && (
-            <button
-              type="button"
-              onClick={() => openThread(message.thread_parent_id!)}
+            <UnstyledButton
+              onPress={() => openThread(message.thread_parent_id!)}
               className="cursor-pointer text-xs text-blue-600 hover:underline dark:text-blue-400"
             >
               replied to a thread
-            </button>
+            </UnstyledButton>
           )}
 
           {/* Message content */}

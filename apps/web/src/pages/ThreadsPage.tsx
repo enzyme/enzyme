@@ -8,7 +8,7 @@ import {
 import { useUserThreads } from '../hooks/useThreads';
 import { useThreadPanel } from '../hooks/usePanel';
 import { usePageTitle } from '../hooks';
-import { Spinner, Avatar } from '../components/ui';
+import { Spinner, Avatar, UnstyledButton } from '../components/ui';
 import { cn, formatRelativeTime } from '../lib/utils';
 import type { ThreadMessage } from '@enzyme/api-client';
 
@@ -26,9 +26,8 @@ function ChannelIcon({ type }: { type: string }) {
 
 function ThreadItem({ thread, onOpen }: { thread: ThreadMessage; onOpen: (id: string) => void }) {
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(thread.id)}
+    <UnstyledButton
+      onPress={() => onOpen(thread.id)}
       className="block w-full border-b border-gray-200 p-4 text-left last:border-b-0 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
     >
       <div className="flex items-start gap-3">
@@ -94,7 +93,7 @@ function ThreadItem({ thread, onOpen }: { thread: ThreadMessage; onOpen: (id: st
           </div>
         </div>
       </div>
-    </button>
+    </UnstyledButton>
   );
 }
 
@@ -149,13 +148,13 @@ export function ThreadsPage() {
             ))}
             {hasNextPage && (
               <div className="p-4 text-center">
-                <button
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
+                <UnstyledButton
+                  onPress={() => fetchNextPage()}
+                  isDisabled={isFetchingNextPage}
                   className="text-sm text-blue-600 hover:underline disabled:opacity-50 dark:text-blue-400"
                 >
                   {isFetchingNextPage ? 'Loading...' : 'Load more'}
-                </button>
+                </UnstyledButton>
               </div>
             )}
           </>

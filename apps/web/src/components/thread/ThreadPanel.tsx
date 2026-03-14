@@ -39,6 +39,7 @@ import {
   MessageSkeleton,
   Modal,
   Button,
+  UnstyledButton,
   toast,
   ContextMenu,
   useContextMenu,
@@ -93,14 +94,13 @@ function ClickableName({
   }
 
   return (
-    <button
-      type="button"
-      onClick={() => openProfile(userId)}
+    <UnstyledButton
+      onPress={() => openProfile(userId)}
       onContextMenu={onContextMenu}
       className="cursor-pointer font-medium text-gray-900 hover:underline dark:text-white"
     >
       {displayName}
-    </button>
+    </UnstyledButton>
   );
 }
 
@@ -293,13 +293,13 @@ export function ThreadPanel({ messageId }: ThreadPanelProps) {
         ) : (
           <>
             {hasNextPage && (
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
+              <UnstyledButton
+                onPress={() => fetchNextPage()}
+                isDisabled={isFetchingNextPage}
                 className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
               >
                 {isFetchingNextPage ? 'Loading...' : 'Load more replies'}
-              </button>
+              </UnstyledButton>
             )}
 
             {threadMessages.map((message) => (
@@ -630,9 +630,9 @@ function ParentMessage({
           {Object.values(reactionGroups).length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {Object.values(reactionGroups).map(({ emoji, count, hasOwn }) => (
-                <button
+                <UnstyledButton
                   key={emoji}
-                  onClick={() => handleReactionClick(emoji, hasOwn)}
+                  onPress={() => handleReactionClick(emoji, hasOwn)}
                   className={cn(
                     'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-sm transition-colors',
                     hasOwn
@@ -644,7 +644,7 @@ function ParentMessage({
                     <EmojiDisplay emoji={emoji} customEmojiMap={customEmojiMap} />
                   </span>
                   <span className="text-xs text-gray-600 dark:text-gray-300">{count}</span>
-                </button>
+                </UnstyledButton>
               ))}
             </div>
           )}
@@ -1064,9 +1064,9 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
           {Object.values(reactionGroups).length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
               {Object.values(reactionGroups).map(({ emoji, count, hasOwn }) => (
-                <button
+                <UnstyledButton
                   key={emoji}
-                  onClick={() => handleReactionClick(emoji, hasOwn)}
+                  onPress={() => handleReactionClick(emoji, hasOwn)}
                   className={cn(
                     'inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs transition-colors',
                     hasOwn
@@ -1078,7 +1078,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
                     <EmojiDisplay emoji={emoji} customEmojiMap={customEmojiMap} />
                   </span>
                   <span className="text-gray-600 dark:text-gray-300">{count}</span>
-                </button>
+                </UnstyledButton>
               ))}
             </div>
           )}

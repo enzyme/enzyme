@@ -98,9 +98,9 @@ export function ChannelMentionBadge({ channelId, channels }: ChannelMentionBadge
           <span className={styles.name()}>{channel.name}</span>
         </div>
         {channel.description && <div className={styles.description()}>{channel.description}</div>}
-        <button type="button" onClick={handleGoToChannel} className={styles.goToChannel()}>
+        <UnstyledButton onPress={handleGoToChannel} className={styles.goToChannel()}>
           Go to channel
-        </button>
+        </UnstyledButton>
       </Popover>
     </DialogTrigger>
   );

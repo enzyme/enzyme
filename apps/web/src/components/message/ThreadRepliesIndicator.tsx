@@ -1,5 +1,5 @@
 import { ChevronRightIcon } from '@heroicons/react/24/outline';
-import { AvatarStack } from '../ui';
+import { AvatarStack, UnstyledButton } from '../ui';
 import { useThreadPanel } from '../../hooks/usePanel';
 import { formatRelativeTime } from '../../lib/utils';
 import type { ThreadParticipant } from '@enzyme/api-client';
@@ -24,8 +24,8 @@ export function ThreadRepliesIndicator({
   }
 
   return (
-    <button
-      onClick={() => openThread(messageId)}
+    <UnstyledButton
+      onPress={() => openThread(messageId)}
       className="group/thread -mx-2 mt-2 flex min-w-[300px] cursor-pointer items-center gap-2 rounded-lg border border-transparent px-2 py-1 hover:border hover:border-gray-200 hover:bg-white dark:hover:border-gray-700 dark:hover:bg-gray-900"
     >
       {threadParticipants && threadParticipants.length > 0 && (
@@ -40,6 +40,6 @@ export function ThreadRepliesIndicator({
         </span>
       )}
       <ChevronRightIcon className="ml-auto h-4 w-4 text-gray-400 opacity-0 group-hover/thread:opacity-100 dark:text-gray-500" />
-    </button>
+    </UnstyledButton>
   );
 }

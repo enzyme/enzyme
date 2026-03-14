@@ -336,9 +336,9 @@ export function WorkspaceSettingsModal({
             {/* Left sidebar nav */}
             <nav className="flex w-56 flex-shrink-0 flex-col gap-1 border-r border-gray-200 p-2 dark:border-gray-700">
               {visibleNavItems.map((item) => (
-                <button
+                <UnstyledButton
                   key={item.id}
-                  onClick={() => setSelectedTab(item.id)}
+                  onPress={() => setSelectedTab(item.id)}
                   className={cn(
                     'flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-left transition-colors',
                     selectedTab === item.id
@@ -353,7 +353,7 @@ export function WorkspaceSettingsModal({
                       {members.length}
                     </span>
                   )}
-                </button>
+                </UnstyledButton>
               ))}
             </nav>
 

@@ -69,9 +69,9 @@ export function UserMentionBadge({ userId, member }: UserMentionBadgeProps) {
             {member?.email && <span className={styles.email()}>{member.email}</span>}
           </div>
         </div>
-        <button type="button" onClick={handleViewProfile} className={styles.viewProfile()}>
+        <UnstyledButton onPress={handleViewProfile} className={styles.viewProfile()}>
           View profile
-        </button>
+        </UnstyledButton>
       </Popover>
     </DialogTrigger>
   );

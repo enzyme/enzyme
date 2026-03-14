@@ -1,4 +1,5 @@
 import { useState, useRef, useLayoutEffect, useCallback, type ReactNode } from 'react';
+import { UnstyledButton } from '../ui';
 import { cn } from '../../lib/utils';
 
 const COLLAPSED_HEIGHT = 600;
@@ -105,9 +106,8 @@ export function CollapsibleMessage({ children }: CollapsibleMessageProps) {
         )}
       </div>
       {isOverflowing && (
-        <button
-          type="button"
-          onClick={isExpanded ? handleCollapse : handleExpand}
+        <UnstyledButton
+          onPress={isExpanded ? handleCollapse : handleExpand}
           className="flex w-full cursor-pointer items-center justify-center gap-1 py-2 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
         >
           {isExpanded ? 'Show less' : 'Show more'}
@@ -121,7 +121,7 @@ export function CollapsibleMessage({ children }: CollapsibleMessageProps) {
           >
             <path d="M4 2 L8 6 L4 10 Z" />
           </svg>
-        </button>
+        </UnstyledButton>
       )}
     </div>
   );

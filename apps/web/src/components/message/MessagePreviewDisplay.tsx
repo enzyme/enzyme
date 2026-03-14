@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { LockClosedIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { Avatar } from '../ui';
+import { Avatar, UnstyledButton } from '../ui';
 import { MessageContent } from './MessageContent';
 import { DismissPreviewButton } from './DismissPreviewButton';
 import { formatRelativeTime } from '../../lib/utils';
@@ -60,9 +60,8 @@ export function MessagePreviewDisplay({
 
   return (
     <div className="group/preview relative mt-2 max-w-lg">
-      <button
-        type="button"
-        onClick={handleClick}
+      <UnstyledButton
+        onPress={handleClick}
         className="block w-full cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-white text-left dark:border-gray-700 dark:bg-gray-900"
       >
         <div className="flex">
@@ -108,7 +107,7 @@ export function MessagePreviewDisplay({
             )}
           </div>
         </div>
-      </button>
+      </UnstyledButton>
       {onDismiss && <DismissPreviewButton onDismiss={onDismiss} label="Remove message preview" />}
     </div>
   );
