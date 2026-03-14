@@ -32,7 +32,9 @@ import {
   FileTrigger,
   Popover,
   DialogTrigger,
+  Tooltip,
 } from '../ui';
+import type { EmojiSelectAttrs } from '../ui';
 import { Toolbar } from './Toolbar';
 import { LinkModal } from './LinkModal';
 import type { LinkModalData } from './LinkModal';
@@ -52,8 +54,6 @@ import { fromMrkdwn } from './serialization';
 import type { MentionOption } from '../../lib/mentions';
 import { SPECIAL_MENTIONS } from '../../lib/mentions';
 import { cn } from '../../lib/utils';
-import { Tooltip } from '../ui';
-import type { EmojiSelectAttrs } from '../ui';
 import type { CustomEmoji } from '@enzyme/api-client';
 
 function getScheduleQuickOptions(): { label: string; date: Date }[] {
