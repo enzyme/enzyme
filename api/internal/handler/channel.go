@@ -66,12 +66,14 @@ func (h *Handler) CreateChannel(ctx context.Context, request openapi.CreateChann
 		return nil, err
 	}
 
-	// Update SSE hub cache with creator as first member
+	apiCh := channelToAPI(ch)
+
+	// Update SSE hub cache with creator as first member and broadcast
 	if h.hub != nil {
 		h.hub.AddChannelMember(ch.ID, userID)
+		h.hub.BroadcastToWorkspace(ch.WorkspaceID, sse.NewChannelCreatedEvent(apiCh))
 	}
 
-	apiCh := channelToAPI(ch)
 	return openapi.CreateChannel200JSONResponse{
 		Channel: apiCh,
 	}, nil
@@ -314,6 +316,14 @@ func (h *Handler) ArchiveChannel(ctx context.Context, request openapi.ArchiveCha
 
 	if err := h.channelRepo.Archive(ctx, string(request.Id)); err != nil {
 		return nil, err
+	}
+
+	// Broadcast archived event so clients remove the channel from their lists
+	if h.hub != nil {
+		// Re-fetch to get the updated archived state
+		if archived, err := h.channelRepo.GetByID(ctx, string(request.Id)); err == nil {
+			h.hub.BroadcastToWorkspace(ch.WorkspaceID, sse.NewChannelArchivedEvent(channelToAPI(archived)))
+		}
 	}
 
 	// Audit log: channel archived
