@@ -86,25 +86,19 @@ func (h *Hub) Run(ctx context.Context) {
 			isFirstConnection := h.addClient(client)
 			if isFirstConnection {
 				// User just came online - broadcast to workspace
-				h.BroadcastToWorkspace(client.WorkspaceID, Event{
-					Type: EventPresenceChanged,
-					Data: map[string]interface{}{
-						"user_id": client.UserID,
-						"status":  "online",
-					},
-				})
+				h.BroadcastToWorkspace(client.WorkspaceID, NewPresenceChangedEvent(PresenceData{
+					UserId: client.UserID,
+					Status: Online,
+				}))
 			}
 		case client := <-h.unregister:
 			isLastConnection := h.removeClient(client)
 			if isLastConnection {
 				// User just went offline - broadcast to workspace
-				h.BroadcastToWorkspace(client.WorkspaceID, Event{
-					Type: EventPresenceChanged,
-					Data: map[string]interface{}{
-						"user_id": client.UserID,
-						"status":  "offline",
-					},
-				})
+				h.BroadcastToWorkspace(client.WorkspaceID, NewPresenceChangedEvent(PresenceData{
+					UserId: client.UserID,
+					Status: Offline,
+				}))
 			}
 		}
 	}

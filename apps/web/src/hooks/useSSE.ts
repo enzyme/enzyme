@@ -444,7 +444,7 @@ export function useSSE(workspaceId: string | undefined) {
 
     // Handle custom emoji events
     connection.on('emoji.created', (event) => {
-      const emoji = event.data as CustomEmoji;
+      const emoji = event.data;
       queryClient.setQueryData(
         ['custom-emojis', workspaceId],
         (old: { emojis: CustomEmoji[] } | undefined) => {
@@ -460,7 +460,7 @@ export function useSSE(workspaceId: string | undefined) {
     });
 
     connection.on('emoji.deleted', (event) => {
-      const { id } = event.data as { id: string; name: string };
+      const { id } = event.data;
       queryClient.setQueryData(
         ['custom-emojis', workspaceId],
         (old: { emojis: CustomEmoji[] } | undefined) => {
@@ -606,7 +606,7 @@ export function useSSE(workspaceId: string | undefined) {
 
     // Handle initial presence (sent on connection with list of online users)
     connection.on('presence.initial', (event) => {
-      const onlineUserIds = event.data.online_user_ids as string[];
+      const onlineUserIds = event.data.online_user_ids;
       for (const userId of onlineUserIds) {
         setUserPresence(userId, 'online');
       }
@@ -614,7 +614,7 @@ export function useSSE(workspaceId: string | undefined) {
 
     // Handle notification events
     connection.on('notification', (event) => {
-      const notification = event.data as NotificationData;
+      const notification = event.data;
 
       // Increment notification_count for the channel
       if (notification.channel_id && notification.type !== 'thread_reply') {

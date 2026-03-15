@@ -9,6 +9,7 @@ WEB_DIST_DST=./internal/web/dist
 generate:
 	@mkdir -p internal/openapi
 	oapi-codegen --config oapi-codegen.yaml openapi.yaml
+	oapi-codegen --config oapi-codegen-sse.yaml openapi.yaml
 
 generate-types: generate
 

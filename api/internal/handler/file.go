@@ -229,10 +229,7 @@ func (h *Handler) DeleteFile(ctx context.Context, request openapi.DeleteFileRequ
 			if h.hub != nil {
 				if sch, err := h.channelRepo.GetByID(ctx, smsg.ChannelID); err == nil {
 					apiMsg := scheduledMessageToAPI(&smsg)
-					h.hub.BroadcastToUser(sch.WorkspaceID, smsg.UserID, sse.Event{
-						Type: sse.EventScheduledMessageUpdated,
-						Data: apiMsg,
-					})
+					h.hub.BroadcastToUser(sch.WorkspaceID, smsg.UserID, sse.NewScheduledMessageUpdatedEvent(apiMsg))
 				}
 			}
 		}

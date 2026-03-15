@@ -83,13 +83,10 @@ func (h *Handler) BanUser(ctx context.Context, request openapi.BanUserRequestObj
 
 	// Broadcast SSE event
 	if h.hub != nil {
-		h.hub.BroadcastToWorkspace(string(request.Wid), sse.Event{
-			Type: sse.EventMemberBanned,
-			Data: map[string]interface{}{
-				"user_id":      targetUserID,
-				"workspace_id": string(request.Wid),
-			},
-		})
+		h.hub.BroadcastToWorkspace(string(request.Wid), sse.NewMemberBannedEvent(sse.MemberBannedData{
+			UserID:      targetUserID,
+			WorkspaceID: string(request.Wid),
+		}))
 
 		// Disconnect the banned user's SSE connections so they stop receiving events
 		h.hub.DisconnectUserClients(string(request.Wid), targetUserID)
@@ -144,13 +141,10 @@ func (h *Handler) UnbanUser(ctx context.Context, request openapi.UnbanUserReques
 
 	// Broadcast SSE event
 	if h.hub != nil {
-		h.hub.BroadcastToWorkspace(string(request.Wid), sse.Event{
-			Type: sse.EventMemberUnbanned,
-			Data: map[string]interface{}{
-				"user_id":      request.Body.UserId,
-				"workspace_id": string(request.Wid),
-			},
-		})
+		h.hub.BroadcastToWorkspace(string(request.Wid), sse.NewMemberUnbannedEvent(sse.MemberUnbannedData{
+			UserID:      request.Body.UserId,
+			WorkspaceID: string(request.Wid),
+		}))
 	}
 
 	return openapi.UnbanUser200JSONResponse{Success: true}, nil

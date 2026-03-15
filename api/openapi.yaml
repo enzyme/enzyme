@@ -2571,7 +2571,7 @@ paths:
           content:
             text/event-stream:
               schema:
-                type: string
+                $ref: '#/components/schemas/SSEEvent'
 
   /workspaces/{wid}/typing/start:
     post:
@@ -3471,6 +3471,8 @@ components:
         - $ref: '#/components/schemas/SSEEventMemberUnbanned'
         - $ref: '#/components/schemas/SSEEventMemberLeft'
         - $ref: '#/components/schemas/SSEEventMemberRoleChanged'
+        - $ref: '#/components/schemas/SSEEventWorkspaceUpdated'
+        - $ref: '#/components/schemas/SSEEventScheduledMessageFailed'
       discriminator:
         propertyName: type
         mapping:
@@ -3504,6 +3506,8 @@ components:
           member.unbanned: '#/components/schemas/SSEEventMemberUnbanned'
           member.left: '#/components/schemas/SSEEventMemberLeft'
           member.role_changed: '#/components/schemas/SSEEventMemberRoleChanged'
+          workspace.updated: '#/components/schemas/SSEEventWorkspaceUpdated'
+          scheduled_message.failed: '#/components/schemas/SSEEventScheduledMessageFailed'
 
     SSEEventConnected:
       type: object
@@ -3646,9 +3650,11 @@ components:
           enum: [channel.member_added]
         data:
           type: object
-          required: [channel_id]
+          required: [channel_id, user_id]
           properties:
             channel_id:
+              type: string
+            user_id:
               type: string
 
     SSEEventChannelMemberRemoved:
@@ -3662,9 +3668,11 @@ components:
           enum: [channel.member_removed]
         data:
           type: object
-          required: [channel_id]
+          required: [channel_id, user_id]
           properties:
             channel_id:
+              type: string
+            user_id:
               type: string
 
     SSEEventChannelRead:
@@ -3944,6 +3952,38 @@ components:
             old_role:
               type: string
             new_role:
+              type: string
+
+    SSEEventWorkspaceUpdated:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [workspace.updated]
+        data:
+          $ref: '#/components/schemas/Workspace'
+
+    SSEEventScheduledMessageFailed:
+      type: object
+      required: [type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [scheduled_message.failed]
+        data:
+          type: object
+          required: [id, channel_id, error]
+          properties:
+            id:
+              type: string
+            channel_id:
+              type: string
+            error:
               type: string
 
     NotificationData:
