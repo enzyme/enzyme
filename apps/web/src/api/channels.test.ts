@@ -8,8 +8,7 @@ const mockApiClient = vi.hoisted(() => ({
 
 vi.mock('@enzyme/api-client', async (importOriginal) => {
   const original = await importOriginal<typeof import('@enzyme/api-client')>();
-  const { mockThrowIfError } = await import('../test-utils/mocks/api-client');
-  return { ...original, apiClient: mockApiClient, throwIfError: mockThrowIfError };
+  return { ...original, apiClient: mockApiClient };
 });
 
 import { channelsApi } from './channels';

@@ -72,6 +72,9 @@ export async function throwIfError<T>(
   return data;
 }
 
+// openapi-fetch lacks typed multipart support, so we bypass body type
+// checking with `as never` and provide a custom serializer that returns
+// the FormData directly instead of JSON-encoding it.
 export function multipartRequest(formData: FormData) {
   return {
     body: formData as never,
