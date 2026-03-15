@@ -488,9 +488,7 @@ export function useSSE(workspaceId: string | undefined) {
     connection.on('scheduled_message.sent', (event) => {
       queryClient.invalidateQueries({ queryKey: ['scheduled-messages', workspaceId] });
       // Also invalidate the relevant channel messages
-      if (event.data?.channel_id) {
-        queryClient.invalidateQueries({ queryKey: ['messages', event.data.channel_id] });
-      }
+      queryClient.invalidateQueries({ queryKey: ['messages', event.data.channel_id] });
     });
     connection.on('scheduled_message.failed', () => {
       queryClient.invalidateQueries({ queryKey: ['scheduled-messages', workspaceId] });

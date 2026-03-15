@@ -73,17 +73,13 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 	defer h.hub.Unregister(client)
 
 	// Send connected event
-	connectedEvent := NewConnectedEvent(ConnectedData{ClientID: client.ID})
-	connectedEvent.ID = ulid.Make().String()
-	h.writeEvent(w, flusher, connectedEvent)
+	h.writeEvent(w, flusher, NewConnectedEvent(ConnectedData{ClientID: client.ID}))
 
 	// Send initial presence - list of currently online users
 	onlineUserIDs := h.hub.GetConnectedUserIDs(workspaceID)
-	presenceInitialEvent := NewPresenceInitialEvent(PresenceInitialData{
+	h.writeEvent(w, flusher, NewPresenceInitialEvent(PresenceInitialData{
 		OnlineUserIds: onlineUserIDs,
-	})
-	presenceInitialEvent.ID = ulid.Make().String()
-	h.writeEvent(w, flusher, presenceInitialEvent)
+	}))
 
 	// Handle reconnection - replay missed events
 	lastEventID := r.Header.Get("Last-Event-ID")
@@ -109,17 +105,16 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 		case event := <-client.Send:
 			h.writeEvent(w, flusher, event)
 		case <-heartbeat.C:
-			heartbeatEvent := NewHeartbeatEvent(HeartbeatData{Timestamp: time.Now().Unix()})
-			heartbeatEvent.ID = ulid.Make().String()
-			h.writeEvent(w, flusher, heartbeatEvent)
+			h.writeEvent(w, flusher, NewHeartbeatEvent(HeartbeatData{Timestamp: time.Now().Unix()}))
 		}
 	}
 }
 
 func (h *Handler) writeEvent(w http.ResponseWriter, flusher http.Flusher, event Event) {
-	if event.ID != "" {
-		_, _ = fmt.Fprintf(w, "id: %s\n", event.ID)
+	if event.ID == "" {
+		event.ID = ulid.Make().String()
 	}
+	_, _ = fmt.Fprintf(w, "id: %s\n", event.ID)
 
 	// Marshal the full event (including type) so the client can dispatch by type
 	data, err := json.Marshal(event)

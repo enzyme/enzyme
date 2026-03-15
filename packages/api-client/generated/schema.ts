@@ -1852,6 +1852,9 @@ export interface components {
              * @enum {string}
              */
             type: "connected";
+            data: {
+                client_id: string;
+            };
         };
         SSEEventHeartbeat: {
             id?: string;
@@ -1860,6 +1863,10 @@ export interface components {
              * @enum {string}
              */
             type: "heartbeat";
+            data: {
+                /** Format: int64 */
+                timestamp: number;
+            };
         };
         SSEEventMessageNew: {
             id?: string;

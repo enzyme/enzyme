@@ -3511,23 +3511,36 @@ components:
 
     SSEEventConnected:
       type: object
-      required: [type]
+      required: [type, data]
       properties:
         id:
           type: string
         type:
           type: string
           enum: [connected]
+        data:
+          type: object
+          required: [client_id]
+          properties:
+            client_id:
+              type: string
 
     SSEEventHeartbeat:
       type: object
-      required: [type]
+      required: [type, data]
       properties:
         id:
           type: string
         type:
           type: string
           enum: [heartbeat]
+        data:
+          type: object
+          required: [timestamp]
+          properties:
+            timestamp:
+              type: integer
+              format: int64
 
     SSEEventMessageNew:
       type: object

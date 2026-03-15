@@ -1,10 +1,68 @@
 package sse
 
 import (
+	"time"
+
 	"github.com/enzyme/api/internal/openapi"
 )
 
-// -- Data types for events with inline schemas --
+// -- Data types for events with inline/simple schemas --
+
+// PresenceStatus defines the online/offline status of a user.
+type PresenceStatus string
+
+const (
+	Online  PresenceStatus = "online"
+	Offline PresenceStatus = "offline"
+)
+
+// PresenceData is the data payload for presence.changed events.
+type PresenceData struct {
+	Status PresenceStatus `json:"status"`
+	UserId string         `json:"user_id"`
+}
+
+// PresenceInitialData is the data payload for presence.initial events.
+type PresenceInitialData struct {
+	OnlineUserIds []string `json:"online_user_ids"`
+}
+
+// TypingEventData is the data payload for typing.start and typing.stop events.
+type TypingEventData struct {
+	ChannelId       string  `json:"channel_id"`
+	UserDisplayName *string `json:"user_display_name,omitempty"`
+	UserId          string  `json:"user_id"`
+}
+
+// ChannelReadEventData is the data payload for channel.read events.
+type ChannelReadEventData struct {
+	ChannelId         string `json:"channel_id"`
+	LastReadMessageId string `json:"last_read_message_id"`
+}
+
+// NotificationDataType defines the type of notification.
+type NotificationDataType string
+
+// NotificationData is the data payload for notification events.
+type NotificationData struct {
+	ChannelId      string               `json:"channel_id"`
+	ChannelName    *string              `json:"channel_name,omitempty"`
+	MessageId      string               `json:"message_id"`
+	Preview        *string              `json:"preview,omitempty"`
+	SenderName     *string              `json:"sender_name,omitempty"`
+	ThreadParentId *string              `json:"thread_parent_id,omitempty"`
+	Type           NotificationDataType `json:"type"`
+}
+
+// ConnectedData is the data payload for connected events.
+type ConnectedData struct {
+	ClientID string `json:"client_id"`
+}
+
+// HeartbeatData is the data payload for heartbeat events.
+type HeartbeatData struct {
+	Timestamp int64 `json:"timestamp"`
+}
 
 // MessageDeletedData is the data payload for message.deleted events.
 type MessageDeletedData struct {
@@ -27,12 +85,12 @@ type ChannelMemberData struct {
 
 // MemberBannedData is the data payload for member.banned events.
 type MemberBannedData struct {
-	UserID        string  `json:"user_id"`
-	WorkspaceID   string  `json:"workspace_id"`
-	BannedBy      *string `json:"banned_by,omitempty"`
-	Reason        *string `json:"reason,omitempty"`
-	ExpiresAt     *string `json:"expires_at,omitempty"`
-	WorkspaceName *string `json:"workspace_name,omitempty"`
+	UserID        string     `json:"user_id"`
+	WorkspaceID   string     `json:"workspace_id"`
+	BannedBy      *string    `json:"banned_by,omitempty"`
+	Reason        *string    `json:"reason,omitempty"`
+	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
+	WorkspaceName *string    `json:"workspace_name,omitempty"`
 }
 
 // MemberUnbannedData is the data payload for member.unbanned events.
@@ -79,164 +137,126 @@ type ScheduledMessageFailedData struct {
 	Error     string `json:"error"`
 }
 
-// ConnectedData is the data payload for connected events.
-type ConnectedData struct {
-	ClientID string `json:"client_id"`
-}
+// -- Typed constructors --
+// Each constructor enforces that the correct payload type is paired with its
+// event type constant. Passing the wrong type is a compile error.
 
-// HeartbeatData is the data payload for heartbeat events.
-type HeartbeatData struct {
-	Timestamp int64 `json:"timestamp"`
-}
-
-// -- Constructors --
-
-// NewConnectedEvent creates a connected event.
 func NewConnectedEvent(data ConnectedData) Event {
 	return Event{Type: EventConnected, Data: data}
 }
 
-// NewHeartbeatEvent creates a heartbeat event.
 func NewHeartbeatEvent(data HeartbeatData) Event {
 	return Event{Type: EventHeartbeat, Data: data}
 }
 
-// NewMessageNewEvent creates a message.new event.
 func NewMessageNewEvent(data openapi.MessageWithUser) Event {
 	return Event{Type: EventMessageNew, Data: data}
 }
 
-// NewMessageUpdatedEvent creates a message.updated event.
 func NewMessageUpdatedEvent(data openapi.MessageWithUser) Event {
 	return Event{Type: EventMessageUpdated, Data: data}
 }
 
-// NewMessageDeletedEvent creates a message.deleted event.
 func NewMessageDeletedEvent(data MessageDeletedData) Event {
 	return Event{Type: EventMessageDeleted, Data: data}
 }
 
-// NewReactionAddedEvent creates a reaction.added event.
 func NewReactionAddedEvent(data openapi.Reaction) Event {
 	return Event{Type: EventReactionAdded, Data: data}
 }
 
-// NewReactionRemovedEvent creates a reaction.removed event.
 func NewReactionRemovedEvent(data ReactionRemovedData) Event {
 	return Event{Type: EventReactionRemoved, Data: data}
 }
 
-// NewChannelUpdatedEvent creates a channel.updated event.
 func NewChannelUpdatedEvent(data openapi.Channel) Event {
 	return Event{Type: EventChannelUpdated, Data: data}
 }
 
-// NewChannelMemberAddedEvent creates a channel.member_added event.
 func NewChannelMemberAddedEvent(data ChannelMemberData) Event {
 	return Event{Type: EventMemberAdded, Data: data}
 }
 
-// NewChannelMemberRemovedEvent creates a channel.member_removed event.
 func NewChannelMemberRemovedEvent(data ChannelMemberData) Event {
 	return Event{Type: EventMemberRemoved, Data: data}
 }
 
-// NewChannelReadEvent creates a channel.read event.
 func NewChannelReadEvent(data ChannelReadEventData) Event {
 	return Event{Type: EventChannelRead, Data: data}
 }
 
-// NewTypingStartEvent creates a typing.start event.
 func NewTypingStartEvent(data TypingEventData) Event {
 	return Event{Type: EventTypingStart, Data: data}
 }
 
-// NewTypingStopEvent creates a typing.stop event.
 func NewTypingStopEvent(data TypingEventData) Event {
 	return Event{Type: EventTypingStop, Data: data}
 }
 
-// NewPresenceChangedEvent creates a presence.changed event.
 func NewPresenceChangedEvent(data PresenceData) Event {
 	return Event{Type: EventPresenceChanged, Data: data}
 }
 
-// NewPresenceInitialEvent creates a presence.initial event.
 func NewPresenceInitialEvent(data PresenceInitialData) Event {
 	return Event{Type: EventPresenceInitial, Data: data}
 }
 
-// NewNotificationEvent creates a notification event.
 func NewNotificationEvent(data NotificationData) Event {
 	return Event{Type: EventNotification, Data: data}
 }
 
-// NewEmojiCreatedEvent creates an emoji.created event.
 func NewEmojiCreatedEvent(data openapi.CustomEmoji) Event {
 	return Event{Type: EventEmojiCreated, Data: data}
 }
 
-// NewEmojiDeletedEvent creates an emoji.deleted event.
 func NewEmojiDeletedEvent(data EmojiDeletedData) Event {
 	return Event{Type: EventEmojiDeleted, Data: data}
 }
 
-// NewMessagePinnedEvent creates a message.pinned event.
 func NewMessagePinnedEvent(data openapi.MessageWithUser) Event {
 	return Event{Type: EventMessagePinned, Data: data}
 }
 
-// NewMessageUnpinnedEvent creates a message.unpinned event.
 func NewMessageUnpinnedEvent(data openapi.MessageWithUser) Event {
 	return Event{Type: EventMessageUnpinned, Data: data}
 }
 
-// NewMemberBannedEvent creates a member.banned event.
 func NewMemberBannedEvent(data MemberBannedData) Event {
 	return Event{Type: EventMemberBanned, Data: data}
 }
 
-// NewMemberUnbannedEvent creates a member.unbanned event.
 func NewMemberUnbannedEvent(data MemberUnbannedData) Event {
 	return Event{Type: EventMemberUnbanned, Data: data}
 }
 
-// NewMemberLeftEvent creates a member.left event.
 func NewMemberLeftEvent(data MemberLeftData) Event {
 	return Event{Type: EventMemberLeft, Data: data}
 }
 
-// NewMemberRoleChangedEvent creates a member.role_changed event.
 func NewMemberRoleChangedEvent(data MemberRoleChangedData) Event {
 	return Event{Type: EventMemberRoleChanged, Data: data}
 }
 
-// NewWorkspaceUpdatedEvent creates a workspace.updated event.
 func NewWorkspaceUpdatedEvent(data openapi.Workspace) Event {
 	return Event{Type: EventWorkspaceUpdated, Data: data}
 }
 
-// NewScheduledMessageCreatedEvent creates a scheduled_message.created event.
 func NewScheduledMessageCreatedEvent(data openapi.ScheduledMessage) Event {
 	return Event{Type: EventScheduledMessageCreated, Data: data}
 }
 
-// NewScheduledMessageUpdatedEvent creates a scheduled_message.updated event.
 func NewScheduledMessageUpdatedEvent(data openapi.ScheduledMessage) Event {
 	return Event{Type: EventScheduledMessageUpdated, Data: data}
 }
 
-// NewScheduledMessageDeletedEvent creates a scheduled_message.deleted event.
 func NewScheduledMessageDeletedEvent(data ScheduledMessageDeletedData) Event {
 	return Event{Type: EventScheduledMessageDeleted, Data: data}
 }
 
-// NewScheduledMessageSentEvent creates a scheduled_message.sent event.
 func NewScheduledMessageSentEvent(data ScheduledMessageSentData) Event {
 	return Event{Type: EventScheduledMessageSent, Data: data}
 }
 
-// NewScheduledMessageFailedEvent creates a scheduled_message.failed event.
 func NewScheduledMessageFailedEvent(data ScheduledMessageFailedData) Event {
 	return Event{Type: EventScheduledMessageFailed, Data: data}
 }
