@@ -378,8 +378,20 @@ export function useSSE(workspaceId: string | undefined) {
     });
 
     // Handle channel events
-    connection.on('channel.created', () => {
-      queryClient.invalidateQueries({ queryKey: ['channels', workspaceId] });
+    connection.on('channel.created', (event) => {
+      const channel = event.data;
+      queryClient.setQueryData(
+        ['channels', workspaceId],
+        (old: { channels: ChannelWithMembership[] } | undefined) => {
+          if (!old) return old;
+          // Avoid duplicates
+          if (old.channels.some((c) => c.id === channel.id)) return old;
+          return {
+            ...old,
+            channels: [...old.channels, { ...channel, unread_count: 0, notification_count: 0 }],
+          };
+        },
+      );
     });
     connection.on('channels.invalidate', () => {
       queryClient.invalidateQueries({ queryKey: ['channels', workspaceId] });
@@ -407,8 +419,18 @@ export function useSSE(workspaceId: string | undefined) {
       );
     });
 
-    connection.on('channel.archived', () => {
-      queryClient.invalidateQueries({ queryKey: ['channels', workspaceId] });
+    connection.on('channel.archived', (event) => {
+      const channel = event.data;
+      queryClient.setQueryData(
+        ['channels', workspaceId],
+        (old: { channels: ChannelWithMembership[] } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            channels: old.channels.filter((c) => c.id !== channel.id),
+          };
+        },
+      );
     });
 
     connection.on('channel.member_added', (event) => {

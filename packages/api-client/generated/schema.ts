@@ -2144,6 +2144,7 @@ export interface components {
              * @enum {string}
              */
             type: "channels.invalidate";
+            data: Record<string, never>;
         };
         ConnectedData: {
             client_id: string;

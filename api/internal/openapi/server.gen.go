@@ -824,6 +824,7 @@ type SSEEventChannelUpdatedType string
 
 // SSEEventChannelsInvalidate defines model for SSEEventChannelsInvalidate.
 type SSEEventChannelsInvalidate struct {
+	Data map[string]interface{}         `json:"data"`
 	Id   *string                        `json:"id,omitempty"`
 	Type SSEEventChannelsInvalidateType `json:"type"`
 }

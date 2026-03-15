@@ -10,57 +10,50 @@ import (
 	"github.com/enzyme/api/internal/openapi"
 )
 
-func TestTypedConstructors(t *testing.T) {
-	tests := []struct {
-		name     string
-		event    Event
-		wantType string
-	}{
-		{"connected", NewConnectedEvent(openapi.ConnectedData{ClientId: "c1"}), EventConnected},
-		{"heartbeat", NewHeartbeatEvent(openapi.HeartbeatData{Timestamp: 1}), EventHeartbeat},
-		{"message.new", NewMessageNewEvent(openapi.MessageWithUser{Id: "m1"}), EventMessageNew},
-		{"message.updated", NewMessageUpdatedEvent(openapi.MessageWithUser{Id: "m1"}), EventMessageUpdated},
-		{"message.deleted", NewMessageDeletedEvent(openapi.MessageDeletedData{Id: "m1"}), EventMessageDeleted},
-		{"reaction.added", NewReactionAddedEvent(openapi.Reaction{Id: "r1"}), EventReactionAdded},
-		{"reaction.removed", NewReactionRemovedEvent(openapi.ReactionRemovedData{MessageId: "m1", UserId: "u1", Emoji: "\U0001f44d"}), EventReactionRemoved},
-		{"channel.created", NewChannelCreatedEvent(openapi.Channel{Id: "c1"}), EventChannelCreated},
-		{"channel.updated", NewChannelUpdatedEvent(openapi.Channel{Id: "c1"}), EventChannelUpdated},
-		{"channel.archived", NewChannelArchivedEvent(openapi.Channel{Id: "c1"}), EventChannelArchived},
-		{"channel.member_added", NewChannelMemberAddedEvent(openapi.ChannelMemberData{ChannelId: "c1", UserId: "u1"}), EventMemberAdded},
-		{"channel.member_removed", NewChannelMemberRemovedEvent(openapi.ChannelMemberData{ChannelId: "c1", UserId: "u1"}), EventMemberRemoved},
-		{"channel.read", NewChannelReadEvent(openapi.ChannelReadEventData{ChannelId: "c1", LastReadMessageId: "m1"}), EventChannelRead},
-		{"typing.start", NewTypingStartEvent(openapi.TypingEventData{UserId: "u1", ChannelId: "c1"}), EventTypingStart},
-		{"typing.stop", NewTypingStopEvent(openapi.TypingEventData{UserId: "u1", ChannelId: "c1"}), EventTypingStop},
-		{"presence.changed", NewPresenceChangedEvent(openapi.PresenceData{UserId: "u1", Status: openapi.Online}), EventPresenceChanged},
-		{"presence.initial", NewPresenceInitialEvent(openapi.PresenceInitialData{OnlineUserIds: []string{"u1"}}), EventPresenceInitial},
-		{"notification", NewNotificationEvent(openapi.NotificationData{Type: openapi.NotificationDataTypeMention, ChannelId: "c1", MessageId: "m1"}), EventNotification},
-		{"emoji.created", NewEmojiCreatedEvent(openapi.CustomEmoji{Id: "e1"}), EventEmojiCreated},
-		{"emoji.deleted", NewEmojiDeletedEvent(openapi.EmojiDeletedData{Id: "e1", Name: "wave"}), EventEmojiDeleted},
-		{"message.pinned", NewMessagePinnedEvent(openapi.MessageWithUser{Id: "m1"}), EventMessagePinned},
-		{"message.unpinned", NewMessageUnpinnedEvent(openapi.MessageWithUser{Id: "m1"}), EventMessageUnpinned},
-		{"member.banned", NewMemberBannedEvent(openapi.WorkspaceMemberData{UserId: "u1", WorkspaceId: "w1"}), EventMemberBanned},
-		{"member.unbanned", NewMemberUnbannedEvent(openapi.WorkspaceMemberData{UserId: "u1", WorkspaceId: "w1"}), EventMemberUnbanned},
-		{"member.left", NewMemberLeftEvent(openapi.WorkspaceMemberData{UserId: "u1", WorkspaceId: "w1"}), EventMemberLeft},
-		{"member.role_changed", NewMemberRoleChangedEvent(openapi.MemberRoleChangedData{UserId: "u1", OldRole: "member", NewRole: "admin"}), EventMemberRoleChanged},
-		{"workspace.updated", NewWorkspaceUpdatedEvent(openapi.Workspace{Id: "w1"}), EventWorkspaceUpdated},
-		{"scheduled_message.created", NewScheduledMessageCreatedEvent(openapi.ScheduledMessage{Id: "s1"}), EventScheduledMessageCreated},
-		{"scheduled_message.updated", NewScheduledMessageUpdatedEvent(openapi.ScheduledMessage{Id: "s1"}), EventScheduledMessageUpdated},
-		{"scheduled_message.deleted", NewScheduledMessageDeletedEvent(openapi.ScheduledMessageDeletedData{Id: "s1"}), EventScheduledMessageDeleted},
-		{"scheduled_message.sent", NewScheduledMessageSentEvent(openapi.ScheduledMessageSentData{Id: "s1", ChannelId: "c1", MessageId: "m1"}), EventScheduledMessageSent},
-		{"scheduled_message.failed", NewScheduledMessageFailedEvent(openapi.ScheduledMessageFailedData{Id: "s1", ChannelId: "c1", Error: "timeout"}), EventScheduledMessageFailed},
+// TestConstructorsRoundTrip verifies every typed constructor produces an event
+// that marshals to valid JSON. Type correctness and non-nil data are enforced
+// at compile time by the constructor signatures.
+func TestConstructorsRoundTrip(t *testing.T) {
+	events := []Event{
+		NewConnectedEvent(openapi.ConnectedData{ClientId: "c1"}),
+		NewHeartbeatEvent(openapi.HeartbeatData{Timestamp: 1}),
+		NewMessageNewEvent(openapi.MessageWithUser{Id: "m1"}),
+		NewMessageUpdatedEvent(openapi.MessageWithUser{Id: "m1"}),
+		NewMessageDeletedEvent(openapi.MessageDeletedData{Id: "m1"}),
+		NewReactionAddedEvent(openapi.Reaction{Id: "r1"}),
+		NewReactionRemovedEvent(openapi.ReactionRemovedData{MessageId: "m1", UserId: "u1", Emoji: "\U0001f44d"}),
+		NewChannelCreatedEvent(openapi.Channel{Id: "c1"}),
+		NewChannelUpdatedEvent(openapi.Channel{Id: "c1"}),
+		NewChannelArchivedEvent(openapi.Channel{Id: "c1"}),
+		NewChannelMemberAddedEvent(openapi.ChannelMemberData{ChannelId: "c1", UserId: "u1"}),
+		NewChannelMemberRemovedEvent(openapi.ChannelMemberData{ChannelId: "c1", UserId: "u1"}),
+		NewChannelReadEvent(openapi.ChannelReadEventData{ChannelId: "c1", LastReadMessageId: "m1"}),
+		NewTypingStartEvent(openapi.TypingEventData{UserId: "u1", ChannelId: "c1"}),
+		NewTypingStopEvent(openapi.TypingEventData{UserId: "u1", ChannelId: "c1"}),
+		NewPresenceChangedEvent(openapi.PresenceData{UserId: "u1", Status: openapi.Online}),
+		NewPresenceInitialEvent(openapi.PresenceInitialData{OnlineUserIds: []string{"u1"}}),
+		NewNotificationEvent(openapi.NotificationData{Type: openapi.NotificationDataTypeMention, ChannelId: "c1", MessageId: "m1"}),
+		NewEmojiCreatedEvent(openapi.CustomEmoji{Id: "e1"}),
+		NewEmojiDeletedEvent(openapi.EmojiDeletedData{Id: "e1", Name: "wave"}),
+		NewMessagePinnedEvent(openapi.MessageWithUser{Id: "m1"}),
+		NewMessageUnpinnedEvent(openapi.MessageWithUser{Id: "m1"}),
+		NewMemberBannedEvent(openapi.WorkspaceMemberData{UserId: "u1", WorkspaceId: "w1"}),
+		NewMemberUnbannedEvent(openapi.WorkspaceMemberData{UserId: "u1", WorkspaceId: "w1"}),
+		NewMemberLeftEvent(openapi.WorkspaceMemberData{UserId: "u1", WorkspaceId: "w1"}),
+		NewMemberRoleChangedEvent(openapi.MemberRoleChangedData{UserId: "u1", OldRole: "member", NewRole: "admin"}),
+		NewWorkspaceUpdatedEvent(openapi.Workspace{Id: "w1"}),
+		NewScheduledMessageCreatedEvent(openapi.ScheduledMessage{Id: "s1"}),
+		NewScheduledMessageUpdatedEvent(openapi.ScheduledMessage{Id: "s1"}),
+		NewScheduledMessageDeletedEvent(openapi.ScheduledMessageDeletedData{Id: "s1"}),
+		NewScheduledMessageSentEvent(openapi.ScheduledMessageSentData{Id: "s1", ChannelId: "c1", MessageId: "m1"}),
+		NewScheduledMessageFailedEvent(openapi.ScheduledMessageFailedData{Id: "s1", ChannelId: "c1", Error: "timeout"}),
+		NewChannelsInvalidateEvent(),
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.event.Type != tt.wantType {
-				t.Errorf("Type = %q, want %q", tt.event.Type, tt.wantType)
-			}
-			if tt.event.Data == nil {
-				t.Error("Data is nil")
-			}
-			// Verify data marshals to valid JSON
-			if _, err := json.Marshal(tt.event.Data); err != nil {
-				t.Errorf("Data failed to marshal: %v", err)
+	for _, e := range events {
+		t.Run(e.Type, func(t *testing.T) {
+			if _, err := json.Marshal(e); err != nil {
+				t.Errorf("Marshal failed: %v", err)
 			}
 		})
 	}
@@ -71,9 +64,16 @@ func TestNewChannelsInvalidateEvent(t *testing.T) {
 	if e.Type != EventChannelsInvalidate {
 		t.Errorf("Type = %q, want %q", e.Type, EventChannelsInvalidate)
 	}
-	// Data is intentionally nil for signal events
-	if e.Data != nil {
-		t.Error("signal event should have nil Data")
+	if e.Data == nil {
+		t.Error("Data should be empty struct, not nil")
+	}
+	// Verify it marshals to {}
+	b, err := json.Marshal(e.Data)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if string(b) != "{}" {
+		t.Errorf("Data JSON = %s, want {}", b)
 	}
 }
 

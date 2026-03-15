@@ -3908,13 +3908,15 @@ components:
 
     SSEEventChannelsInvalidate:
       type: object
-      required: [type]
+      required: [type, data]
       properties:
         id:
           type: string
         type:
           type: string
           enum: [channels.invalidate]
+        data:
+          type: object
 
     ConnectedData:
       type: object

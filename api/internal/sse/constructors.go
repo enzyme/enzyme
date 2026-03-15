@@ -40,11 +40,11 @@ func NewChannelCreatedEvent(data openapi.Channel) Event {
 	return Event{Type: EventChannelCreated, Data: data}
 }
 
-// NewChannelsInvalidateEvent sends a channels.invalidate signal with no payload.
+// NewChannelsInvalidateEvent sends a channels.invalidate signal.
 // Used when multiple channels are created in a batch (e.g., auto-DMs on workspace join)
 // and the frontend should refetch its channel list.
 func NewChannelsInvalidateEvent() Event {
-	return Event{Type: EventChannelsInvalidate}
+	return Event{Type: EventChannelsInvalidate, Data: struct{}{}}
 }
 
 func NewChannelUpdatedEvent(data openapi.Channel) Event {

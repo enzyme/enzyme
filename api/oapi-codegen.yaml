@@ -6,6 +6,10 @@ generate:
   strict-server: true
   embedded-spec: false
 output-options:
+  # skip-prune keeps SSE data schemas (e.g. ConnectedData, TypingEventData) in
+  # the generated output even though no REST endpoint references them. Without
+  # this flag oapi-codegen would tree-shake them because the SSE tag is excluded
+  # from chi-server generation via exclude-tags below.
   skip-prune: true
   exclude-tags:
     - sse
