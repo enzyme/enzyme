@@ -138,10 +138,7 @@ func (h *Handler) ScheduleMessage(ctx context.Context, request openapi.ScheduleM
 
 	// Broadcast to the user
 	if h.hub != nil {
-		h.hub.BroadcastToUser(ch.WorkspaceID, userID, sse.Event{
-			Type: sse.EventScheduledMessageCreated,
-			Data: apiMsg,
-		})
+		h.hub.BroadcastToUser(ch.WorkspaceID, userID, sse.NewScheduledMessageCreatedEvent(apiMsg))
 	}
 
 	return openapi.ScheduleMessage200JSONResponse{
@@ -252,10 +249,7 @@ func (h *Handler) UpdateScheduledMessage(ctx context.Context, request openapi.Up
 	// Get workspace ID for broadcasting
 	if h.hub != nil {
 		if ch, err := h.channelRepo.GetByID(ctx, msg.ChannelID); err == nil {
-			h.hub.BroadcastToUser(ch.WorkspaceID, userID, sse.Event{
-				Type: sse.EventScheduledMessageUpdated,
-				Data: apiMsg,
-			})
+			h.hub.BroadcastToUser(ch.WorkspaceID, userID, sse.NewScheduledMessageUpdatedEvent(apiMsg))
 		}
 	}
 
@@ -294,10 +288,7 @@ func (h *Handler) DeleteScheduledMessage(ctx context.Context, request openapi.De
 	// Broadcast deletion
 	if h.hub != nil {
 		if ch, err := h.channelRepo.GetByID(ctx, msg.ChannelID); err == nil {
-			h.hub.BroadcastToUser(ch.WorkspaceID, userID, sse.Event{
-				Type: sse.EventScheduledMessageDeleted,
-				Data: map[string]string{"id": msg.ID},
-			})
+			h.hub.BroadcastToUser(ch.WorkspaceID, userID, sse.NewScheduledMessageDeletedEvent(sse.ScheduledMessageDeletedData{ID: msg.ID}))
 		}
 	}
 
@@ -452,10 +443,7 @@ func (h *Handler) executeScheduledSend(ctx context.Context, smsg *scheduled.Sche
 
 	// Broadcast the new message
 	if h.hub != nil {
-		h.hub.BroadcastToChannel(ch.WorkspaceID, smsg.ChannelID, sse.Event{
-			Type: sse.EventMessageNew,
-			Data: apiMsg,
-		})
+		h.hub.BroadcastToChannel(ch.WorkspaceID, smsg.ChannelID, sse.NewMessageNewEvent(apiMsg))
 	}
 
 	// Trigger notifications
@@ -492,14 +480,11 @@ func (h *Handler) executeScheduledSend(ctx context.Context, smsg *scheduled.Sche
 
 	// Broadcast scheduled_message.sent event to the user
 	if h.hub != nil {
-		h.hub.BroadcastToUser(ch.WorkspaceID, smsg.UserID, sse.Event{
-			Type: sse.EventScheduledMessageSent,
-			Data: map[string]interface{}{
-				"id":         smsg.ID,
-				"channel_id": smsg.ChannelID,
-				"message_id": msg.ID,
-			},
-		})
+		h.hub.BroadcastToUser(ch.WorkspaceID, smsg.UserID, sse.NewScheduledMessageSentEvent(sse.ScheduledMessageSentData{
+			ID:        smsg.ID,
+			ChannelID: smsg.ChannelID,
+			MessageID: msg.ID,
+		}))
 	}
 
 	return &apiMsg, nil
@@ -520,8 +505,9 @@ func (h *Handler) NotifyScheduledMessageFailed(ctx context.Context, smsg *schedu
 	if err != nil {
 		return
 	}
-	h.hub.BroadcastToUser(ch.WorkspaceID, smsg.UserID, sse.Event{
-		Type: sse.EventScheduledMessageFailed,
-		Data: map[string]string{"id": smsg.ID, "channel_id": smsg.ChannelID, "error": reason},
-	})
+	h.hub.BroadcastToUser(ch.WorkspaceID, smsg.UserID, sse.NewScheduledMessageFailedEvent(sse.ScheduledMessageFailedData{
+		ID:        smsg.ID,
+		ChannelID: smsg.ChannelID,
+		Error:     reason,
+	}))
 }

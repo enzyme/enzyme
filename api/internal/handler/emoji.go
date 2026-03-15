@@ -172,10 +172,7 @@ func (h *Handler) UploadCustomEmoji(ctx context.Context, request openapi.UploadC
 
 	// Broadcast SSE event
 	if h.hub != nil {
-		h.hub.BroadcastToWorkspace(workspaceID, sse.Event{
-			Type: sse.EventEmojiCreated,
-			Data: apiEmoji,
-		})
+		h.hub.BroadcastToWorkspace(workspaceID, sse.NewEmojiCreatedEvent(apiEmoji))
 	}
 
 	return openapi.UploadCustomEmoji200JSONResponse{
@@ -257,13 +254,10 @@ func (h *Handler) DeleteCustomEmoji(ctx context.Context, request openapi.DeleteC
 
 	// Broadcast SSE event
 	if h.hub != nil {
-		h.hub.BroadcastToWorkspace(e.WorkspaceID, sse.Event{
-			Type: sse.EventEmojiDeleted,
-			Data: map[string]string{
-				"id":   e.ID,
-				"name": e.Name,
-			},
-		})
+		h.hub.BroadcastToWorkspace(e.WorkspaceID, sse.NewEmojiDeletedEvent(sse.EmojiDeletedData{
+			ID:   e.ID,
+			Name: e.Name,
+		}))
 	}
 
 	return openapi.DeleteCustomEmoji200JSONResponse{

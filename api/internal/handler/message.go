@@ -258,16 +258,10 @@ func (h *Handler) SendMessage(ctx context.Context, request openapi.SendMessageRe
 				if memberID != userID && usersWhoBlockedSender[memberID] {
 					continue
 				}
-				h.hub.BroadcastToUser(ch.WorkspaceID, memberID, sse.Event{
-					Type: sse.EventMessageNew,
-					Data: apiMsg,
-				})
+				h.hub.BroadcastToUser(ch.WorkspaceID, memberID, sse.NewMessageNewEvent(apiMsg))
 			}
 		} else {
-			h.hub.BroadcastToChannel(ch.WorkspaceID, string(request.Id), sse.Event{
-				Type: sse.EventMessageNew,
-				Data: apiMsg,
-			})
+			h.hub.BroadcastToChannel(ch.WorkspaceID, string(request.Id), sse.NewMessageNewEvent(apiMsg))
 		}
 	}
 
@@ -469,10 +463,7 @@ func (h *Handler) UpdateMessage(ctx context.Context, request openapi.UpdateMessa
 
 	// Broadcast update via SSE (use API type to include attachment URLs)
 	if h.hub != nil && ch != nil && msgWithUser != nil {
-		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
-			Type: sse.EventMessageUpdated,
-			Data: apiMsg,
-		})
+		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.NewMessageUpdatedEvent(apiMsg))
 	}
 
 	return openapi.UpdateMessage200JSONResponse{
@@ -533,14 +524,10 @@ func (h *Handler) DeleteMessage(ctx context.Context, request openapi.DeleteMessa
 
 	// Broadcast delete via SSE
 	if h.hub != nil {
-		deleteData := map[string]string{"id": string(request.Id)}
-		if msg.ThreadParentID != nil {
-			deleteData["thread_parent_id"] = *msg.ThreadParentID
-		}
-		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
-			Type: sse.EventMessageDeleted,
-			Data: deleteData,
-		})
+		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.NewMessageDeletedEvent(sse.MessageDeletedData{
+			ID:             string(request.Id),
+			ThreadParentID: msg.ThreadParentID,
+		}))
 	}
 
 	return openapi.DeleteMessage200JSONResponse{
@@ -577,10 +564,7 @@ func (h *Handler) DeleteLinkPreview(ctx context.Context, request openapi.DeleteL
 			attachments, _ := h.fileRepo.ListForMessage(ctx, msg.ID)
 			msgWithUser.Attachments = attachments
 			apiMsg := messageWithUserToAPI(msgWithUser)
-			h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
-				Type: sse.EventMessageUpdated,
-				Data: apiMsg,
-			})
+			h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.NewMessageUpdatedEvent(apiMsg))
 		}
 	}
 
@@ -633,15 +617,13 @@ func (h *Handler) AddReaction(ctx context.Context, request openapi.AddReactionRe
 		return nil, err
 	}
 
+	apiReaction := reactionToAPI(reaction)
+
 	// Broadcast reaction via SSE
 	if h.hub != nil {
-		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
-			Type: sse.EventReactionAdded,
-			Data: reaction,
-		})
+		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.NewReactionAddedEvent(apiReaction))
 	}
 
-	apiReaction := reactionToAPI(reaction)
 	return openapi.AddReaction200JSONResponse{
 		Reaction: apiReaction,
 	}, nil
@@ -669,14 +651,11 @@ func (h *Handler) RemoveReaction(ctx context.Context, request openapi.RemoveReac
 
 	// Broadcast removal via SSE
 	if h.hub != nil && ch != nil {
-		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
-			Type: sse.EventReactionRemoved,
-			Data: map[string]string{
-				"message_id": string(request.Id),
-				"user_id":    userID,
-				"emoji":      request.Body.Emoji,
-			},
-		})
+		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.NewReactionRemovedEvent(sse.ReactionRemovedData{
+			MessageID: string(request.Id),
+			UserID:    userID,
+			Emoji:     request.Body.Emoji,
+		}))
 	}
 
 	return openapi.RemoveReaction200JSONResponse{
@@ -1101,10 +1080,7 @@ func (h *Handler) fetchLinkPreview(ctx context.Context, url, msgID, channelID, w
 			updated.LinkPreview = p
 			apiUpdated := messageWithUserToAPI(updated)
 			if h.hub != nil && workspaceID != "" {
-				h.hub.BroadcastToChannel(workspaceID, channelID, sse.Event{
-					Type: sse.EventMessageUpdated,
-					Data: apiUpdated,
-				})
+				h.hub.BroadcastToChannel(workspaceID, channelID, sse.NewMessageUpdatedEvent(apiUpdated))
 			}
 		}()
 	}
@@ -1459,13 +1435,10 @@ func (h *Handler) MarkMessageUnread(ctx context.Context, request openapi.MarkMes
 
 	// Broadcast to user's other clients
 	if h.hub != nil {
-		h.hub.BroadcastToUser(ch.WorkspaceID, userID, sse.Event{
-			Type: sse.EventChannelRead,
-			Data: map[string]string{
-				"channel_id":           msg.ChannelID,
-				"last_read_message_id": prevMessageID,
-			},
-		})
+		h.hub.BroadcastToUser(ch.WorkspaceID, userID, sse.NewChannelReadEvent(sse.ChannelReadEventData{
+			ChannelID:         msg.ChannelID,
+			LastReadMessageID: prevMessageID,
+		}))
 	}
 
 	return openapi.MarkMessageUnread200JSONResponse{
@@ -1572,19 +1545,13 @@ func (h *Handler) PinMessage(ctx context.Context, request openapi.PinMessageRequ
 
 	// Broadcast SSE events
 	if h.hub != nil {
-		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
-			Type: sse.EventMessagePinned,
-			Data: apiMsg,
-		})
+		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.NewMessagePinnedEvent(apiMsg))
 
 		// Broadcast system message
 		if sysMsg != nil {
 			sysMsgWithUser, _ := h.messageRepo.GetByIDWithUser(ctx, sysMsg.ID)
 			if sysMsgWithUser != nil {
-				h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
-					Type: sse.EventMessageNew,
-					Data: messageWithUserToAPI(sysMsgWithUser),
-				})
+				h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.NewMessageNewEvent(messageWithUserToAPI(sysMsgWithUser)))
 			}
 		}
 	}
@@ -1652,19 +1619,13 @@ func (h *Handler) UnpinMessage(ctx context.Context, request openapi.UnpinMessage
 
 	// Broadcast SSE event
 	if h.hub != nil {
-		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
-			Type: sse.EventMessageUnpinned,
-			Data: apiMsg,
-		})
+		h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.NewMessageUnpinnedEvent(apiMsg))
 
 		// Broadcast system message
 		if sysMsg != nil {
 			sysMsgWithUser, _ := h.messageRepo.GetByIDWithUser(ctx, sysMsg.ID)
 			if sysMsgWithUser != nil {
-				h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.Event{
-					Type: sse.EventMessageNew,
-					Data: messageWithUserToAPI(sysMsgWithUser),
-				})
+				h.hub.BroadcastToChannel(ch.WorkspaceID, msg.ChannelID, sse.NewMessageNewEvent(messageWithUserToAPI(sysMsgWithUser)))
 			}
 		}
 	}

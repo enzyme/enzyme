@@ -164,10 +164,7 @@ func (h *Handler) UpdateWorkspace(ctx context.Context, request openapi.UpdateWor
 
 	// Broadcast workspace update so all connected clients refresh permission-gated UI
 	if h.hub != nil {
-		h.hub.BroadcastToWorkspace(string(request.Wid), sse.Event{
-			Type: sse.EventWorkspaceUpdated,
-			Data: apiWs,
-		})
+		h.hub.BroadcastToWorkspace(string(request.Wid), sse.NewWorkspaceUpdatedEvent(apiWs))
 	}
 
 	return openapi.UpdateWorkspace200JSONResponse{
@@ -299,22 +296,16 @@ func (h *Handler) LeaveWorkspace(ctx context.Context, request openapi.LeaveWorks
 	if h.hub != nil {
 		for _, channelID := range removedChannelIDs {
 			h.hub.RemoveChannelMember(channelID, userID)
-			h.hub.BroadcastToWorkspace(workspaceID, sse.Event{
-				Type: sse.EventMemberRemoved,
-				Data: map[string]string{
-					"channel_id": channelID,
-					"user_id":    userID,
-				},
-			})
+			h.hub.BroadcastToWorkspace(workspaceID, sse.NewChannelMemberRemovedEvent(sse.ChannelMemberData{
+				ChannelID: channelID,
+				UserID:    userID,
+			}))
 		}
 
-		h.hub.BroadcastToWorkspace(workspaceID, sse.Event{
-			Type: sse.EventMemberLeft,
-			Data: map[string]string{
-				"user_id":      userID,
-				"workspace_id": workspaceID,
-			},
-		})
+		h.hub.BroadcastToWorkspace(workspaceID, sse.NewMemberLeftEvent(sse.MemberLeftData{
+			UserID:      userID,
+			WorkspaceID: workspaceID,
+		}))
 
 		h.hub.DisconnectUserClients(workspaceID, userID)
 	}
@@ -404,14 +395,11 @@ func (h *Handler) UpdateWorkspaceMemberRole(ctx context.Context, request openapi
 
 	// SSE broadcast: role changed
 	if h.hub != nil {
-		h.hub.BroadcastToWorkspace(workspaceID, sse.Event{
-			Type: sse.EventMemberRoleChanged,
-			Data: map[string]string{
-				"user_id":  targetUserID,
-				"old_role": targetMembership.Role,
-				"new_role": newRole,
-			},
-		})
+		h.hub.BroadcastToWorkspace(workspaceID, sse.NewMemberRoleChangedEvent(sse.MemberRoleChangedData{
+			UserID:  targetUserID,
+			OldRole: targetMembership.Role,
+			NewRole: newRole,
+		}))
 	}
 
 	return openapi.UpdateWorkspaceMemberRole200JSONResponse{
@@ -536,13 +524,10 @@ func (h *Handler) AcceptInvite(ctx context.Context, request openapi.AcceptInvite
 		_, addErr := h.channelRepo.AddMember(ctx, userID, defaultChannel.ID, &memberRole)
 		if addErr == nil && h.hub != nil {
 			h.hub.AddChannelMember(defaultChannel.ID, userID)
-			h.hub.BroadcastToWorkspace(ws.ID, sse.Event{
-				Type: sse.EventMemberAdded,
-				Data: map[string]string{
-					"channel_id": defaultChannel.ID,
-					"user_id":    userID,
-				},
-			})
+			h.hub.BroadcastToWorkspace(ws.ID, sse.NewChannelMemberAddedEvent(sse.ChannelMemberData{
+				ChannelID: defaultChannel.ID,
+				UserID:    userID,
+			}))
 		}
 	}
 
@@ -587,9 +572,7 @@ func (h *Handler) autoCreateDMs(ctx context.Context, workspaceID, joiningUserID 
 
 	// Single broadcast so all connected clients refetch their channel list
 	if created > 0 && h.hub != nil {
-		h.hub.BroadcastToWorkspace(workspaceID, sse.Event{
-			Type: sse.EventChannelCreated,
-		})
+		h.hub.BroadcastToWorkspace(workspaceID, sse.NewChannelCreatedSignal())
 	}
 }
 

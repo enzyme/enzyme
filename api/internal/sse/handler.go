@@ -73,23 +73,13 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 	defer h.hub.Unregister(client)
 
 	// Send connected event
-	h.writeEvent(w, flusher, Event{
-		ID:   ulid.Make().String(),
-		Type: EventConnected,
-		Data: map[string]string{
-			"client_id": client.ID,
-		},
-	})
+	h.writeEvent(w, flusher, NewConnectedEvent(ConnectedData{ClientID: client.ID}))
 
 	// Send initial presence - list of currently online users
 	onlineUserIDs := h.hub.GetConnectedUserIDs(workspaceID)
-	h.writeEvent(w, flusher, Event{
-		ID:   ulid.Make().String(),
-		Type: EventPresenceInitial,
-		Data: map[string]interface{}{
-			"online_user_ids": onlineUserIDs,
-		},
-	})
+	h.writeEvent(w, flusher, NewPresenceInitialEvent(PresenceInitialData{
+		OnlineUserIDs: onlineUserIDs,
+	}))
 
 	// Handle reconnection - replay missed events
 	lastEventID := r.Header.Get("Last-Event-ID")
@@ -115,21 +105,16 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 		case event := <-client.Send:
 			h.writeEvent(w, flusher, event)
 		case <-heartbeat.C:
-			h.writeEvent(w, flusher, Event{
-				ID:   ulid.Make().String(),
-				Type: EventHeartbeat,
-				Data: map[string]int64{
-					"timestamp": time.Now().Unix(),
-				},
-			})
+			h.writeEvent(w, flusher, NewHeartbeatEvent(HeartbeatData{Timestamp: time.Now().Unix()}))
 		}
 	}
 }
 
 func (h *Handler) writeEvent(w http.ResponseWriter, flusher http.Flusher, event Event) {
-	if event.ID != "" {
-		_, _ = fmt.Fprintf(w, "id: %s\n", event.ID)
+	if event.ID == "" {
+		event.ID = ulid.Make().String()
 	}
+	_, _ = fmt.Fprintf(w, "id: %s\n", event.ID)
 
 	// Marshal the full event (including type) so the client can dispatch by type
 	data, err := json.Marshal(event)
@@ -155,13 +140,10 @@ func (h *Handler) StartTyping(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.hub.BroadcastToChannel(workspaceID, input.ChannelID, Event{
-		Type: EventTypingStart,
-		Data: map[string]string{
-			"user_id":    userID,
-			"channel_id": input.ChannelID,
-		},
-	})
+	h.hub.BroadcastToChannel(workspaceID, input.ChannelID, NewTypingStartEvent(TypingEventData{
+		UserID:    userID,
+		ChannelID: input.ChannelID,
+	}))
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,
@@ -178,13 +160,10 @@ func (h *Handler) StopTyping(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.hub.BroadcastToChannel(workspaceID, input.ChannelID, Event{
-		Type: EventTypingStop,
-		Data: map[string]string{
-			"user_id":    userID,
-			"channel_id": input.ChannelID,
-		},
-	})
+	h.hub.BroadcastToChannel(workspaceID, input.ChannelID, NewTypingStopEvent(TypingEventData{
+		UserID:    userID,
+		ChannelID: input.ChannelID,
+	}))
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,

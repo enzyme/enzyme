@@ -82,17 +82,6 @@ func (s *Service) SetThreadSubscriptionProvider(provider ThreadSubscriptionProvi
 	s.threadSubProvider = provider
 }
 
-// NotificationEvent is the SSE event data for notifications
-type NotificationEvent struct {
-	Type           string  `json:"type"`
-	ChannelID      string  `json:"channel_id"`
-	MessageID      string  `json:"message_id"`
-	ChannelName    string  `json:"channel_name"`
-	SenderName     string  `json:"sender_name"`
-	Preview        string  `json:"preview"`
-	ThreadParentID *string `json:"thread_parent_id,omitempty"`
-}
-
 // Notify processes a message and sends notifications to appropriate recipients
 func (s *Service) Notify(ctx context.Context, channel *ChannelInfo, msg *MessageInfo) error {
 	_, notificationTypes := s.determineRecipients(ctx, channel, msg)
@@ -107,22 +96,20 @@ func (s *Service) Notify(ctx context.Context, channel *ChannelInfo, msg *Message
 		isOnline := s.hub.IsUserOnline(channel.WorkspaceID, userID)
 
 		// Build notification event
-		event := NotificationEvent{
+		preview := truncatePreview(msg.Content, 100)
+		sseEvent := sse.NewNotificationEvent(sse.NotificationData{
 			Type:           notifType,
 			ChannelID:      channel.ID,
 			MessageID:      msg.ID,
-			ChannelName:    channel.Name,
-			SenderName:     msg.SenderName,
-			Preview:        truncatePreview(msg.Content, 100),
+			ChannelName:    &channel.Name,
+			SenderName:     &msg.SenderName,
+			Preview:        &preview,
 			ThreadParentID: msg.ThreadParentID,
-		}
+		})
 
 		if isOnline {
 			// Send real-time SSE notification
-			s.hub.BroadcastToUser(channel.WorkspaceID, userID, sse.Event{
-				Type: sse.EventNotification,
-				Data: event,
-			})
+			s.hub.BroadcastToUser(channel.WorkspaceID, userID, sseEvent)
 		} else {
 			// Queue for email notification
 			if s.shouldSendEmail(ctx, userID, channel.ID, channel.Type) {
