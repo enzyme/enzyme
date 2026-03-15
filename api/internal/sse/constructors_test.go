@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/enzyme/api/internal/openapi"
+	"go.yaml.in/yaml/v3"
 )
 
 func TestTypedConstructors(t *testing.T) {
@@ -122,4 +125,157 @@ func TestNoRawEventConstruction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to walk source tree: %v", err)
 	}
+}
+
+// TestSSEDataTypeConformance verifies that hand-written Go SSE data structs
+// have the same JSON field names as their corresponding OpenAPI schemas.
+// This catches drift between Go types and the spec at test time.
+func TestSSEDataTypeConformance(t *testing.T) {
+	specPath := filepath.Join("..", "..", "openapi.yaml")
+	data, err := os.ReadFile(specPath)
+	if err != nil {
+		t.Fatalf("failed to read openapi.yaml: %v", err)
+	}
+
+	var spec map[string]interface{}
+	if err := yaml.Unmarshal(data, &spec); err != nil {
+		t.Fatalf("failed to parse openapi.yaml: %v", err)
+	}
+
+	schemas := yamlNav(spec, "components", "schemas")
+	if schemas == nil {
+		t.Fatal("components.schemas not found in spec")
+	}
+
+	// Each entry maps a Go struct to the OpenAPI schema that defines its fields.
+	// "schemaName" is the top-level schema under components.schemas.
+	// "inline" means the data fields are defined inline under .properties.data.properties;
+	// otherwise the data property is a $ref to a named component whose .properties we check.
+	tests := []struct {
+		name       string
+		goStruct   interface{}
+		schemaName string
+		inline     bool // true = fields are inline under .properties.data
+	}{
+		{"ConnectedData", ConnectedData{}, "SSEEventConnected", true},
+		{"HeartbeatData", HeartbeatData{}, "SSEEventHeartbeat", true},
+		{"MessageDeletedData", MessageDeletedData{}, "SSEEventMessageDeleted", true},
+		{"ReactionRemovedData", ReactionRemovedData{}, "SSEEventReactionRemoved", true},
+		{"ChannelMemberData/Added", ChannelMemberData{}, "SSEEventChannelMemberAdded", true},
+		{"MemberBannedData", MemberBannedData{}, "SSEEventMemberBanned", true},
+		{"MemberUnbannedData", MemberUnbannedData{}, "SSEEventMemberUnbanned", true},
+		{"MemberLeftData", MemberLeftData{}, "SSEEventMemberLeft", true},
+		{"MemberRoleChangedData", MemberRoleChangedData{}, "SSEEventMemberRoleChanged", true},
+		{"EmojiDeletedData", EmojiDeletedData{}, "SSEEventEmojiDeleted", true},
+		{"ScheduledMessageDeletedData", ScheduledMessageDeletedData{}, "SSEEventScheduledMessageDeleted", true},
+		{"ScheduledMessageSentData", ScheduledMessageSentData{}, "SSEEventScheduledMessageSent", true},
+		{"ScheduledMessageFailedData", ScheduledMessageFailedData{}, "SSEEventScheduledMessageFailed", true},
+		{"PresenceData", PresenceData{}, "PresenceData", false},
+		{"PresenceInitialData", PresenceInitialData{}, "PresenceInitialData", false},
+		{"TypingEventData", TypingEventData{}, "TypingEventData", false},
+		{"ChannelReadEventData", ChannelReadEventData{}, "ChannelReadEventData", false},
+		{"NotificationData", NotificationData{}, "NotificationData", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			goFields := jsonFieldNames(tt.goStruct)
+
+			var specFields []string
+			if tt.inline {
+				// Inline: schema.properties.data.properties
+				dataNode := yamlNav(schemas, tt.schemaName, "properties", "data")
+				if dataNode == nil {
+					t.Fatalf("schema %s.properties.data not found", tt.schemaName)
+				}
+				// Resolve $ref if present
+				dataNode = resolveRef(schemas, dataNode)
+				props := yamlNav(dataNode, "properties")
+				if props == nil {
+					t.Fatalf("schema %s.properties.data.properties not found", tt.schemaName)
+				}
+				specFields = mapKeys(props)
+			} else {
+				// Named component: schema.properties
+				schemaNode := yamlNav(schemas, tt.schemaName)
+				if schemaNode == nil {
+					t.Fatalf("schema %s not found", tt.schemaName)
+				}
+				schemaNode = resolveRef(schemas, schemaNode)
+				props := yamlNav(schemaNode, "properties")
+				if props == nil {
+					t.Fatalf("schema %s.properties not found", tt.schemaName)
+				}
+				specFields = mapKeys(props)
+			}
+
+			sort.Strings(goFields)
+			sort.Strings(specFields)
+
+			if !reflect.DeepEqual(goFields, specFields) {
+				t.Errorf("field mismatch\n  Go struct: %v\n  OpenAPI:   %v", goFields, specFields)
+			}
+		})
+	}
+}
+
+// jsonFieldNames extracts JSON tag names from a struct, stripping ",omitempty".
+func jsonFieldNames(v interface{}) []string {
+	t := reflect.TypeOf(v)
+	var names []string
+	for i := 0; i < t.NumField(); i++ {
+		tag := t.Field(i).Tag.Get("json")
+		if tag == "" || tag == "-" {
+			continue
+		}
+		name, _, _ := strings.Cut(tag, ",")
+		names = append(names, name)
+	}
+	return names
+}
+
+// yamlNav navigates nested map[string]interface{} by key path.
+func yamlNav(m interface{}, keys ...string) map[string]interface{} {
+	cur, ok := m.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	for _, k := range keys {
+		val, exists := cur[k]
+		if !exists {
+			return nil
+		}
+		cur, ok = val.(map[string]interface{})
+		if !ok {
+			return nil
+		}
+	}
+	return cur
+}
+
+// resolveRef follows a $ref if present (local refs only: #/components/schemas/X).
+func resolveRef(schemas map[string]interface{}, node map[string]interface{}) map[string]interface{} {
+	ref, ok := node["$ref"].(string)
+	if !ok {
+		return node
+	}
+	const prefix = "#/components/schemas/"
+	if !strings.HasPrefix(ref, prefix) {
+		return node
+	}
+	name := strings.TrimPrefix(ref, prefix)
+	resolved := yamlNav(schemas, name)
+	if resolved == nil {
+		return node
+	}
+	return resolved
+}
+
+// mapKeys returns the keys of a map[string]interface{}.
+func mapKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
