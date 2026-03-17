@@ -285,6 +285,9 @@ func (h *Hub) getChannelMembers(channelID string) map[string]bool {
 					members[userID] = true
 				}
 			}
+			if err := rows.Err(); err != nil {
+				slog.Error("error iterating channel members", "channel_id", channelID, "error", err)
+			}
 		}
 	}
 

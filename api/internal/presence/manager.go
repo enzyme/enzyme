@@ -3,6 +3,7 @@ package presence
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -83,6 +84,9 @@ func (m *Manager) loadFromDB() {
 			m.presence[p.WorkspaceID] = make(map[string]*UserPresence)
 		}
 		m.presence[p.WorkspaceID][p.UserID] = &p
+	}
+	if err := rows.Err(); err != nil {
+		slog.Error("error iterating presence rows", "error", err)
 	}
 }
 
