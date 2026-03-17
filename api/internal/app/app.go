@@ -163,7 +163,7 @@ func New(cfg *config.Config) (*App, error) {
 	cfg.Server.PublicURL = strings.TrimRight(cfg.Server.PublicURL, "/")
 
 	// Initialize SSE handler (kept separate as it requires streaming)
-	sseHandler := sse.NewHandler(hub, workspaceRepo, cfg.SSE.HeartbeatInterval, cfg.SSE.ClientBufferSize)
+	sseHandler := sse.NewHandler(hub, workspaceRepo, channelRepo, cfg.SSE.HeartbeatInterval, cfg.SSE.ClientBufferSize)
 
 	// Initialize main handler implementing StrictServerInterface
 	h := handler.New(handler.Dependencies{

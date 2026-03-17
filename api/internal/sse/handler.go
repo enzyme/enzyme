@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/enzyme/api/internal/auth"
+	"github.com/enzyme/api/internal/channel"
 	"github.com/enzyme/api/internal/openapi"
 	"github.com/enzyme/api/internal/workspace"
 	"github.com/go-chi/chi/v5"
@@ -17,14 +18,16 @@ import (
 type Handler struct {
 	hub               *Hub
 	workspaceRepo     *workspace.Repository
+	channelRepo       *channel.Repository
 	heartbeatInterval time.Duration
 	clientBufferSize  int
 }
 
-func NewHandler(hub *Hub, workspaceRepo *workspace.Repository, heartbeatInterval time.Duration, clientBufferSize int) *Handler {
+func NewHandler(hub *Hub, workspaceRepo *workspace.Repository, channelRepo *channel.Repository, heartbeatInterval time.Duration, clientBufferSize int) *Handler {
 	return &Handler{
 		hub:               hub,
 		workspaceRepo:     workspaceRepo,
+		channelRepo:       channelRepo,
 		heartbeatInterval: heartbeatInterval,
 		clientBufferSize:  clientBufferSize,
 	}
@@ -131,13 +134,69 @@ type TypingInput struct {
 	ChannelID string `json:"channel_id"`
 }
 
+// checkTypingAccess verifies workspace membership and channel access for typing endpoints.
+// Returns the decoded input and true if access is granted; writes an error response and returns false otherwise.
+func (h *Handler) checkTypingAccess(w http.ResponseWriter, r *http.Request, workspaceID, userID string) (TypingInput, bool) {
+	var input TypingInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Invalid request body")
+		return input, false
+	}
+
+	if input.ChannelID == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "channel_id is required")
+		return input, false
+	}
+
+	// Check workspace membership
+	_, err := h.workspaceRepo.GetMembership(r.Context(), userID, workspaceID)
+	if err != nil {
+		if errors.Is(err, workspace.ErrNotAMember) {
+			writeError(w, http.StatusForbidden, "NOT_A_MEMBER", "Not a member of this workspace")
+			return input, false
+		}
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Internal error")
+		return input, false
+	}
+
+	// Verify channel belongs to this workspace
+	ch, err := h.channelRepo.GetByID(r.Context(), input.ChannelID)
+	if err != nil {
+		if errors.Is(err, channel.ErrChannelNotFound) {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "Channel not found")
+			return input, false
+		}
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Internal error")
+		return input, false
+	}
+	if ch.WorkspaceID != workspaceID {
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "Channel not found")
+		return input, false
+	}
+
+	// Check channel membership (public channels allow any workspace member)
+	_, err = h.channelRepo.GetMembership(r.Context(), userID, input.ChannelID)
+	if err != nil {
+		if errors.Is(err, channel.ErrNotChannelMember) {
+			if ch.Type != channel.TypePublic {
+				writeError(w, http.StatusForbidden, "NOT_A_MEMBER", "Not a member of this channel")
+				return input, false
+			}
+		} else {
+			writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Internal error")
+			return input, false
+		}
+	}
+
+	return input, true
+}
+
 func (h *Handler) StartTyping(w http.ResponseWriter, r *http.Request) {
 	workspaceID := chi.URLParam(r, "wid")
 	userID := auth.GetUserID(r.Context())
 
-	var input TypingInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Invalid request body")
+	input, ok := h.checkTypingAccess(w, r, workspaceID, userID)
+	if !ok {
 		return
 	}
 
@@ -155,9 +214,8 @@ func (h *Handler) StopTyping(w http.ResponseWriter, r *http.Request) {
 	workspaceID := chi.URLParam(r, "wid")
 	userID := auth.GetUserID(r.Context())
 
-	var input TypingInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Invalid request body")
+	input, ok := h.checkTypingAccess(w, r, workspaceID, userID)
+	if !ok {
 		return
 	}
 
