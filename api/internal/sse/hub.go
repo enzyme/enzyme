@@ -38,9 +38,18 @@ type Hub struct {
 	register   chan *Client
 	unregister chan *Client
 
+	// Async event storage queue — drained by a background goroutine
+	// so broadcast callers never block on DB writes.
+	storeQueue chan storeRequest
+
 	// OTel metrics (no-op when telemetry is disabled)
 	connectionsActive metric.Int64UpDownCounter
 	eventsBroadcast   metric.Int64Counter
+}
+
+type storeRequest struct {
+	workspaceID string
+	event       Event
 }
 
 // Pre-computed metric attribute sets to avoid allocation per broadcast under lock.
@@ -72,12 +81,15 @@ func NewHub(db *sql.DB, retention time.Duration) *Hub {
 		retention:         retention,
 		register:          make(chan *Client, 256),
 		unregister:        make(chan *Client, 256),
+		storeQueue:        make(chan storeRequest, 1024),
 		connectionsActive: connectionsActive,
 		eventsBroadcast:   eventsBroadcast,
 	}
 }
 
 func (h *Hub) Run(ctx context.Context) {
+	go h.runStoreLoop(ctx)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -160,17 +172,17 @@ func (h *Hub) removeClient(client *Client) bool {
 }
 
 func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
 	if event.ID == "" {
 		event.ID = ulid.Make().String()
 	}
 
 	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsWorkspace)
 
-	// Store event for replay
-	h.storeEvent(workspaceID, event)
+	// Queue event storage asynchronously (no DB I/O on this goroutine)
+	h.enqueueStoreEvent(workspaceID, event)
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	if workspace, ok := h.workspaces[workspaceID]; ok {
 		for _, clients := range workspace {
@@ -186,20 +198,21 @@ func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {
 }
 
 func (h *Hub) BroadcastToChannel(workspaceID, channelID string, event Event) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
 	if event.ID == "" {
 		event.ID = ulid.Make().String()
 	}
 
 	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsChannel)
 
-	// Store event for replay
-	h.storeEvent(workspaceID, event)
+	// Queue event storage asynchronously (no DB I/O on this goroutine)
+	h.enqueueStoreEvent(workspaceID, event)
 
-	// Get channel members from cache or database
+	// Resolve channel members before taking the broadcast lock.
+	// getChannelMembers manages its own locking internally.
 	members := h.getChannelMembers(channelID)
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	if workspace, ok := h.workspaces[workspaceID]; ok {
 		for userID, clients := range workspace {
@@ -269,14 +282,15 @@ func (h *Hub) RemoveChannelMember(channelID, userID string) {
 }
 
 func (h *Hub) getChannelMembers(channelID string) map[string]bool {
-	// Check cache first (safe under RLock)
+	// Fast path: check cache under RLock.
+	h.mu.RLock()
 	if members, ok := h.channelMembers[channelID]; ok {
+		h.mu.RUnlock()
 		return members
 	}
+	h.mu.RUnlock()
 
-	// Load from database if not cached
-	// Note: We don't cache the result here because we may only hold RLock.
-	// Caching happens via AddChannelMember/UpdateChannelMembers when membership changes.
+	// Slow path: query database without holding any lock.
 	members := make(map[string]bool)
 	if h.db != nil {
 		rows, err := h.db.Query(`
@@ -293,7 +307,44 @@ func (h *Hub) getChannelMembers(channelID string) map[string]bool {
 		}
 	}
 
+	// Cache the result for future lookups.
+	h.mu.Lock()
+	// Re-check: another goroutine may have populated the cache while we queried.
+	if _, ok := h.channelMembers[channelID]; !ok {
+		h.channelMembers[channelID] = members
+	} else {
+		// Use the already-cached version (it may be more up-to-date).
+		members = h.channelMembers[channelID]
+	}
+	h.mu.Unlock()
+
 	return members
+}
+
+// enqueueStoreEvent sends an event to the background store goroutine.
+// Non-blocking: if the queue is full the event is dropped with a warning.
+func (h *Hub) enqueueStoreEvent(workspaceID string, event Event) {
+	if h.db == nil {
+		return
+	}
+	select {
+	case h.storeQueue <- storeRequest{workspaceID: workspaceID, event: event}:
+	default:
+		slog.Error("sse store queue full, dropping event", "event_id", event.ID)
+	}
+}
+
+// runStoreLoop drains the storeQueue and persists events to the database.
+// Runs as a background goroutine started by Hub.Run.
+func (h *Hub) runStoreLoop(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case req := <-h.storeQueue:
+			h.storeEvent(req.workspaceID, req.event)
+		}
+	}
 }
 
 func (h *Hub) storeEvent(workspaceID string, event Event) {
