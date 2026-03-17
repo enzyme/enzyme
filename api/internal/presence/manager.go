@@ -87,11 +87,10 @@ func (m *Manager) loadFromDB() {
 }
 
 func (m *Manager) SetOnline(workspaceID, userID string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	now := time.Now().UTC()
+	var shouldBroadcast bool
 
+	m.mu.Lock()
 	if m.presence[workspaceID] == nil {
 		m.presence[workspaceID] = make(map[string]*UserPresence)
 	}
@@ -108,26 +107,29 @@ func (m *Manager) SetOnline(workspaceID, userID string) {
 		Status:      StatusOnline,
 		LastSeenAt:  now,
 	}
+	shouldBroadcast = prevStatus != StatusOnline
+	m.mu.Unlock()
 
 	m.persistPresence(context.Background(), workspaceID, userID, StatusOnline, now)
 
-	if prevStatus != StatusOnline {
+	if shouldBroadcast {
 		m.broadcastPresenceChange(workspaceID, userID, openapi.Online)
 	}
 }
 
 func (m *Manager) SetOffline(workspaceID, userID string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	now := time.Now().UTC()
+	var shouldBroadcast bool
 
+	m.mu.Lock()
 	if m.presence[workspaceID] == nil {
+		m.mu.Unlock()
 		return
 	}
 
 	prev := m.presence[workspaceID][userID]
 	if prev == nil || prev.Status == StatusOffline {
+		m.mu.Unlock()
 		return
 	}
 
@@ -137,9 +139,14 @@ func (m *Manager) SetOffline(workspaceID, userID string) {
 		Status:      StatusOffline,
 		LastSeenAt:  now,
 	}
+	shouldBroadcast = true
+	m.mu.Unlock()
 
 	m.persistPresence(context.Background(), workspaceID, userID, StatusOffline, now)
-	m.broadcastPresenceChange(workspaceID, userID, openapi.Offline)
+
+	if shouldBroadcast {
+		m.broadcastPresenceChange(workspaceID, userID, openapi.Offline)
+	}
 }
 
 func (m *Manager) SetStatus(workspaceID, userID, status string) {
@@ -147,11 +154,10 @@ func (m *Manager) SetStatus(workspaceID, userID, status string) {
 		return
 	}
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	now := time.Now().UTC()
+	var shouldBroadcast bool
 
+	m.mu.Lock()
 	if m.presence[workspaceID] == nil {
 		m.presence[workspaceID] = make(map[string]*UserPresence)
 	}
@@ -168,10 +174,12 @@ func (m *Manager) SetStatus(workspaceID, userID, status string) {
 		Status:      status,
 		LastSeenAt:  now,
 	}
+	shouldBroadcast = prevStatus != status
+	m.mu.Unlock()
 
 	m.persistPresence(context.Background(), workspaceID, userID, status, now)
 
-	if prevStatus != status {
+	if shouldBroadcast {
 		m.broadcastPresenceChange(workspaceID, userID, openapi.PresenceStatus(status))
 	}
 }
@@ -201,12 +209,16 @@ func (m *Manager) GetWorkspacePresence(workspaceID string) map[string]string {
 	return result
 }
 
+type presenceChange struct {
+	workspaceID string
+	userID      string
+}
+
 func (m *Manager) checkPresence(ctx context.Context) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	now := time.Now().UTC()
+	var offlineChanges []presenceChange
 
+	m.mu.Lock()
 	for workspaceID, workspace := range m.presence {
 		for userID, p := range workspace {
 			if p.Status == StatusOffline {
@@ -220,11 +232,16 @@ func (m *Manager) checkPresence(ctx context.Context) {
 				// User disconnected - mark offline after timeout
 				if now.Sub(p.LastSeenAt) > OfflineTimeout {
 					p.Status = StatusOffline
-					m.persistPresence(ctx, workspaceID, userID, StatusOffline, now)
-					m.broadcastPresenceChange(workspaceID, userID, openapi.Offline)
+					offlineChanges = append(offlineChanges, presenceChange{workspaceID, userID})
 				}
 			}
 		}
+	}
+	m.mu.Unlock()
+
+	for _, c := range offlineChanges {
+		m.persistPresence(ctx, c.workspaceID, c.userID, StatusOffline, now)
+		m.broadcastPresenceChange(c.workspaceID, c.userID, openapi.Offline)
 	}
 }
 
