@@ -338,7 +338,15 @@ func (h *Hub) runStoreLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			// Drain remaining queued events before exiting
+			for {
+				select {
+				case req := <-h.storeQueue:
+					h.storeEvent(req.workspaceID, req.event)
+				default:
+					return
+				}
+			}
 		case req := <-h.storeQueue:
 			h.storeEvent(req.workspaceID, req.event)
 		}

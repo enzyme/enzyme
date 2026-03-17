@@ -123,7 +123,6 @@ func (m *Manager) SetOnline(workspaceID, userID string) {
 
 func (m *Manager) SetOffline(workspaceID, userID string) {
 	now := time.Now().UTC()
-	var shouldBroadcast bool
 
 	m.mu.Lock()
 	if m.presence[workspaceID] == nil {
@@ -143,14 +142,10 @@ func (m *Manager) SetOffline(workspaceID, userID string) {
 		Status:      StatusOffline,
 		LastSeenAt:  now,
 	}
-	shouldBroadcast = true
 	m.mu.Unlock()
 
 	m.persistPresence(context.Background(), workspaceID, userID, StatusOffline, now)
-
-	if shouldBroadcast {
-		m.broadcastPresenceChange(workspaceID, userID, openapi.Offline)
-	}
+	m.broadcastPresenceChange(workspaceID, userID, openapi.Offline)
 }
 
 func (m *Manager) SetStatus(workspaceID, userID, status string) {
@@ -220,25 +215,41 @@ type presenceChange struct {
 
 func (m *Manager) checkPresence(ctx context.Context) {
 	now := time.Now().UTC()
-	var offlineChanges []presenceChange
 
-	m.mu.Lock()
+	// Snapshot candidates under read lock — no calls into hub while holding mu.
+	type candidate struct {
+		workspaceID, userID string
+		lastSeenAt          time.Time
+	}
+	var candidates []candidate
+
+	m.mu.RLock()
 	for workspaceID, workspace := range m.presence {
 		for userID, p := range workspace {
-			if p.Status == StatusOffline {
-				continue
+			if p.Status != StatusOffline {
+				candidates = append(candidates, candidate{workspaceID, userID, p.LastSeenAt})
 			}
+		}
+	}
+	m.mu.RUnlock()
 
-			// Check if user is still connected via SSE
-			isConnected := m.hub != nil && m.hub.IsUserConnected(workspaceID, userID)
+	// Check connectivity without holding any presence lock.
+	var offlineChanges []presenceChange
+	for _, c := range candidates {
+		if now.Sub(c.lastSeenAt) <= OfflineTimeout {
+			continue
+		}
+		if m.hub != nil && m.hub.IsUserConnected(c.workspaceID, c.userID) {
+			continue
+		}
+		offlineChanges = append(offlineChanges, presenceChange{c.workspaceID, c.userID})
+	}
 
-			if !isConnected {
-				// User disconnected - mark offline after timeout
-				if now.Sub(p.LastSeenAt) > OfflineTimeout {
-					p.Status = StatusOffline
-					offlineChanges = append(offlineChanges, presenceChange{workspaceID, userID})
-				}
-			}
+	// Apply status changes under write lock.
+	m.mu.Lock()
+	for _, c := range offlineChanges {
+		if p, ok := m.presence[c.workspaceID][c.userID]; ok && p.Status != StatusOffline {
+			p.Status = StatusOffline
 		}
 	}
 	m.mu.Unlock()
