@@ -144,7 +144,7 @@ func TestGetEventsSinceFiltersPrivateChannelEvents(t *testing.T) {
 	insertEvent("03-private", privateCh.ID, `{"text":"private channel msg"}`)
 
 	// Alice (member of both channels) should see all 3 events
-	aliceEvents, err := hub.GetEventsSince(ws.ID, alice.ID, "00")
+	aliceEvents, err := hub.GetEventsSince(ws.ID, "00", []string{publicCh.ID, privateCh.ID})
 	if err != nil {
 		t.Fatalf("GetEventsSince for alice: %v", err)
 	}
@@ -153,7 +153,7 @@ func TestGetEventsSinceFiltersPrivateChannelEvents(t *testing.T) {
 	}
 
 	// Bob (member of public channel only) should see workspace + public events, NOT private
-	bobEvents, err := hub.GetEventsSince(ws.ID, bob.ID, "00")
+	bobEvents, err := hub.GetEventsSince(ws.ID, "00", []string{publicCh.ID})
 	if err != nil {
 		t.Fatalf("GetEventsSince for bob: %v", err)
 	}
@@ -165,6 +165,41 @@ func TestGetEventsSinceFiltersPrivateChannelEvents(t *testing.T) {
 	}
 	if bobEvents[1].ID != "02-public" {
 		t.Fatalf("bob: expected second event to be public channel event, got %s", bobEvents[1].ID)
+	}
+}
+
+func TestGetEventsSinceZeroChannelUser(t *testing.T) {
+	db := testutil.TestDB(t)
+
+	user := testutil.CreateTestUser(t, db, "test@example.com", "Test")
+	ws := testutil.CreateTestWorkspace(t, db, user.ID, "Test Workspace")
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user.ID, "general", "public")
+
+	hub := NewHub(db, 1*time.Hour)
+
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	// Insert a workspace-scoped event and a channel-scoped event
+	_, err := db.Exec(`
+		INSERT INTO workspace_events (id, workspace_id, event_type, payload, channel_id, created_at)
+		VALUES (?, ?, ?, ?, NULL, ?),
+		       (?, ?, ?, ?, ?, ?)
+	`, "01-ws", ws.ID, "presence.changed", `{"user_id":"x"}`, now,
+		"02-ch", ws.ID, "message.new", `{"text":"hello"}`, ch.ID, now)
+	if err != nil {
+		t.Fatalf("inserting events: %v", err)
+	}
+
+	// User with no channel memberships should only see workspace-scoped events
+	events, err := hub.GetEventsSince(ws.ID, "00", nil)
+	if err != nil {
+		t.Fatalf("GetEventsSince: %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	if events[0].ID != "01-ws" {
+		t.Fatalf("expected workspace event, got %s", events[0].ID)
 	}
 }
 

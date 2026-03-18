@@ -295,11 +295,13 @@ func (h *Handler) LeaveWorkspace(ctx context.Context, request openapi.LeaveWorks
 	// Update SSE hub and broadcast events
 	if h.hub != nil {
 		for _, channelID := range removedChannelIDs {
-			h.hub.RemoveChannelMember(channelID, userID)
+			// Broadcast before removing from hub so the leaving user's other
+			// sessions (if any) receive the removal event.
 			h.hub.BroadcastToChannel(workspaceID, channelID, sse.NewChannelMemberRemovedEvent(openapi.ChannelMemberData{
 				ChannelId: channelID,
 				UserId:    userID,
 			}))
+			h.hub.RemoveChannelMember(channelID, userID)
 		}
 
 		h.hub.BroadcastToWorkspace(workspaceID, sse.NewMemberLeftEvent(openapi.WorkspaceMemberData{

@@ -362,6 +362,7 @@ func (h *Hub) storeEvent(workspaceID, channelID string, event Event) {
 
 	data, err := json.Marshal(event.Data)
 	if err != nil {
+		slog.Error("failed to marshal SSE event data", "event_id", event.ID, "error", err)
 		return
 	}
 
@@ -397,21 +398,37 @@ func (h *Hub) CleanupOldEvents(ctx context.Context) error {
 	return nil
 }
 
-func (h *Hub) GetEventsSince(workspaceID, userID, lastEventID string) ([]Event, error) {
+func (h *Hub) GetEventsSince(workspaceID, lastEventID string, memberChannelIDs []string) ([]Event, error) {
 	if h.db == nil {
 		return nil, nil
 	}
 
-	rows, err := h.db.Query(`
+	// Build query that filters events by channel membership.
+	// Workspace-scoped events (NULL channel_id) are always included.
+	query := `
 		SELECT id, event_type, payload, created_at
 		FROM workspace_events
 		WHERE workspace_id = ? AND id > ?
-		  AND (channel_id IS NULL OR channel_id IN (
-		    SELECT channel_id FROM channel_memberships WHERE user_id = ?
-		  ))
+		  AND (channel_id IS NULL`
+	args := []any{workspaceID, lastEventID}
+
+	if len(memberChannelIDs) > 0 {
+		query += ` OR channel_id IN (`
+		for i, id := range memberChannelIDs {
+			if i > 0 {
+				query += `, `
+			}
+			query += `?`
+			args = append(args, id)
+		}
+		query += `)`
+	}
+
+	query += `)
 		ORDER BY id ASC
-		LIMIT 100
-	`, workspaceID, lastEventID, userID)
+		LIMIT 100`
+
+	rows, err := h.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
