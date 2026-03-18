@@ -88,7 +88,8 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 	// Handle reconnection - replay missed events
 	lastEventID := r.Header.Get("Last-Event-ID")
 	if lastEventID != "" {
-		events, err := h.hub.GetEventsSince(workspaceID, lastEventID)
+		channelIDs, _ := h.channelRepo.ListMemberChannelIDs(r.Context(), workspaceID, userID)
+		events, err := h.hub.GetEventsSince(workspaceID, lastEventID, channelIDs)
 		if err == nil {
 			for _, event := range events {
 				h.writeEvent(w, flusher, event)

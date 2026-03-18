@@ -50,6 +50,7 @@ type Hub struct {
 
 type storeRequest struct {
 	workspaceID string
+	channelID   string // empty for workspace-scoped events
 	event       Event
 }
 
@@ -174,7 +175,7 @@ func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {
 	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsWorkspace)
 
 	// Queue event storage asynchronously (no DB I/O on this goroutine)
-	h.enqueueStoreEvent(workspaceID, event)
+	h.enqueueStoreEvent(workspaceID, "", event)
 
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -200,7 +201,7 @@ func (h *Hub) BroadcastToChannel(workspaceID, channelID string, event Event) {
 	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsChannel)
 
 	// Queue event storage asynchronously (no DB I/O on this goroutine)
-	h.enqueueStoreEvent(workspaceID, event)
+	h.enqueueStoreEvent(workspaceID, channelID, event)
 
 	// Resolve channel members before taking the broadcast lock.
 	// getChannelMembers manages its own locking internally.
@@ -321,12 +322,13 @@ func (h *Hub) getChannelMembers(channelID string) map[string]bool {
 
 // enqueueStoreEvent sends an event to the background store goroutine.
 // Non-blocking: if the queue is full the event is dropped with a warning.
-func (h *Hub) enqueueStoreEvent(workspaceID string, event Event) {
+// channelID should be set for channel-scoped events, empty for workspace-scoped.
+func (h *Hub) enqueueStoreEvent(workspaceID, channelID string, event Event) {
 	if h.db == nil {
 		return
 	}
 	select {
-	case h.storeQueue <- storeRequest{workspaceID: workspaceID, event: event}:
+	case h.storeQueue <- storeRequest{workspaceID: workspaceID, channelID: channelID, event: event}:
 	default:
 		slog.Error("sse store queue full, dropping event", "event_id", event.ID)
 	}
@@ -342,32 +344,40 @@ func (h *Hub) runStoreLoop(ctx context.Context) {
 			for {
 				select {
 				case req := <-h.storeQueue:
-					h.storeEvent(req.workspaceID, req.event)
+					h.storeEvent(req.workspaceID, req.channelID, req.event)
 				default:
 					return
 				}
 			}
 		case req := <-h.storeQueue:
-			h.storeEvent(req.workspaceID, req.event)
+			h.storeEvent(req.workspaceID, req.channelID, req.event)
 		}
 	}
 }
 
-func (h *Hub) storeEvent(workspaceID string, event Event) {
+func (h *Hub) storeEvent(workspaceID, channelID string, event Event) {
 	if h.db == nil {
 		return
 	}
 
 	data, err := json.Marshal(event.Data)
 	if err != nil {
+		slog.Error("failed to marshal SSE event data", "event_id", event.ID, "error", err)
 		return
 	}
 
+	var chID *string
+	if channelID != "" {
+		chID = &channelID
+	}
+
 	now := time.Now().UTC()
-	_, _ = h.db.Exec(`
-		INSERT INTO workspace_events (id, workspace_id, event_type, payload, created_at)
-		VALUES (?, ?, ?, ?, ?)
-	`, event.ID, workspaceID, event.Type, string(data), now.Format(time.RFC3339))
+	if _, err := h.db.Exec(`
+		INSERT INTO workspace_events (id, workspace_id, event_type, payload, channel_id, created_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, event.ID, workspaceID, event.Type, string(data), chID, now.Format(time.RFC3339)); err != nil {
+		slog.Error("failed to store SSE event", "event_id", event.ID, "error", err)
+	}
 }
 
 // CleanupOldEvents deletes SSE events older than the retention period.
@@ -388,18 +398,37 @@ func (h *Hub) CleanupOldEvents(ctx context.Context) error {
 	return nil
 }
 
-func (h *Hub) GetEventsSince(workspaceID, lastEventID string) ([]Event, error) {
+func (h *Hub) GetEventsSince(workspaceID, lastEventID string, memberChannelIDs []string) ([]Event, error) {
 	if h.db == nil {
 		return nil, nil
 	}
 
-	rows, err := h.db.Query(`
+	// Build query that filters events by channel membership.
+	// Workspace-scoped events (NULL channel_id) are always included.
+	query := `
 		SELECT id, event_type, payload, created_at
 		FROM workspace_events
 		WHERE workspace_id = ? AND id > ?
+		  AND (channel_id IS NULL`
+	args := []any{workspaceID, lastEventID}
+
+	if len(memberChannelIDs) > 0 {
+		query += ` OR channel_id IN (`
+		for i, id := range memberChannelIDs {
+			if i > 0 {
+				query += `, `
+			}
+			query += `?`
+			args = append(args, id)
+		}
+		query += `)`
+	}
+
+	query += `)
 		ORDER BY id ASC
-		LIMIT 100
-	`, workspaceID, lastEventID)
+		LIMIT 100`
+
+	rows, err := h.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
