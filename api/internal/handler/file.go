@@ -27,6 +27,10 @@ func (h *Handler) UploadFile(ctx context.Context, request openapi.UploadFileRequ
 		return openapi.UploadFile401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
 	}
 
+	if !h.filesEnabled {
+		return openapi.UploadFile403JSONResponse{ForbiddenJSONResponse: filesDisabledResponse()}, nil
+	}
+
 	// Check channel exists and user has access
 	ch, err := h.channelRepo.GetByID(ctx, string(request.Id))
 	if err != nil {

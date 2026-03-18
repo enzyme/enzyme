@@ -5,7 +5,7 @@ import {
   useUploadCustomEmoji,
   useDeleteCustomEmoji,
 } from '../../hooks/useCustomEmojis';
-import { useAuth } from '../../hooks';
+import { useAuth, useServerInfo } from '../../hooks';
 import { useWorkspaceMembers, useWorkspace } from '../../hooks/useWorkspaces';
 import { Button, Spinner, toast, CustomEmojiImg, ConfirmDialog } from '../ui';
 import { resolveStandardShortcode } from '../../lib/emoji';
@@ -33,10 +33,13 @@ export function CustomEmojiManager({ workspaceId }: CustomEmojiManagerProps) {
   const { data: workspaceData } = useWorkspace(workspaceId);
   const currentMember = membersData?.members.find((m) => m.user_id === user?.id);
   const isAdmin = currentMember?.role === 'owner' || currentMember?.role === 'admin';
-  const canManageEmoji = hasPermission(
-    currentMember?.role,
-    workspaceData?.workspace.parsed_settings?.who_can_manage_custom_emoji,
-  );
+  const { filesEnabled } = useServerInfo();
+  const canManageEmoji =
+    filesEnabled &&
+    hasPermission(
+      currentMember?.role,
+      workspaceData?.workspace.parsed_settings?.who_can_manage_custom_emoji,
+    );
 
   const nameError = (() => {
     if (!name) return null;
@@ -221,7 +224,9 @@ export function CustomEmojiManager({ workspaceId }: CustomEmojiManagerProps) {
           </div>
         ) : (
           <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-            No custom emojis yet. Upload one above to get started.
+            {!filesEnabled
+              ? 'File uploads are disabled on this server. Custom emoji upload is unavailable.'
+              : 'No custom emojis yet. Upload one above to get started.'}
           </p>
         )}
       </div>

@@ -97,12 +97,14 @@ func Validate(cfg *Config) error {
 		errs = append(errs, fmt.Errorf("auth.bcrypt_cost must be between 10 and 31"))
 	}
 
-	// Files validation
-	if cfg.Files.StoragePath == "" {
-		errs = append(errs, fmt.Errorf("files.storage_path is required"))
-	}
-	if cfg.Files.MaxUploadSize < 1024 {
-		errs = append(errs, fmt.Errorf("files.max_upload_size must be at least 1KB"))
+	// Files validation (only when enabled)
+	if cfg.Files.Enabled {
+		if cfg.Files.StoragePath == "" {
+			errs = append(errs, fmt.Errorf("files.storage_path is required"))
+		}
+		if cfg.Files.MaxUploadSize < 1024 {
+			errs = append(errs, fmt.Errorf("files.max_upload_size must be at least 1KB"))
+		}
 	}
 
 	// Email validation (only if enabled)

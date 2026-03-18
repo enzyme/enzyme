@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetServerInfo(t *testing.T) {
-	h := &Handler{emailService: email.NewTestService(false, "")}
+	h := &Handler{emailService: email.NewTestService(false, ""), filesEnabled: true}
 
 	resp, err := h.GetServerInfo(context.Background(), openapi.GetServerInfoRequestObject{})
 	if err != nil {
@@ -29,10 +29,14 @@ func TestGetServerInfo(t *testing.T) {
 	if jsonResp.EmailEnabled == nil || *jsonResp.EmailEnabled != false {
 		t.Error("expected email_enabled to be false")
 	}
+
+	if jsonResp.FilesEnabled == nil || *jsonResp.FilesEnabled != true {
+		t.Error("expected files_enabled to be true")
+	}
 }
 
 func TestGetServerInfo_EmailEnabled(t *testing.T) {
-	h := &Handler{emailService: email.NewTestService(true, "")}
+	h := &Handler{emailService: email.NewTestService(true, ""), filesEnabled: true}
 
 	resp, err := h.GetServerInfo(context.Background(), openapi.GetServerInfoRequestObject{})
 	if err != nil {
@@ -42,5 +46,19 @@ func TestGetServerInfo_EmailEnabled(t *testing.T) {
 	jsonResp := resp.(openapi.GetServerInfo200JSONResponse)
 	if jsonResp.EmailEnabled == nil || *jsonResp.EmailEnabled != true {
 		t.Error("expected email_enabled to be true")
+	}
+}
+
+func TestGetServerInfo_FilesDisabled(t *testing.T) {
+	h := &Handler{emailService: email.NewTestService(false, ""), filesEnabled: false}
+
+	resp, err := h.GetServerInfo(context.Background(), openapi.GetServerInfoRequestObject{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	jsonResp := resp.(openapi.GetServerInfo200JSONResponse)
+	if jsonResp.FilesEnabled == nil || *jsonResp.FilesEnabled != false {
+		t.Error("expected files_enabled to be false")
 	}
 }

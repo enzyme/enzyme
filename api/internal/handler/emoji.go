@@ -55,6 +55,10 @@ func (h *Handler) UploadCustomEmoji(ctx context.Context, request openapi.UploadC
 		return openapi.UploadCustomEmoji401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
 	}
 
+	if !h.filesEnabled {
+		return openapi.UploadCustomEmoji403JSONResponse{ForbiddenJSONResponse: filesDisabledResponse()}, nil
+	}
+
 	workspaceID := request.Wid
 
 	// Check workspace membership

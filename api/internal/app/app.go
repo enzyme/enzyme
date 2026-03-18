@@ -186,6 +186,7 @@ func New(cfg *config.Config) (*App, error) {
 		Signer:              signer,
 		StoragePath:         cfg.Files.StoragePath,
 		MaxUploadSize:       cfg.Files.MaxUploadSize,
+		FilesEnabled:        cfg.Files.Enabled,
 		PublicURL:           cfg.Server.PublicURL,
 	})
 

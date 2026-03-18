@@ -1831,6 +1831,7 @@ export interface components {
         ServerInfo: {
             version: string;
             email_enabled?: boolean;
+            files_enabled?: boolean;
         };
         SuccessResponse: {
             success: boolean;

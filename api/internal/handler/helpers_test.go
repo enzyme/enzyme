@@ -74,6 +74,7 @@ func testHandler(t *testing.T) (*Handler, *sql.DB) {
 		Signer:              signing.NewSigner("test-signing-secret"),
 		StoragePath:         t.TempDir(),
 		MaxUploadSize:       10 * 1024 * 1024,
+		FilesEnabled:        true,
 		PublicURL:           "http://localhost:8080",
 	})
 
@@ -213,6 +214,7 @@ func testHandlerWithLinkPreviews(t *testing.T, httpClient *http.Client) (*Handle
 		Signer:              signing.NewSigner("test-signing-secret"),
 		StoragePath:         t.TempDir(),
 		MaxUploadSize:       10 * 1024 * 1024,
+		FilesEnabled:        true,
 		PublicURL:           "http://localhost:8080",
 	})
 

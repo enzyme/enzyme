@@ -18,6 +18,7 @@ import {
   useWorkspaceMembers,
   useChannels,
   useAddReaction,
+  useServerInfo,
 } from '../../hooks';
 import { useScheduleMessage } from '../../hooks/useScheduledMessages';
 import { useCustomEmojis } from '../../hooks/useCustomEmojis';
@@ -99,6 +100,7 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
     const { data: membersData } = useWorkspaceMembers(workspaceId);
     const { data: channelsData } = useChannels(workspaceId);
     const { data: customEmojis } = useCustomEmojis(workspaceId);
+    const { filesEnabled } = useServerInfo();
 
     const isThreadVariant = variant === 'thread';
     const activeMutation = parentMessageId ? sendThreadReply : sendMessage;
@@ -308,7 +310,7 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
         )}
 
         {/* Pending attachments preview */}
-        {pendingAttachments.length > 0 && (
+        {filesEnabled && pendingAttachments.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
             {pendingAttachments.map((attachment) => (
               <div
@@ -370,10 +372,11 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
         )}
 
         <DropZone
-          onDropEnter={() => setIsDragging(true)}
+          onDropEnter={() => filesEnabled && setIsDragging(true)}
           onDropExit={() => setIsDragging(false)}
           onDrop={async (e) => {
             setIsDragging(false);
+            if (!filesEnabled) return;
             const files = await Promise.all(
               e.items.filter((i) => i.kind === 'file').map((i) => i.getFile()),
             );
@@ -403,11 +406,11 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
               workspaceMembers={workspaceMembers}
               workspaceChannels={workspaceChannels}
               customEmojis={customEmojis}
-              onAddEmoji={() => setAddEmojiOpen(true)}
+              onAddEmoji={filesEnabled ? () => setAddEmojiOpen(true) : undefined}
               showToolbar
               disabled={activeMutation.isPending}
               isPending={activeMutation.isPending || isUploading}
-              onAttachmentClick={handleFilesSelected}
+              onAttachmentClick={filesEnabled ? handleFilesSelected : undefined}
               onScheduleClick={() => setScheduleModalOpen(true)}
               onSchedule={handleSchedule}
               belowEditor={
@@ -433,12 +436,14 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
             />
           </form>
         </DropZone>
-        <AddEmojiModal
-          isOpen={addEmojiOpen}
-          onClose={() => setAddEmojiOpen(false)}
-          workspaceId={workspaceId}
-          customEmojis={customEmojis ?? []}
-        />
+        {filesEnabled && (
+          <AddEmojiModal
+            isOpen={addEmojiOpen}
+            onClose={() => setAddEmojiOpen(false)}
+            workspaceId={workspaceId}
+            customEmojis={customEmojis ?? []}
+          />
+        )}
         <ScheduleMessageModal
           isOpen={scheduleModalOpen}
           onClose={() => setScheduleModalOpen(false)}

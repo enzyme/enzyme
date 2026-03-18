@@ -11,5 +11,6 @@ export function useServerInfo() {
 
   return {
     emailEnabled: data?.email_enabled ?? true,
+    filesEnabled: data?.files_enabled ?? true,
   };
 }

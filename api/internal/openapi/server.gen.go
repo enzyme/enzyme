@@ -1206,6 +1206,7 @@ type SendMessageInput struct {
 // ServerInfo defines model for ServerInfo.
 type ServerInfo struct {
 	EmailEnabled *bool  `json:"email_enabled,omitempty"`
+	FilesEnabled *bool  `json:"files_enabled,omitempty"`
 	Version      string `json:"version"`
 }
 
