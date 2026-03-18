@@ -7,6 +7,25 @@ import (
 	"github.com/enzyme/api/internal/testutil"
 )
 
+func TestUploadCustomEmoji_FilesDisabled(t *testing.T) {
+	h, db := testHandler(t)
+	h.filesEnabled = false
+
+	user := testutil.CreateTestUser(t, db, "user@test.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, user.ID, "WS")
+
+	ctx := ctxWithUser(t, h, user.ID)
+	resp, err := h.UploadCustomEmoji(ctx, openapi.UploadCustomEmojiRequestObject{
+		Wid: ws.ID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := resp.(openapi.UploadCustomEmoji403JSONResponse); !ok {
+		t.Fatalf("expected 403 response, got %T", resp)
+	}
+}
+
 func TestListCustomEmojis_Success(t *testing.T) {
 	h, db := testHandler(t)
 

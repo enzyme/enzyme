@@ -46,6 +46,7 @@ type Handler struct {
 	signer              *signing.Signer
 	storagePath         string
 	maxUploadSize       int64
+	filesEnabled        bool
 	publicURL           string
 }
 
@@ -70,6 +71,7 @@ type Dependencies struct {
 	Signer              *signing.Signer
 	StoragePath         string
 	MaxUploadSize       int64
+	FilesEnabled        bool
 	PublicURL           string
 }
 
@@ -95,6 +97,7 @@ func New(deps Dependencies) *Handler {
 		signer:              deps.Signer,
 		storagePath:         deps.StoragePath,
 		maxUploadSize:       deps.MaxUploadSize,
+		filesEnabled:        deps.FilesEnabled,
 		publicURL:           deps.PublicURL,
 	}
 }

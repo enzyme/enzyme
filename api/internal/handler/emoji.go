@@ -50,6 +50,10 @@ func toOpenAPIEmoji(e *emoji.CustomEmoji) openapi.CustomEmoji {
 
 // UploadCustomEmoji uploads a custom emoji image
 func (h *Handler) UploadCustomEmoji(ctx context.Context, request openapi.UploadCustomEmojiRequestObject) (openapi.UploadCustomEmojiResponseObject, error) {
+	if !h.filesEnabled {
+		return openapi.UploadCustomEmoji403JSONResponse{ForbiddenJSONResponse: filesDisabledResponse()}, nil
+	}
+
 	userID := h.getUserID(ctx)
 	if userID == "" {
 		return openapi.UploadCustomEmoji401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil

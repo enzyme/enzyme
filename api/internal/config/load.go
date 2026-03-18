@@ -133,6 +133,7 @@ func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 			"bcrypt_cost":      d.defaults.Auth.BcryptCost,
 		},
 		"files": map[string]interface{}{
+			"enabled":         d.defaults.Files.Enabled,
 			"storage_path":    d.defaults.Files.StoragePath,
 			"max_upload_size": d.defaults.Files.MaxUploadSize,
 			"signing_secret":  d.defaults.Files.SigningSecret,
@@ -192,6 +193,7 @@ func SetupFlags() *pflag.FlagSet {
 	flags.String("server.public_url", "", "Public URL")
 	flags.String("database.path", "", "Database path")
 	flags.Duration("auth.session_duration", 0, "Session duration")
+	flags.Bool("files.enabled", true, "Enable file uploads")
 	flags.String("files.storage_path", "", "File storage path")
 	flags.Int64("files.max_upload_size", 0, "Max upload size in bytes")
 	flags.Bool("email.enabled", false, "Enable email sending")

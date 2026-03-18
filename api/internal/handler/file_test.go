@@ -9,6 +9,49 @@ import (
 	"github.com/enzyme/api/internal/testutil"
 )
 
+func TestUploadFile_FilesDisabled(t *testing.T) {
+	h, db := testHandler(t)
+	h.filesEnabled = false
+
+	user := testutil.CreateTestUser(t, db, "user@test.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, user.ID, "WS")
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user.ID, "general", channel.TypePublic)
+
+	ctx := ctxWithUser(t, h, user.ID)
+	resp, err := h.UploadFile(ctx, openapi.UploadFileRequestObject{
+		Id: openapi.ChannelId(ch.ID),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := resp.(openapi.UploadFile403JSONResponse); !ok {
+		t.Fatalf("expected 403 response, got %T", resp)
+	}
+}
+
+func TestDeleteFile_FilesDisabled_StillWorks(t *testing.T) {
+	h, db := testHandler(t)
+
+	user := testutil.CreateTestUser(t, db, "user@test.com", "User")
+	ws := testutil.CreateTestWorkspace(t, db, user.ID, "WS")
+	ch := testutil.CreateTestChannel(t, db, ws.ID, user.ID, "general", channel.TypePublic)
+	fileID := createFileAttachment(t, db, ch.ID, user.ID)
+
+	// Disable files after creating the attachment
+	h.filesEnabled = false
+
+	ctx := ctxWithUser(t, h, user.ID)
+	resp, err := h.DeleteFile(ctx, openapi.DeleteFileRequestObject{
+		Id: fileID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := resp.(openapi.DeleteFile200JSONResponse); !ok {
+		t.Fatalf("expected 200 response (delete should still work), got %T", resp)
+	}
+}
+
 func TestDeleteFile_Owner(t *testing.T) {
 	h, db := testHandler(t)
 

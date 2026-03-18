@@ -94,8 +94,11 @@ Enzyme uses SQLite in WAL mode. No external database server is needed. See [Scal
 
 ## File Storage
 
+File uploads are enabled by default. When disabled, upload endpoints return 403 and upload UI is hidden. Existing uploaded files remain downloadable.
+
 | Key                     | Env Var                        | CLI Flag                  | Default          | Description                                                                                                                                                                                                         |
 | ----------------------- | ------------------------------ | ------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `files.enabled`         | `ENZYME_FILES_ENABLED`         | `--files.enabled`         | `true`           | Enable file uploads. When `false`, upload endpoints return 403 and upload UI is hidden. Existing files remain downloadable.                                                                                         |
 | `files.storage_path`    | `ENZYME_FILES_STORAGE_PATH`    | `--files.storage_path`    | `./data/uploads` | Directory for uploaded files.                                                                                                                                                                                       |
 | `files.max_upload_size` | `ENZYME_FILES_MAX_UPLOAD_SIZE` | `--files.max_upload_size` | `10485760`       | Maximum upload file size in bytes. Default is 10 MB.                                                                                                                                                                |
 | `files.signing_secret`  | `ENZYME_FILES_SIGNING_SECRET`  |                           |                  | HMAC secret for signing file download URLs. If empty, a random secret is auto-generated and saved to `.signing_secret` in the database directory for persistence across restarts. You can also set this explicitly. |

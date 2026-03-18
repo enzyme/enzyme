@@ -29,6 +29,7 @@ const (
 	ErrCodePermissionDenied = "PERMISSION_DENIED"
 	ErrCodeValidationError  = "VALIDATION_ERROR"
 	ErrCodeConflict         = "CONFLICT"
+	ErrCodeFilesDisabled    = "FILES_DISABLED"
 )
 
 // Error response helpers that return typed shared response components.
@@ -56,4 +57,8 @@ func notAMemberResponse(msg string) openapi.ForbiddenJSONResponse {
 
 func conflictResponse(msg string) openapi.ConflictJSONResponse {
 	return openapi.ConflictJSONResponse(newErrorResponse(ErrCodeConflict, msg))
+}
+
+func filesDisabledResponse() openapi.ForbiddenJSONResponse {
+	return openapi.ForbiddenJSONResponse(newErrorResponse(ErrCodeFilesDisabled, "File uploads are disabled"))
 }

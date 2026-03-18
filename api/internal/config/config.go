@@ -57,6 +57,7 @@ type AuthConfig struct {
 }
 
 type FilesConfig struct {
+	Enabled       bool   `koanf:"enabled"`
 	StoragePath   string `koanf:"storage_path"`
 	MaxUploadSize int64  `koanf:"max_upload_size"`
 	SigningSecret string `koanf:"signing_secret"`
@@ -139,6 +140,7 @@ func Defaults() *Config {
 			BcryptCost:      12,
 		},
 		Files: FilesConfig{
+			Enabled:       true,
 			StoragePath:   "./data/uploads",
 			MaxUploadSize: 10 * 1024 * 1024, // 10MB
 		},
