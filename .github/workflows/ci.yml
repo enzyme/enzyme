@@ -160,6 +160,7 @@ jobs:
         run: pnpm --filter @enzyme/web build
 
   ci:
+    name: All checks pass
     if: always()
     needs: [format, lint-go, lint-ts, test-go, test-web, build]
     runs-on: ubuntu-latest
