@@ -20,7 +20,7 @@ import {
   ModalOverlay,
   type DateValue,
 } from '../ui';
-import { formatRelativeTime } from '../../lib/utils';
+import { formatRelativeTime } from '@enzyme/shared';
 import type { SearchMessage } from '@enzyme/api-client';
 
 function dateValueToISO(value: DateValue | null, endOfDay?: boolean): string | undefined {

@@ -21,6 +21,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@enzyme/api-client': path.resolve(__dirname, '../../packages/api-client/src'),
+      '@enzyme/shared': path.resolve(__dirname, '../../packages/shared/src'),
     },
   },
   build: {

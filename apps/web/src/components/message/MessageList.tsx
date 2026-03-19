@@ -10,7 +10,7 @@ import { MessageItem } from './MessageItem';
 import { SystemMessage } from './SystemMessage';
 import { JumpToLatestButton } from './JumpToLatestButton';
 import { MessageSkeleton } from '../ui';
-import { formatDate, hasPermission } from '../../lib/utils';
+import { formatDate, hasPermission } from '@enzyme/shared';
 import type { ChannelWithMembership } from '@enzyme/api-client';
 
 interface MessageListProps {

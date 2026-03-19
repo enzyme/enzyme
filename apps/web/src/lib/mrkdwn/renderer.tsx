@@ -1,6 +1,11 @@
 import { useMemo } from 'react';
 import { tv } from 'tailwind-variants';
-import { parseMrkdwn, type MrkdwnSegment } from './parser';
+import {
+  parseMrkdwn,
+  type MrkdwnSegment,
+  resolveStandardShortcode,
+  isEmojiOnly,
+} from '@enzyme/shared';
 import { UserMentionBadge, SpecialMentionBadge } from '../../components/message/MentionBadge';
 import { ChannelMentionBadge } from '../../components/message/ChannelMentionBadge';
 import type {
@@ -8,9 +13,7 @@ import type {
   ChannelWithMembership,
   CustomEmoji,
 } from '@enzyme/api-client';
-import { resolveStandardShortcode } from '../emoji';
 import { CustomEmojiImg } from '../../components/ui/CustomEmojiImg';
-import { isEmojiOnly } from './isEmojiOnly';
 
 const styles = tv({
   slots: {

@@ -5,7 +5,7 @@ import {
   type EmojiOption,
   type EmojiSuggestionRef,
 } from './EmojiSuggestionList';
-import { searchAllEmojis } from '../../../lib/emoji';
+import { searchAllEmojis } from '@enzyme/shared';
 import type { CustomEmoji } from '@enzyme/api-client';
 
 /**

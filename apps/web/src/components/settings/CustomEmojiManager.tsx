@@ -8,8 +8,8 @@ import {
 import { useAuth, useServerInfo } from '../../hooks';
 import { useWorkspaceMembers, useWorkspace } from '../../hooks/useWorkspaces';
 import { Button, Spinner, toast, CustomEmojiImg, ConfirmDialog } from '../ui';
-import { resolveStandardShortcode } from '../../lib/emoji';
-import { hasPermission } from '../../lib/utils';
+import { resolveStandardShortcode } from '@enzyme/shared';
+import { hasPermission } from '@enzyme/shared';
 
 const NAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$/;
 

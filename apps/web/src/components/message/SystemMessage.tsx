@@ -11,7 +11,8 @@ import { useMessage, useMarkMessageUnread } from '../../hooks/useMessages';
 import { useCustomEmojiMap, useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useChannels } from '../../hooks/useChannels';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
-import { cn, formatTime } from '../../lib/utils';
+import { cn } from '../../lib/utils';
+import { formatTime } from '@enzyme/shared';
 import type { MessageWithUser } from '@enzyme/api-client';
 
 interface SystemMessageProps {

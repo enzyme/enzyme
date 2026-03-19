@@ -63,7 +63,8 @@ import {
   useUnstarChannel,
   useMarkAllChannelsAsRead,
 } from '../../hooks/useChannels';
-import { cn, getAvatarColor, hasPermission } from '../../lib/utils';
+import { cn } from '../../lib/utils';
+import { getAvatarColor, hasPermission } from '@enzyme/shared';
 import { useUserPresence } from '../../lib/presenceStore';
 import { AvatarStack } from '../ui';
 import type { ChannelWithMembership, ChannelType } from '@enzyme/api-client';

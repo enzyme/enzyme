@@ -1,6 +1,6 @@
 import { UnstyledButton, Tooltip, CustomEmojiImg } from '../ui';
 import { cn } from '../../lib/utils';
-import { resolveStandardShortcode } from '../../lib/emoji';
+import { resolveStandardShortcode } from '@enzyme/shared';
 import type { ReactionGroup } from './reactionUtils';
 import type { CustomEmoji } from '@enzyme/api-client';
 

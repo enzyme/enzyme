@@ -19,7 +19,8 @@
     /* Path aliases */
     "baseUrl": ".",
     "paths": {
-      "@enzyme/api-client": ["../../packages/api-client/src"]
+      "@enzyme/api-client": ["../../packages/api-client/src"],
+      "@enzyme/shared": ["../../packages/shared/src"]
     },
 
     /* Linting */

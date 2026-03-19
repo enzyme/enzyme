@@ -1,7 +1,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { Node as PmNode } from '@tiptap/pm/model';
-import { EMOJI_NAME, UNICODE_EMOJI_RE } from '../../../lib/emoji';
+import { EMOJI_NAME, UNICODE_EMOJI_RE } from '@enzyme/shared';
 
 function isDocEmojiOnly(doc: PmNode): boolean {
   // Must be a single paragraph

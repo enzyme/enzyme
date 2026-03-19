@@ -2,7 +2,7 @@ import { forwardRef, useImperativeHandle, useState, useRef, useLayoutEffect } fr
 import { BellIcon } from '@heroicons/react/24/outline';
 import { tv } from 'tailwind-variants';
 import { Avatar } from '../../ui';
-import type { MentionOption } from '../../../lib/mentions';
+import type { MentionOption } from '@enzyme/shared';
 
 const styles = tv({
   slots: {

@@ -1,5 +1,5 @@
 import type { SuggestionOptions, SuggestionProps } from '@tiptap/suggestion';
-import type { MentionOption } from '../../../lib/mentions';
+import type { MentionOption } from '@enzyme/shared';
 import { MentionSuggestionList, type MentionSuggestionRef } from './MentionSuggestionList';
 
 /**

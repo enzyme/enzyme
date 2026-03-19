@@ -63,7 +63,8 @@ import { MessagePreviewDisplay } from '../message/MessagePreviewDisplay';
 import { CollapsibleMessage } from '../message/CollapsibleMessage';
 import { MessageContent, EditedBadge } from '../message/MessageContent';
 import { MessageComposer, type MessageComposerRef } from '../message/MessageComposer';
-import { cn, formatTime } from '../../lib/utils';
+import { cn } from '../../lib/utils';
+import { formatTime } from '@enzyme/shared';
 import {
   useIsEditingMessage,
   setEditingMessageId,

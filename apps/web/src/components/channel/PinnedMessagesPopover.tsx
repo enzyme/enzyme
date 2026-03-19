@@ -10,7 +10,7 @@ import {
 } from '../ui';
 import { MessageContent } from '../message/MessageContent';
 import { usePinnedMessages } from '../../hooks/useModeration';
-import { formatTime } from '../../lib/utils';
+import { formatTime } from '@enzyme/shared';
 
 interface PinnedMessagesPopoverProps {
   channelId: string;

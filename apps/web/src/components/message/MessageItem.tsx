@@ -42,7 +42,8 @@ import {
 import { usePinMessage, useUnpinMessage, useBlockUser } from '../../hooks/useModeration';
 import { useCustomEmojiMap, useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useThreadPanel, useProfilePanel } from '../../hooks/usePanel';
-import { cn, formatTime } from '../../lib/utils';
+import { cn } from '../../lib/utils';
+import { formatTime } from '@enzyme/shared';
 import {
   useIsEditingMessage,
   setEditingMessageId,

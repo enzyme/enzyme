@@ -1,5 +1,5 @@
 import type { JSONContent } from '@tiptap/react';
-import { resolveStandardShortcode } from '../../../lib/emoji';
+import { resolveStandardShortcode } from '@enzyme/shared';
 
 /**
  * Convert mrkdwn string to TipTap JSON content.

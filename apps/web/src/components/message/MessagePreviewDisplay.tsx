@@ -3,7 +3,7 @@ import { LockClosedIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Avatar, UnstyledButton } from '../ui';
 import { MessageContent } from './MessageContent';
 import { DismissPreviewButton } from './DismissPreviewButton';
-import { formatRelativeTime } from '../../lib/utils';
+import { formatRelativeTime } from '@enzyme/shared';
 import type {
   LinkPreview,
   WorkspaceMemberWithUser,

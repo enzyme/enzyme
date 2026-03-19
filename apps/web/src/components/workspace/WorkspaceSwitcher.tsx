@@ -50,7 +50,8 @@ import {
 } from '../../hooks/useWorkspaces';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import { useProfilePanel } from '../../hooks/usePanel';
-import { cn, getAvatarColor } from '../../lib/utils';
+import { cn } from '../../lib/utils';
+import { getAvatarColor } from '@enzyme/shared';
 import type { WorkspaceSummary, WorkspaceNotificationSummary } from '@enzyme/api-client';
 import { WorkspaceContextMenu } from './WorkspaceContextMenu';
 

@@ -8,10 +8,9 @@ import {
   SKIN_TONE_EMOJIS,
   searchAllEmojis,
   applySkinTone,
-  getSavedSkinTone,
-  saveSkinTone,
   type SkinTone,
-} from '../../lib/emoji';
+} from '@enzyme/shared';
+import { getSavedSkinTone, saveSkinTone } from '../../lib/emoji';
 import { CustomEmojiImg } from './CustomEmojiImg';
 import type { CustomEmoji } from '@enzyme/api-client';
 

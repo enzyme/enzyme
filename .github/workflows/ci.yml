@@ -104,8 +104,8 @@ jobs:
 
       - run: cd api && make test
 
-  test-web:
-    name: Test Web
+  test-ts:
+    name: Test TypeScript
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -124,7 +124,7 @@ jobs:
       - name: Generate TypeScript types
         run: pnpm --filter @enzyme/api-client generate
 
-      - run: pnpm --filter @enzyme/web test:run
+      - run: pnpm -r test:run
 
   build:
     name: Build
@@ -162,7 +162,7 @@ jobs:
   ci:
     name: All checks pass
     if: always()
-    needs: [format, lint-go, lint-ts, test-go, test-web, build]
+    needs: [format, lint-go, lint-ts, test-go, test-ts, build]
     runs-on: ubuntu-latest
     steps:
       - name: Check results

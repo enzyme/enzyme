@@ -9,7 +9,8 @@ import { useUserThreads } from '../hooks/useThreads';
 import { useThreadPanel } from '../hooks/usePanel';
 import { usePageTitle } from '../hooks';
 import { Spinner, Avatar, UnstyledButton } from '../components/ui';
-import { cn, formatRelativeTime } from '../lib/utils';
+import { cn } from '../lib/utils';
+import { formatRelativeTime } from '@enzyme/shared';
 import type { ThreadMessage } from '@enzyme/api-client';
 
 function ChannelIcon({ type }: { type: string }) {

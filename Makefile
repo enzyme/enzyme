@@ -29,7 +29,7 @@ build: generate-types
 # Run all tests
 test:
 	cd api && make test
-	pnpm --filter @enzyme/web test:run
+	pnpm -r test:run
 	pnpm -r typecheck
 
 # Clean build artifacts

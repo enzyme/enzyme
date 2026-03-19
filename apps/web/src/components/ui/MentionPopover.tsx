@@ -2,7 +2,7 @@ import { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { BellIcon } from '@heroicons/react/24/outline';
 import { tv } from 'tailwind-variants';
 import { Avatar } from './Avatar';
-import type { MentionOption } from '../../lib/mentions';
+import type { MentionOption } from '@enzyme/shared';
 
 const mentionPopover = tv({
   slots: {

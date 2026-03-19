@@ -5,7 +5,7 @@ import {
   SPECIAL_MENTIONS,
   type MentionOption,
   type MentionTrigger,
-} from '../lib/mentions';
+} from '@enzyme/shared';
 
 interface UseMentionsResult {
   trigger: MentionTrigger | null;

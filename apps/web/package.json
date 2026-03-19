@@ -20,6 +20,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@enzyme/api-client": "workspace:*",
+    "@enzyme/shared": "workspace:*",
     "@heroicons/react": "^2.2.0",
     "@internationalized/date": "^3.11.0",
     "@opentelemetry/api": "^1.9.0",

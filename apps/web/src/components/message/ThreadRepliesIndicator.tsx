@@ -1,7 +1,7 @@
 import { ChevronRightIcon } from '@heroicons/react/24/outline';
 import { AvatarStack, UnstyledButton } from '../ui';
 import { useThreadPanel } from '../../hooks/usePanel';
-import { formatRelativeTime } from '../../lib/utils';
+import { formatRelativeTime } from '@enzyme/shared';
 import type { ThreadParticipant } from '@enzyme/api-client';
 
 interface ThreadRepliesIndicatorProps {

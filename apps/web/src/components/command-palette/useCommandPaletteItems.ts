@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useChannels, useAuth } from '../../hooks';
 import { useWorkspaceMembers, useWorkspace } from '../../hooks/useWorkspaces';
-import { fuzzyMatch } from '../../lib/fuzzyMatch';
+import { fuzzyMatch } from '@enzyme/shared';
 import { getRecentChannels } from '../../lib/recentChannels';
-import { hasPermission } from '../../lib/utils';
+import { hasPermission } from '@enzyme/shared';
 import type { ChannelWithMembership, WorkspaceMemberWithUser } from '@enzyme/api-client';
 
 export type CommandPaletteItemType = 'channel' | 'person' | 'action';

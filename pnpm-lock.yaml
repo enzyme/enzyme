@@ -53,6 +53,9 @@ importers:
       '@enzyme/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@enzyme/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@heroicons/react':
         specifier: ^2.2.0
         version: 2.2.0(react@19.2.4)
@@ -238,6 +241,19 @@ importers:
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
+
+  packages/shared:
+    dependencies:
+      '@enzyme/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+    devDependencies:
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@28.0.0)(lightningcss@1.31.1)(terser@5.46.0)
 
 packages:
 

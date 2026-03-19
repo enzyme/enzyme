@@ -19,7 +19,8 @@ import { useProfilePanel } from '../../hooks/usePanel';
 import { useBlocks, useBlockUser, useUnblockUser } from '../../hooks/useModeration';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaces';
 import { Button, UnstyledButton, IconButton, Input, Modal, Spinner, Tooltip, toast } from '../ui';
-import { cn, getInitials, getAvatarColor } from '../../lib/utils';
+import { cn } from '../../lib/utils';
+import { getInitials, getAvatarColor } from '@enzyme/shared';
 import { useUserPresence } from '../../lib/presenceStore';
 
 interface ProfilePaneProps {

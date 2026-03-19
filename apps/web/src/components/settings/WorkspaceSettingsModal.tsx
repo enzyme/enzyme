@@ -43,7 +43,8 @@ import {
 import { useBlocks, useBlockUser, useUnblockUser } from '../../hooks/useModeration';
 import { CustomEmojiManager } from './CustomEmojiManager';
 import { ModerationPanel } from './ModerationPanel';
-import { cn, getAvatarColor, hasPermission } from '../../lib/utils';
+import { cn } from '../../lib/utils';
+import { getAvatarColor, hasPermission } from '@enzyme/shared';
 import type { WorkspaceRole, PermissionLevel } from '@enzyme/api-client';
 
 export type WorkspaceSettingsTab =

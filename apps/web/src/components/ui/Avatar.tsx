@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { cn, getInitials, getAvatarColor } from '../../lib/utils';
+import { cn } from '../../lib/utils';
+import { getInitials, getAvatarColor } from '@enzyme/shared';
 import type { PresenceStatus } from '@enzyme/api-client';
 
 // Module-level cache for gravatar URLs that returned 404

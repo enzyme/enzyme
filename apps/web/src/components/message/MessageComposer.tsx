@@ -24,7 +24,7 @@ import { useScheduleMessage } from '../../hooks/useScheduledMessages';
 import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useTypingUsers } from '../../lib/presenceStore';
 import { setEditingMessageId } from '../../lib/editingMessageStore';
-import { EMOJI_MAP } from '../../lib/emoji';
+import { EMOJI_MAP } from '@enzyme/shared';
 import { cn } from '../../lib/utils';
 import type { MessageListResult } from '@enzyme/api-client';
 import {

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Button, Modal, toast } from '../ui';
-import { resolveStandardShortcode } from '../../lib/emoji';
+import { resolveStandardShortcode } from '@enzyme/shared';
 import { useUploadCustomEmoji } from '../../hooks/useCustomEmojis';
 import type { CustomEmoji } from '@enzyme/api-client';
 

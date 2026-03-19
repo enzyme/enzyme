@@ -51,8 +51,7 @@ import type { EmojiOption } from './suggestions';
 import type { ChannelOption } from './suggestions';
 import { toMrkdwn } from './serialization';
 import { fromMrkdwn } from './serialization';
-import type { MentionOption } from '../../lib/mentions';
-import { SPECIAL_MENTIONS } from '../../lib/mentions';
+import { SPECIAL_MENTIONS, type MentionOption } from '@enzyme/shared';
 import { cn } from '../../lib/utils';
 import type { CustomEmoji } from '@enzyme/api-client';
 
