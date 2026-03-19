@@ -158,3 +158,16 @@ jobs:
 
       - name: Build Web
         run: pnpm --filter @enzyme/web build
+
+  ci:
+    name: CI
+    if: always()
+    needs: [format, lint-go, lint-ts, test-go, test-web, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ] || [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "One or more jobs failed or were cancelled"
+            exit 1
+          fi
