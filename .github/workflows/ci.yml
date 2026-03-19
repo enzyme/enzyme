@@ -5,67 +5,156 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_call:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  ci:
+  format:
+    name: Format
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.25.5'
           cache-dependency-path: api/go.sum
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: pnpm
 
-      - name: Install dependencies
-        run: make install
+      - run: make install
 
       - name: Install oapi-codegen
-        # Version must match server.gen.go header
         run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.1
 
-      - name: Generate types
-        run: make generate-types
+      - run: make generate-types
 
-      - name: Check formatting
-        run: make format-check
+      - run: make format-check
 
-      - name: Lint Go
-        uses: golangci/golangci-lint-action@v7
+  lint-go:
+    name: Lint Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.5'
+          cache-dependency-path: api/go.sum
+
+      - name: Install oapi-codegen
+        run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.1
+
+      - run: cd api && make generate
+
+      - uses: golangci/golangci-lint-action@v7
         with:
           version: v2.8
           working-directory: api
 
-      - name: Test Go
-        run: cd api && make test
+  lint-ts:
+    name: Lint TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: TypeScript typecheck
-        run: pnpm -r typecheck
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
 
-      - name: ESLint
-        run: pnpm -r lint
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
 
-      - name: Test web client
-        run: pnpm --filter @enzyme/web test:run
+      - run: make install
 
-      - name: Build verification
-        run: |
-          cd api && go build -o /dev/null ./cmd/enzyme
-          pnpm --filter @enzyme/web build
+      - name: Generate TypeScript types
+        run: pnpm --filter @enzyme/api-client generate
+
+      - run: pnpm -r typecheck
+
+      - run: pnpm -r lint
+
+  test-go:
+    name: Test Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.5'
+          cache-dependency-path: api/go.sum
+
+      - name: Install oapi-codegen
+        run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.1
+
+      - run: cd api && make generate
+
+      - run: cd api && make test
+
+  test-web:
+    name: Test Web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - run: make install
+
+      - name: Generate TypeScript types
+        run: pnpm --filter @enzyme/api-client generate
+
+      - run: pnpm --filter @enzyme/web test:run
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.5'
+          cache-dependency-path: api/go.sum
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - run: make install
+
+      - name: Install oapi-codegen
+        run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.1
+
+      - run: make generate-types
+
+      - name: Build Go
+        run: cd api && go build -o /dev/null ./cmd/enzyme
+
+      - name: Build Web
+        run: pnpm --filter @enzyme/web build
