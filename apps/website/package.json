@@ -1,6 +1,6 @@
 {
   "name": "@enzyme/website",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "tailwindcss -i src/css/main.css -o _site/css/main.css && concurrently \"eleventy --serve\" \"tailwindcss -i src/css/main.css -o _site/css/main.css --watch\"",
