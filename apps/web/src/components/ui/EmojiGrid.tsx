@@ -10,9 +10,22 @@ import {
   applySkinTone,
   type SkinTone,
 } from '@enzyme/shared';
-import { getSavedSkinTone, saveSkinTone } from '../../lib/emoji';
 import { CustomEmojiImg } from './CustomEmojiImg';
 import type { CustomEmoji } from '@enzyme/api-client';
+
+const SKIN_TONE_KEY = 'enzyme:skin-tone';
+
+function getSavedSkinTone(): SkinTone {
+  return (localStorage.getItem(SKIN_TONE_KEY) || '') as SkinTone;
+}
+
+function saveSkinTone(tone: SkinTone): void {
+  if (tone) {
+    localStorage.setItem(SKIN_TONE_KEY, tone);
+  } else {
+    localStorage.removeItem(SKIN_TONE_KEY);
+  }
+}
 
 const styles = tv({
   slots: {

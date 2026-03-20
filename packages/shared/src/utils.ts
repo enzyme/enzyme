@@ -107,6 +107,7 @@ const AVATAR_COLORS = [
   'bg-rose-500',
 ];
 
+/** Returns a deterministic Tailwind bg-color class for the given ID. */
 export function getAvatarColor(id: string): string {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {

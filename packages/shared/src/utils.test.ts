@@ -7,6 +7,7 @@ import {
   getAvatarColor,
   groupReactions,
   debounce,
+  hasPermission,
 } from './utils';
 
 describe('formatTime', () => {
@@ -168,6 +169,45 @@ describe('groupReactions', () => {
   it('handles empty array', () => {
     const grouped = groupReactions([]);
     expect(grouped.size).toBe(0);
+  });
+});
+
+describe('hasPermission', () => {
+  const roles = ['owner', 'admin', 'member', 'guest'] as const;
+
+  it.each([
+    ['owner', 'everyone', true],
+    ['admin', 'everyone', true],
+    ['member', 'everyone', true],
+    ['guest', 'everyone', true],
+    ['owner', 'members', true],
+    ['admin', 'members', true],
+    ['member', 'members', true],
+    ['guest', 'members', false],
+    ['owner', 'admins', true],
+    ['admin', 'admins', true],
+    ['member', 'admins', false],
+    ['guest', 'admins', false],
+  ] as const)('role=%s level=%s → %s', (role, level, expected) => {
+    expect(hasPermission(role, level)).toBe(expected);
+  });
+
+  it('returns false when role is undefined', () => {
+    expect(hasPermission(undefined, 'everyone')).toBe(false);
+    expect(hasPermission(undefined, 'members')).toBe(false);
+    expect(hasPermission(undefined, 'admins')).toBe(false);
+  });
+
+  it('returns false when level is undefined', () => {
+    for (const role of roles) {
+      expect(hasPermission(role, undefined)).toBe(false);
+    }
+  });
+
+  it('returns false for unknown level', () => {
+    for (const role of roles) {
+      expect(hasPermission(role, 'unknown' as never)).toBe(false);
+    }
   });
 });
 
