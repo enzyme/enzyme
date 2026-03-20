@@ -251,6 +251,15 @@ importers:
         specifier: workspace:*
         version: link:../api-client
     devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.90.20
+        version: 5.90.20(react@19.2.4)
+      '@types/react':
+        specifier: ^19.2.5
+        version: 19.2.10
+      react:
+        specifier: ^19.2.0
+        version: 19.2.4
       typescript:
         specifier: ~5.9.3
         version: 5.9.3

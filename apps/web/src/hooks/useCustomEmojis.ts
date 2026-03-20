@@ -1,38 +1,19 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { emojisApi, type CustomEmoji } from '@enzyme/api-client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { emojisApi } from '@enzyme/api-client';
+import { emojiKeys } from '@enzyme/shared';
 import { toast } from '../components/ui';
 
-export function useCustomEmojis(workspaceId: string | undefined) {
-  return useQuery({
-    queryKey: ['custom-emojis', workspaceId],
-    queryFn: () => emojisApi.list(workspaceId!),
-    enabled: !!workspaceId,
-    staleTime: 5 * 60 * 1000,
-    select: (data) => data.emojis,
-  });
-}
+// Re-export the pure hooks from shared
+export { useCustomEmojis, useCustomEmojiMap } from '@enzyme/shared';
 
-export function useCustomEmojiMap(workspaceId: string | undefined) {
-  const { data: emojis } = useCustomEmojis(workspaceId);
-  return useMemo(() => {
-    const map = new Map<string, CustomEmoji>();
-    if (emojis) {
-      for (const emoji of emojis) {
-        map.set(emoji.name, emoji);
-      }
-    }
-    return map;
-  }, [emojis]);
-}
-
+// Web-specific: adds toast error handling
 export function useUploadCustomEmoji(workspaceId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ file, name }: { file: File; name: string }) =>
       emojisApi.upload(workspaceId, file, name),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['custom-emojis', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: emojiKeys.list(workspaceId) });
     },
     onError: (error) => {
       toast(error instanceof Error ? error.message : 'Failed to upload emoji', 'error');
@@ -40,12 +21,13 @@ export function useUploadCustomEmoji(workspaceId: string) {
   });
 }
 
+// Web-specific: adds toast error handling
 export function useDeleteCustomEmoji(workspaceId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (emojiId: string) => emojisApi.delete(emojiId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['custom-emojis', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: emojiKeys.list(workspaceId) });
     },
     onError: (error) => {
       toast(error instanceof Error ? error.message : 'Failed to delete emoji', 'error');

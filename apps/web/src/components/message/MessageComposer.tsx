@@ -9,6 +9,7 @@ import {
 import { DropZone } from '../ui';
 import { DocumentIcon, ExclamationCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useQueryClient } from '@tanstack/react-query';
+import { messageKeys, threadKeys } from '@enzyme/shared';
 import {
   useSendMessage,
   useSendThreadReply,
@@ -179,7 +180,9 @@ export const MessageComposer = forwardRef<MessageComposerRef, MessageComposerPro
     const hasAttachments = completedAttachmentIds.length > 0;
 
     const getNewestPage = useCallback(() => {
-      const cacheKey = parentMessageId ? ['thread', parentMessageId] : ['messages', channelId];
+      const cacheKey = parentMessageId
+        ? threadKeys.detail(parentMessageId)
+        : messageKeys.list(channelId);
       const cached = queryClient.getQueryData<{ pages: MessageListResult[] }>(cacheKey);
       return cached?.pages?.[0]?.messages ?? [];
     }, [queryClient, channelId, parentMessageId]);

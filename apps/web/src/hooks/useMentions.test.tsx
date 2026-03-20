@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 // Hoist mocks
 const mockUseWorkspaceMembers = vi.hoisted(() => vi.fn());
 
-vi.mock('./useWorkspaces', () => ({
+vi.mock('@enzyme/shared/hooks/useWorkspaces', () => ({
   useWorkspaceMembers: mockUseWorkspaceMembers,
 }));
 

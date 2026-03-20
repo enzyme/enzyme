@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { serverApi } from '@enzyme/api-client';
+import { serverKeys } from '@enzyme/shared';
 
 export function useServerInfo() {
   const { data } = useQuery({
-    queryKey: ['server-info'],
+    queryKey: serverKeys.info(),
     queryFn: serverApi.getServerInfo,
     staleTime: Infinity,
     gcTime: Infinity,

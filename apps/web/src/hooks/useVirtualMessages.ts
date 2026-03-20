@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMessages } from './useMessages';
 import { messagesApi, type MessageListResult } from '@enzyme/api-client';
+import { messageKeys } from '@enzyme/shared';
 
 const PAGE_SIZE = 50;
 
@@ -20,7 +21,7 @@ export function useVirtualMessages(channelId: string | undefined) {
       const existing = queryClient.getQueryData<{
         pages: MessageListResult[];
         pageParams: unknown[];
-      }>(['messages', channelId]);
+      }>(messageKeys.list(channelId));
 
       if (existing) {
         const found = existing.pages.some((page) => page.messages.some((m) => m.id === messageId));
@@ -37,7 +38,7 @@ export function useVirtualMessages(channelId: string | undefined) {
       });
 
       // Replace the query cache with the around-fetched data
-      queryClient.setQueryData(['messages', channelId], {
+      queryClient.setQueryData(messageKeys.list(channelId), {
         pages: [result],
         pageParams: [{ cursor: messageId, direction: 'around' }],
       });
@@ -52,7 +53,7 @@ export function useVirtualMessages(channelId: string | undefined) {
     if (!channelId) return;
     setAroundMessageId(undefined);
     setIsDetached(false);
-    queryClient.resetQueries({ queryKey: ['messages', channelId] });
+    queryClient.resetQueries({ queryKey: messageKeys.list(channelId) });
   }, [channelId, queryClient]);
 
   const onReachBottom = useCallback(() => {
