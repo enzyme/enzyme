@@ -1,5 +1,6 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { messagesApi } from '@enzyme/api-client';
+import { searchKeys } from '@enzyme/shared';
 
 interface UseSearchOptions {
   workspaceId: string;
@@ -23,7 +24,7 @@ export function useSearch({
   offset = 0,
 }: UseSearchOptions) {
   return useQuery({
-    queryKey: ['search', workspaceId, query, channelId, userId, before, after, limit, offset],
+    queryKey: searchKeys.query(workspaceId, query, channelId, userId, before, after, limit, offset),
     queryFn: () =>
       messagesApi.search(workspaceId, {
         query,

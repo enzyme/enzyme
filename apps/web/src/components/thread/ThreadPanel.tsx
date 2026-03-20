@@ -64,7 +64,7 @@ import { CollapsibleMessage } from '../message/CollapsibleMessage';
 import { MessageContent, EditedBadge } from '../message/MessageContent';
 import { MessageComposer, type MessageComposerRef } from '../message/MessageComposer';
 import { cn } from '../../lib/utils';
-import { formatTime } from '@enzyme/shared';
+import { formatTime, messageKeys, threadKeys } from '@enzyme/shared';
 import {
   useIsEditingMessage,
   setEditingMessageId,
@@ -413,7 +413,7 @@ function ParentMessage({
         },
       ]);
       queryClient.setQueriesData(
-        { queryKey: ['messages'] },
+        { queryKey: messageKeys.all },
         (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
           if (!old) return old;
           return {
@@ -451,7 +451,7 @@ function ParentMessage({
       const userId = user?.id;
       setLocalReactions((prev) => prev.filter((r) => !(r.user_id === userId && r.emoji === emoji)));
       queryClient.setQueriesData(
-        { queryKey: ['messages'] },
+        { queryKey: messageKeys.all },
         (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
           if (!old) return old;
           return {
@@ -830,7 +830,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
       const userId = user?.id || 'temp';
       // Update thread cache
       queryClient.setQueryData(
-        ['thread', parentMessageId],
+        threadKeys.detail(parentMessageId),
         (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
           if (!old) return old;
           return {
@@ -867,7 +867,7 @@ function ThreadMessage({ message, parentMessageId, members, channels }: ThreadMe
     onMutate: async (emoji) => {
       const userId = user?.id;
       queryClient.setQueryData(
-        ['thread', parentMessageId],
+        threadKeys.detail(parentMessageId),
         (old: { pages: MessageListResult[]; pageParams: (string | undefined)[] } | undefined) => {
           if (!old) return old;
           return {
@@ -1199,7 +1199,7 @@ function getParentMessageFromCache(
   const queries = queryClient.getQueriesData<{
     pages: MessageListResult[];
     pageParams: (string | undefined)[];
-  }>({ queryKey: ['messages'] });
+  }>({ queryKey: messageKeys.all });
 
   for (const [, data] of queries) {
     if (!data) continue;

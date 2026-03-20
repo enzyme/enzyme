@@ -18,6 +18,8 @@ export const userKeys = {
 export const messageKeys = {
   all: ['messages'] as const,
   list: (channelId: string) => ['messages', channelId] as const,
+  // Intentionally 'message' (singular) — single-message fetches are separate from
+  // channel message lists and should not be bulk-invalidated by messageKeys.all.
   detail: (messageId: string) => ['message', messageId] as const,
 };
 
@@ -42,6 +44,8 @@ export const workspaceKeys = {
   bans: (workspaceId: string) => ['workspace', workspaceId, 'bans'] as const,
   blocks: (workspaceId: string) => ['workspace', workspaceId, 'blocks'] as const,
   moderationLog: (workspaceId: string) => ['workspace', workspaceId, 'moderation-log'] as const,
+  // Intentionally outside 'workspace' prefix — this is a cross-workspace aggregate
+  // that should not be invalidated by single-workspace operations.
   notifications: () => ['workspaces', 'notifications'] as const,
 };
 

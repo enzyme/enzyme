@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { messagesApi, type ThreadListResult } from '@enzyme/api-client';
+import { threadKeys } from '@enzyme/shared';
 
 interface UseUserThreadsOptions {
   workspaceId: string;
@@ -8,7 +9,7 @@ interface UseUserThreadsOptions {
 
 export function useUserThreads({ workspaceId, enabled = true }: UseUserThreadsOptions) {
   return useInfiniteQuery<ThreadListResult>({
-    queryKey: ['user-threads', workspaceId],
+    queryKey: threadKeys.userThreads(workspaceId),
     queryFn: async ({ pageParam }) => {
       return messagesApi.listUserThreads(workspaceId, {
         limit: 20,
@@ -30,7 +31,7 @@ export function useMarkThreadRead(workspaceId: string) {
     mutationFn: ({ messageId, lastReadReplyId }: { messageId: string; lastReadReplyId?: string }) =>
       messagesApi.markThreadRead(messageId, lastReadReplyId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-threads', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: threadKeys.userThreads(workspaceId) });
     },
   });
 }

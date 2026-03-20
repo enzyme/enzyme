@@ -28,6 +28,7 @@ import {
   useUpdateChannelNotifications,
   usePageTitle,
 } from '../hooks';
+import { channelKeys } from '@enzyme/shared';
 import { useThreadPanel } from '../hooks/usePanel';
 import { useMarkChannelAsRead, useStarChannel, useUnstarChannel } from '../hooks/useChannels';
 import { MessageList, MessageComposer, type MessageComposerRef } from '../components/message';
@@ -220,7 +221,7 @@ export function ChannelPage() {
     try {
       await joinChannel.mutateAsync(channelId);
       // Wait for the channels query to refetch so the UI updates
-      await queryClient.refetchQueries({ queryKey: ['channels', workspaceId] });
+      await queryClient.refetchQueries({ queryKey: channelKeys.list(workspaceId!) });
       toast('Joined channel', 'success');
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Failed to join channel', 'error');

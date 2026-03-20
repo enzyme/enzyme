@@ -4,11 +4,12 @@ import {
   type ScheduleMessageInput,
   type UpdateScheduledMessageInput,
 } from '@enzyme/api-client';
+import { scheduledMessageKeys } from '@enzyme/shared';
 import { toast } from '../components/ui';
 
 export function useScheduledMessages(workspaceId: string) {
   return useQuery({
-    queryKey: ['scheduled-messages', workspaceId],
+    queryKey: scheduledMessageKeys.list(workspaceId),
     queryFn: () => scheduledMessagesApi.list(workspaceId),
     enabled: !!workspaceId,
   });
@@ -19,7 +20,7 @@ export function useScheduleMessage(channelId: string) {
   return useMutation({
     mutationFn: (input: ScheduleMessageInput) => scheduledMessagesApi.schedule(channelId, input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scheduled-messages'] });
+      queryClient.invalidateQueries({ queryKey: scheduledMessageKeys.all });
     },
     onError: (error) => {
       toast(error instanceof Error ? error.message : 'Failed to schedule message', 'error');
@@ -33,7 +34,7 @@ export function useUpdateScheduledMessage() {
     mutationFn: ({ id, input }: { id: string; input: UpdateScheduledMessageInput }) =>
       scheduledMessagesApi.update(id, input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scheduled-messages'] });
+      queryClient.invalidateQueries({ queryKey: scheduledMessageKeys.all });
       toast('Scheduled message updated', 'success');
     },
     onError: (error) => {
@@ -47,7 +48,7 @@ export function useDeleteScheduledMessage() {
   return useMutation({
     mutationFn: (id: string) => scheduledMessagesApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scheduled-messages'] });
+      queryClient.invalidateQueries({ queryKey: scheduledMessageKeys.all });
       toast('Scheduled message canceled', 'success');
     },
     onError: (error) => {
@@ -61,7 +62,7 @@ export function useSendScheduledMessageNow() {
   return useMutation({
     mutationFn: (id: string) => scheduledMessagesApi.sendNow(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scheduled-messages'] });
+      queryClient.invalidateQueries({ queryKey: scheduledMessageKeys.all });
       toast('Message sent', 'success');
     },
     onError: (error) => {
@@ -78,7 +79,7 @@ export function useRetryScheduledMessage() {
       return scheduledMessagesApi.update(id, { scheduled_for: newTime });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scheduled-messages'] });
+      queryClient.invalidateQueries({ queryKey: scheduledMessageKeys.all });
       toast('Message rescheduled', 'success');
     },
     onError: (error) => {
