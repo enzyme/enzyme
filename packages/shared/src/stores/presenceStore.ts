@@ -22,7 +22,11 @@ function emitChange() {
 // Subscribe for useSyncExternalStore
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  startCleanupTimer();
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) stopCleanupTimer();
+  };
 }
 
 // Snapshots for useSyncExternalStore
@@ -97,14 +101,29 @@ function cleanupExpiredTyping() {
   }
 }
 
-// Cleanup expired typing indicators every second
-setInterval(cleanupExpiredTyping, 1000);
+// Lazy cleanup timer — starts on first subscription, stops when all unsubscribe
+let cleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+function startCleanupTimer() {
+  if (!cleanupTimer) {
+    cleanupTimer = setInterval(cleanupExpiredTyping, 1000);
+  }
+}
+
+function stopCleanupTimer() {
+  if (cleanupTimer) {
+    clearInterval(cleanupTimer);
+    cleanupTimer = null;
+  }
+}
 
 // Hooks
+const EMPTY_TYPERS: TypingUser[] = [];
+
 export function useTypingUsers(channelId: string): TypingUser[] {
   const map = useSyncExternalStore(subscribe, getTypingSnapshot, getTypingSnapshot);
   // Expired typers are cleaned up by the interval timer, so no need to filter here
-  return map.get(channelId) || [];
+  return map.get(channelId) || EMPTY_TYPERS;
 }
 
 export function useUserPresence(userId: string): PresenceStatus | undefined {

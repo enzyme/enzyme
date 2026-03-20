@@ -2,7 +2,6 @@
   "name": "@enzyme/shared",
   "version": "0.1.0",
   "private": true,
-  "sideEffects": false,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -43,14 +42,6 @@
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",
     "react": "^18.0.0 || ^19.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@tanstack/react-query": {
-      "optional": true
-    },
-    "react": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.90.20",
