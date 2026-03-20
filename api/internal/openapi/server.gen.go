@@ -38,6 +38,12 @@ const (
 	ChannelTypePublic  ChannelType = "public"
 )
 
+// Defines values for ConvertGroupDMInputType.
+const (
+	ConvertGroupDMInputTypePrivate ConvertGroupDMInputType = "private"
+	ConvertGroupDMInputTypePublic  ConvertGroupDMInputType = "public"
+)
+
 // Defines values for LinkPreviewType.
 const (
 	LinkPreviewTypeExternal LinkPreviewType = "external"
@@ -76,9 +82,9 @@ const (
 
 // Defines values for PermissionLevel.
 const (
-	Admins   PermissionLevel = "admins"
-	Everyone PermissionLevel = "everyone"
-	Members  PermissionLevel = "members"
+	PermissionLevelAdmins   PermissionLevel = "admins"
+	PermissionLevelEveryone PermissionLevel = "everyone"
+	PermissionLevelMembers  PermissionLevel = "members"
 )
 
 // Defines values for PresenceStatus.
@@ -324,12 +330,6 @@ const (
 	WorkspaceRoleOwner  WorkspaceRole = "owner"
 )
 
-// Defines values for ConvertGroupDMToChannelJSONBodyType.
-const (
-	Private ConvertGroupDMToChannelJSONBodyType = "private"
-	Public  ConvertGroupDMToChannelJSONBodyType = "public"
-)
-
 // ApiError defines model for ApiError.
 type ApiError struct {
 	Code    string `json:"code"`
@@ -487,11 +487,26 @@ type ConnectedData struct {
 	ClientId string `json:"client_id"`
 }
 
+// ConvertGroupDMInput defines model for ConvertGroupDMInput.
+type ConvertGroupDMInput struct {
+	Description *string                  `json:"description,omitempty"`
+	Name        string                   `json:"name"`
+	Type        *ConvertGroupDMInputType `json:"type,omitempty"`
+}
+
+// ConvertGroupDMInputType defines model for ConvertGroupDMInput.Type.
+type ConvertGroupDMInputType string
+
 // CreateChannelInput defines model for CreateChannelInput.
 type CreateChannelInput struct {
 	Description *string     `json:"description,omitempty"`
 	Name        string      `json:"name"`
 	Type        ChannelType `json:"type"`
+}
+
+// CreateDMInput defines model for CreateDMInput.
+type CreateDMInput struct {
+	UserIds []string `json:"user_ids"`
 }
 
 // CreateInviteInput defines model for CreateInviteInput.
@@ -1546,16 +1561,6 @@ type VerifyEmailJSONBody struct {
 	Token string `json:"token"`
 }
 
-// ConvertGroupDMToChannelJSONBody defines parameters for ConvertGroupDMToChannel.
-type ConvertGroupDMToChannelJSONBody struct {
-	Description *string                              `json:"description,omitempty"`
-	Name        string                               `json:"name"`
-	Type        *ConvertGroupDMToChannelJSONBodyType `json:"type,omitempty"`
-}
-
-// ConvertGroupDMToChannelJSONBodyType defines parameters for ConvertGroupDMToChannel.
-type ConvertGroupDMToChannelJSONBodyType string
-
 // UploadFileMultipartBody defines parameters for UploadFile.
 type UploadFileMultipartBody struct {
 	File openapi_types.File `json:"file"`
@@ -1643,11 +1648,6 @@ type UnblockUserJSONBody struct {
 	UserId string `json:"user_id"`
 }
 
-// CreateDMJSONBody defines parameters for CreateDM.
-type CreateDMJSONBody struct {
-	UserIds []string `json:"user_ids"`
-}
-
 // UploadCustomEmojiMultipartBody defines parameters for UploadCustomEmoji.
 type UploadCustomEmojiMultipartBody struct {
 	File openapi_types.File `json:"file"`
@@ -1704,7 +1704,7 @@ type ResetPasswordJSONRequestBody ResetPasswordJSONBody
 type VerifyEmailJSONRequestBody VerifyEmailJSONBody
 
 // ConvertGroupDMToChannelJSONRequestBody defines body for ConvertGroupDMToChannel for application/json ContentType.
-type ConvertGroupDMToChannelJSONRequestBody ConvertGroupDMToChannelJSONBody
+type ConvertGroupDMToChannelJSONRequestBody = ConvertGroupDMInput
 
 // UploadFileMultipartRequestBody defines body for UploadFile for multipart/form-data ContentType.
 type UploadFileMultipartRequestBody UploadFileMultipartBody
@@ -1785,7 +1785,7 @@ type UnblockUserJSONRequestBody UnblockUserJSONBody
 type CreateChannelJSONRequestBody = CreateChannelInput
 
 // CreateDMJSONRequestBody defines body for CreateDM for application/json ContentType.
-type CreateDMJSONRequestBody CreateDMJSONBody
+type CreateDMJSONRequestBody = CreateDMInput
 
 // UploadCustomEmojiMultipartRequestBody defines body for UploadCustomEmoji for multipart/form-data ContentType.
 type UploadCustomEmojiMultipartRequestBody UploadCustomEmojiMultipartBody

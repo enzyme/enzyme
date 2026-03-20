@@ -2,19 +2,11 @@ import { apiClient, throwIfError } from '../client';
 import type {
   ChannelRole,
   CreateChannelInput,
+  CreateDMInput,
+  ConvertGroupDMInput,
   UpdateChannelInput,
   NotificationPreferences,
 } from '../types';
-
-export interface CreateDMInput {
-  user_ids: string[];
-}
-
-export interface ConvertGroupDMInput {
-  name: string;
-  description?: string;
-  type?: 'public' | 'private';
-}
 
 export const channelsApi = {
   create: (workspaceId: string, input: CreateChannelInput) =>

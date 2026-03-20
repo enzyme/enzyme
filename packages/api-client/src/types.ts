@@ -25,6 +25,8 @@ export type UpdateWorkspaceInput = components['schemas']['UpdateWorkspaceInput']
 export type CreateInviteInput = components['schemas']['CreateInviteInput'];
 
 // Channel types
+export type CreateDMInput = components['schemas']['CreateDMInput'];
+export type ConvertGroupDMInput = components['schemas']['ConvertGroupDMInput'];
 export type Channel = components['schemas']['Channel'];
 export type ChannelWithMembership = components['schemas']['ChannelWithMembership'];
 export type ChannelType = components['schemas']['ChannelType'];
@@ -51,7 +53,7 @@ export type ListMessagesInput = components['schemas']['ListMessagesInput'];
 export type ServerInfo = components['schemas']['ServerInfo'];
 
 // API types
-export type ApiError = components['schemas']['ApiError'];
+export type ApiErrorBody = components['schemas']['ApiError'];
 export type ApiErrorResponse = components['schemas']['ApiErrorResponse'];
 
 // SSE types

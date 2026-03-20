@@ -614,13 +614,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [user_ids]
-              properties:
-                user_ids:
-                  type: array
-                  items:
-                    type: string
+              $ref: '#/components/schemas/CreateDMInput'
       responses:
         '200':
           description: DM channel
@@ -686,17 +680,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [name]
-              properties:
-                name:
-                  type: string
-                description:
-                  type: string
-                type:
-                  type: string
-                  enum: [public, private]
-                  default: private
+              $ref: '#/components/schemas/ConvertGroupDMInput'
       responses:
         '200':
           description: Channel converted
@@ -4170,6 +4154,28 @@ components:
           type: integer
         expires_in_hours:
           type: integer
+
+    CreateDMInput:
+      type: object
+      required: [user_ids]
+      properties:
+        user_ids:
+          type: array
+          items:
+            type: string
+
+    ConvertGroupDMInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [public, private]
+          default: private
 
     CreateChannelInput:
       type: object

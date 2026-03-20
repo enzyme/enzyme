@@ -1,5 +1,5 @@
 export { authApi } from './auth';
-export { channelsApi, type CreateDMInput, type ConvertGroupDMInput } from './channels';
+export { channelsApi } from './channels';
 export { messagesApi } from './messages';
 export { workspacesApi } from './workspaces';
 export { usersApi } from './users';

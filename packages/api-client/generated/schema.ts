@@ -2262,6 +2262,18 @@ export interface components {
             max_uses?: number;
             expires_in_hours?: number;
         };
+        CreateDMInput: {
+            user_ids: string[];
+        };
+        ConvertGroupDMInput: {
+            name: string;
+            description?: string;
+            /**
+             * @default private
+             * @enum {string}
+             */
+            type: "public" | "private";
+        };
         CreateChannelInput: {
             name: string;
             description?: string;
@@ -3041,9 +3053,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    user_ids: string[];
-                };
+                "application/json": components["schemas"]["CreateDMInput"];
             };
         };
         responses: {
@@ -3107,15 +3117,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    name: string;
-                    description?: string;
-                    /**
-                     * @default private
-                     * @enum {string}
-                     */
-                    type?: "public" | "private";
-                };
+                "application/json": components["schemas"]["ConvertGroupDMInput"];
             };
         };
         responses: {

@@ -1,3 +1,1 @@
-export function mockResponse<T>(data: T) {
-  return { data, response: new Response() };
-}
+export { mockResponse } from '@enzyme/api-client/api/test-utils';
