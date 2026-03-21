@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useMessages,
@@ -15,7 +15,12 @@ import { DateSeparator } from '../components/DateSeparator';
 import { MessageComposer } from '../components/MessageComposer';
 import { MessageActions } from '../components/MessageActions';
 import { TypingIndicator } from '../components/TypingIndicator';
+import { FullScreenLoader } from '../components/FullScreenLoader';
 import { buildListItems, type ListItem } from '../lib/buildListItems';
+
+const CONTENT_STYLE = { paddingVertical: 8 };
+
+const keyExtractor = (item: ListItem) => (item.type === 'message' ? item.data.id : item.id);
 
 export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>) {
   const { workspaceId, channelId } = route.params;
@@ -49,6 +54,27 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const handleDismissActions = useCallback(() => {
+    setActionMessage(null);
+    setReactionMessage(null);
+  }, []);
+
+  const handleShowReactionPicker = useCallback((msg: MessageWithUser) => {
+    setActionMessage(null);
+    setReactionMessage(msg);
+  }, []);
+
+  const handleAvatarPress = useCallback(
+    (userId: string) => navigation.navigate('Profile', { workspaceId, userId }),
+    [navigation, workspaceId],
+  );
+
+  const handleThreadPress = useCallback(
+    (messageId: string) =>
+      navigation.navigate('Thread', { workspaceId, channelId, parentMessageId: messageId }),
+    [navigation, workspaceId, channelId],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: ListItem }) => {
       if (item.type === 'date') {
@@ -58,39 +84,23 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
       return (
         <MessageBubble
           message={item.data}
-          workspaceId={workspaceId}
           channelId={channelId}
           members={members}
           channels={channels}
           currentUserId={user?.id}
           isGrouped={item.isGrouped}
-          onAvatarPress={(userId) => navigation.navigate('Profile', { workspaceId, userId })}
-          onThreadPress={(messageId) =>
-            navigation.navigate('Thread', {
-              workspaceId,
-              channelId,
-              parentMessageId: messageId,
-            })
-          }
+          onAvatarPress={handleAvatarPress}
+          onThreadPress={handleThreadPress}
           onLongPress={setActionMessage}
           onReactionPress={setReactionMessage}
         />
       );
     },
-    [workspaceId, channelId, members, channels, user?.id, navigation],
-  );
-
-  const keyExtractor = useCallback(
-    (item: ListItem) => (item.type === 'message' ? item.data.id : item.id),
-    [],
+    [channelId, members, channels, user?.id, handleAvatarPress, handleThreadPress],
   );
 
   if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white dark:bg-neutral-900">
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <FullScreenLoader />;
   }
 
   return (
@@ -108,10 +118,13 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
         onEndReachedThreshold={0.5}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
+        windowSize={7}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={Platform.OS !== 'ios'}
         ListFooterComponent={
           isFetchingNextPage ? <ActivityIndicator style={{ padding: 16 }} /> : null
         }
-        contentContainerStyle={{ paddingVertical: 8 }}
+        contentContainerStyle={CONTENT_STYLE}
       />
 
       <TypingIndicator channelId={channelId} />
@@ -125,21 +138,9 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
       <MessageActions
         message={actionMessage}
         reactionMessage={reactionMessage}
-        onDismiss={() => {
-          setActionMessage(null);
-          setReactionMessage(null);
-        }}
-        onShowReactionPicker={(msg) => {
-          setActionMessage(null);
-          setReactionMessage(msg);
-        }}
-        onReply={(messageId) =>
-          navigation.navigate('Thread', {
-            workspaceId,
-            channelId,
-            parentMessageId: messageId,
-          })
-        }
+        onDismiss={handleDismissActions}
+        onShowReactionPicker={handleShowReactionPicker}
+        onReply={handleThreadPress}
         channelId={channelId}
         currentUserId={user?.id}
       />

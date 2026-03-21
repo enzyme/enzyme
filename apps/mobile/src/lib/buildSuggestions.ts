@@ -25,7 +25,6 @@ const TRIGGER_CHARS = new Set(['@', '#', ':']);
 interface Trigger {
   char: string;
   query: string;
-  startIndex: number;
 }
 
 /**
@@ -45,7 +44,6 @@ function detectTrigger(text: string, cursorPos: number): Trigger | null {
         return {
           char,
           query: before.slice(i + 1),
-          startIndex: i,
         };
       }
       break;
@@ -60,7 +58,6 @@ export function buildSuggestions(
   cursorPosition: number,
   members: Member[] | undefined,
   channels: Channel[] | undefined,
-  customEmoji: { name: string; url: string }[] = [],
 ): Suggestion[] {
   const trigger = detectTrigger(text, cursorPosition);
   if (!trigger) return [];
@@ -122,7 +119,7 @@ export function buildSuggestions(
 
   if (trigger.char === ':') {
     if (query.length < 2) return [];
-    const emojis = searchAllEmojis(query, 5, customEmoji);
+    const emojis = searchAllEmojis(query, 5, []);
     return emojis.map((e) => ({
       id: e.shortcode,
       displayText: e.shortcode,

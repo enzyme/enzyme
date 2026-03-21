@@ -21,8 +21,11 @@ import type { MainScreenProps } from '../navigation/types';
 import { MessageBubble } from '../components/MessageBubble';
 import { MessageComposer } from '../components/MessageComposer';
 import { MessageActions } from '../components/MessageActions';
+import { FullScreenLoader } from '../components/FullScreenLoader';
+import { shouldGroupMessages } from '../lib/buildListItems';
 
-const GROUP_THRESHOLD_MS = 5 * 60 * 1000;
+const threadKeyExtractor = (item: MessageWithUser) => item.id;
+const CONTENT_STYLE = { paddingVertical: 8 };
 
 export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
   const { workspaceId, channelId, parentMessageId } = route.params;
@@ -41,6 +44,16 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
   const [reactionMessage, setReactionMessage] = useState<MessageWithUser | null>(null);
   const [alsoSendToChannel, setAlsoSendToChannel] = useState(false);
 
+  const handleDismissActions = useCallback(() => {
+    setActionMessage(null);
+    setReactionMessage(null);
+  }, []);
+
+  const handleShowReactionPicker = useCallback((msg: MessageWithUser) => {
+    setActionMessage(null);
+    setReactionMessage(msg);
+  }, []);
+
   const replies = useMemo(
     () => (data?.pages.flatMap((p) => p.messages) ?? []).slice().reverse(),
     [data?.pages],
@@ -52,42 +65,34 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const handleAvatarPress = useCallback(
+    (userId: string) => navigation.navigate('Profile', { workspaceId, userId }),
+    [navigation, workspaceId],
+  );
+
   const renderItem = useCallback(
     ({ item, index }: { item: MessageWithUser; index: number }) => {
-      const next = replies[index + 1];
-      const isGrouped =
-        !!next &&
-        item.type !== 'system' &&
-        next.type !== 'system' &&
-        item.user_id === next.user_id &&
-        !next.deleted_at &&
-        Math.abs(new Date(item.created_at).getTime() - new Date(next.created_at).getTime()) <
-          GROUP_THRESHOLD_MS;
+      const isGrouped = shouldGroupMessages(item, replies[index + 1]);
 
       return (
         <MessageBubble
           message={item}
-          workspaceId={workspaceId}
           channelId={channelId}
           members={members}
           channels={channels}
           currentUserId={user?.id}
           isGrouped={isGrouped}
-          onAvatarPress={(userId) => navigation.navigate('Profile', { workspaceId, userId })}
+          onAvatarPress={handleAvatarPress}
           onLongPress={setActionMessage}
           onReactionPress={setReactionMessage}
         />
       );
     },
-    [workspaceId, channelId, members, channels, user?.id, navigation, replies],
+    [channelId, members, channels, user?.id, handleAvatarPress, replies],
   );
 
   if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white dark:bg-neutral-900">
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <FullScreenLoader />;
   }
 
   return (
@@ -101,12 +106,11 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
         <View className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800/50">
           <MessageBubble
             message={parentMessage}
-            workspaceId={workspaceId}
             channelId={channelId}
             members={members}
             channels={channels}
             currentUserId={user?.id}
-            onAvatarPress={(userId) => navigation.navigate('Profile', { workspaceId, userId })}
+            onAvatarPress={handleAvatarPress}
           />
         </View>
       )}
@@ -115,16 +119,19 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
       <FlatList
         data={replies}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={threadKeyExtractor}
         inverted
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
+        windowSize={7}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={Platform.OS !== 'ios'}
         ListFooterComponent={
           isFetchingNextPage ? <ActivityIndicator style={{ padding: 16 }} /> : null
         }
-        contentContainerStyle={{ paddingVertical: 8 }}
+        contentContainerStyle={CONTENT_STYLE}
       />
 
       {/* Also send to channel toggle */}
@@ -148,21 +155,8 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
       <MessageActions
         message={actionMessage}
         reactionMessage={reactionMessage}
-        onDismiss={() => {
-          setActionMessage(null);
-          setReactionMessage(null);
-        }}
-        onShowReactionPicker={(msg) => {
-          setActionMessage(null);
-          setReactionMessage(msg);
-        }}
-        onReply={(messageId) =>
-          navigation.navigate('Thread', {
-            workspaceId,
-            channelId,
-            parentMessageId: messageId,
-          })
-        }
+        onDismiss={handleDismissActions}
+        onShowReactionPicker={handleShowReactionPicker}
         channelId={channelId}
         currentUserId={user?.id}
       />

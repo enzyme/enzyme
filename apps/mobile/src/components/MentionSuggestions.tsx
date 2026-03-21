@@ -8,7 +8,7 @@ interface MentionSuggestionsProps {
   text: string;
   cursorPosition: number;
   workspaceId: string;
-  onSelect: (token: string, displayText: string) => void;
+  onSelect: (token: string) => void;
 }
 
 export function MentionSuggestions({
@@ -36,7 +36,7 @@ export function MentionSuggestions({
         renderItem={({ item }) => (
           <Pressable
             className="flex-row items-center px-4 py-2.5 active:bg-neutral-100 dark:active:bg-neutral-800"
-            onPress={() => onSelect(item.token, item.displayText)}
+            onPress={() => onSelect(item.token)}
           >
             {item.avatarUser ? (
               <Avatar user={item.avatarUser} size="sm" />

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { formatTime } from '@enzyme/shared';
@@ -12,7 +13,6 @@ import { ReactionsDisplay } from './ReactionsDisplay';
 
 interface MessageBubbleProps {
   message: MessageWithUser;
-  workspaceId: string;
   channelId: string;
   members?: WorkspaceMemberWithUser[];
   channels?: ChannelWithMembership[];
@@ -24,7 +24,7 @@ interface MessageBubbleProps {
   isGrouped?: boolean;
 }
 
-export function MessageBubble({
+export const MessageBubble = memo(function MessageBubble({
   message,
   channelId,
   members,
@@ -165,4 +165,4 @@ export function MessageBubble({
       </View>
     </Pressable>
   );
-}
+});

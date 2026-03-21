@@ -9,7 +9,7 @@ interface MessageActionsProps {
   message: MessageWithUser | null;
   reactionMessage: MessageWithUser | null;
   onDismiss: () => void;
-  onReply: (messageId: string) => void;
+  onReply?: (messageId: string) => void;
   onShowReactionPicker: (message: MessageWithUser) => void;
   channelId: string;
   currentUserId?: string;
@@ -32,7 +32,7 @@ export function MessageActions({
   const isOwnMessage = activeMessage?.user_id === currentUserId;
 
   const handleReply = useCallback(() => {
-    if (!activeMessage) return;
+    if (!activeMessage || !onReply) return;
     onDismiss();
     onReply(activeMessage.id);
   }, [activeMessage, onDismiss, onReply]);
@@ -79,7 +79,7 @@ export function MessageActions({
               <View className="h-1 w-10 rounded-full bg-neutral-300 dark:bg-neutral-600" />
             </View>
 
-            <ActionButton label="Reply in thread" onPress={handleReply} />
+            {onReply && <ActionButton label="Reply in thread" onPress={handleReply} />}
             <ActionButton label="Add reaction" onPress={handleAddReaction} />
             <ActionButton label="Copy text" onPress={handleCopy} />
             {isOwnMessage && <ActionButton label="Edit" onPress={handleEdit} />}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { View, Text, SectionList, Pressable, ActivityIndicator } from 'react-native';
 import { useChannels, useWorkspace } from '@enzyme/shared';
 import type { ChannelWithMembership } from '@enzyme/api-client';
@@ -53,44 +53,50 @@ export function ChannelListScreen({ route, navigation }: MainScreenProps<'Channe
     return result;
   }, [channelsData]);
 
-  const renderChannel = ({ item }: { item: ChannelWithMembership }) => {
-    const icon = channelIcon(item);
-    const dmName =
-      (item.type === 'dm' || item.type === 'group_dm') && item.dm_participants?.length
-        ? item.dm_participants.map((p) => p.display_name).join(', ')
-        : null;
+  const renderChannel = useCallback(
+    ({ item }: { item: ChannelWithMembership }) => {
+      const icon = channelIcon(item);
+      const dmName =
+        (item.type === 'dm' || item.type === 'group_dm') && item.dm_participants?.length
+          ? item.dm_participants.map((p) => p.display_name).join(', ')
+          : null;
 
-    return (
-      <Pressable
-        className="flex-row items-center px-4 py-3 active:bg-neutral-100 dark:active:bg-neutral-800"
-        onPress={() =>
-          navigation.navigate('Channel', {
-            workspaceId,
-            channelId: item.id,
-            channelName: dmName ?? item.name,
-          })
-        }
-      >
-        <Text className="w-8 text-center text-lg">{icon}</Text>
-        <View className="ml-1 flex-1">
-          <Text
-            className={`text-base ${item.unread_count > 0 ? 'font-bold' : 'font-normal'} text-neutral-900 dark:text-white`}
-            numberOfLines={1}
-          >
-            {dmName ?? item.name}
-          </Text>
-        </View>
-        {item.unread_count > 0 && <UnreadBadge count={item.unread_count} />}
-      </Pressable>
-    );
-  };
+      return (
+        <Pressable
+          className="flex-row items-center px-4 py-3 active:bg-neutral-100 dark:active:bg-neutral-800"
+          onPress={() =>
+            navigation.navigate('Channel', {
+              workspaceId,
+              channelId: item.id,
+              channelName: dmName ?? item.name,
+            })
+          }
+        >
+          <Text className="w-8 text-center text-lg">{icon}</Text>
+          <View className="ml-1 flex-1">
+            <Text
+              className={`text-base ${item.unread_count > 0 ? 'font-bold' : 'font-normal'} text-neutral-900 dark:text-white`}
+              numberOfLines={1}
+            >
+              {dmName ?? item.name}
+            </Text>
+          </View>
+          {item.unread_count > 0 && <UnreadBadge count={item.unread_count} />}
+        </Pressable>
+      );
+    },
+    [navigation, workspaceId],
+  );
 
-  const renderSectionHeader = ({ section }: { section: Section }) => (
-    <View className="bg-white px-4 pb-1 pt-4 dark:bg-neutral-900">
-      <Text className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-        {section.title}
-      </Text>
-    </View>
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: Section }) => (
+      <View className="bg-white px-4 pb-1 pt-4 dark:bg-neutral-900">
+        <Text className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          {section.title}
+        </Text>
+      </View>
+    ),
+    [],
   );
 
   if (isLoading) {

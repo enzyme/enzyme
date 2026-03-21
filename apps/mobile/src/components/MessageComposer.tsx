@@ -46,13 +46,13 @@ export function MessageComposer({
   const updateMessage = useUpdateMessage();
 
   // Load editing message content
-  const [editLoaded, setEditLoaded] = useState<string | null>(null);
+  const editLoadedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (editingMessageId && editingMessage?.message && editLoaded !== editingMessageId) {
+    if (editingMessageId && editingMessage?.message && editLoadedRef.current !== editingMessageId) {
       setText(editingMessage.message.content);
-      setEditLoaded(editingMessageId);
+      editLoadedRef.current = editingMessageId;
     }
-  }, [editingMessageId, editingMessage?.message, editLoaded]);
+  }, [editingMessageId, editingMessage?.message]);
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
@@ -64,7 +64,7 @@ export function MessageComposer({
         {
           onSuccess: () => {
             setText('');
-            setEditLoaded(null);
+            editLoadedRef.current = null;
             clearEditingMessageId();
           },
         },
@@ -90,7 +90,7 @@ export function MessageComposer({
   const handleCancelEdit = useCallback(() => {
     clearEditingMessageId();
     setText('');
-    setEditLoaded(null);
+    editLoadedRef.current = null;
   }, []);
 
   const applyFormat = useCallback(

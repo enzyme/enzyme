@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { Text, Pressable, ScrollView } from 'react-native';
 import { useAddReaction, useRemoveReaction } from '@enzyme/shared';
 import type { Reaction } from '@enzyme/api-client';
@@ -11,7 +12,9 @@ interface ReactionsDisplayProps {
   onAddReaction?: () => void;
 }
 
-export function ReactionsDisplay({
+const CONTAINER_STYLE = { gap: 4 };
+
+export const ReactionsDisplay = memo(function ReactionsDisplay({
   reactions,
   messageId,
   channelId,
@@ -21,7 +24,10 @@ export function ReactionsDisplay({
   const addReaction = useAddReaction(channelId);
   const removeReaction = useRemoveReaction(channelId);
 
-  const groups = groupReactions(reactions, currentUserId);
+  const groups = useMemo(
+    () => groupReactions(reactions, currentUserId),
+    [reactions, currentUserId],
+  );
 
   if (groups.length === 0) return null;
 
@@ -38,7 +44,7 @@ export function ReactionsDisplay({
       horizontal
       showsHorizontalScrollIndicator={false}
       className="mt-1"
-      contentContainerStyle={{ gap: 4 }}
+      contentContainerStyle={CONTAINER_STYLE}
     >
       {groups.map((group) => (
         <Pressable
@@ -72,4 +78,4 @@ export function ReactionsDisplay({
       </Pressable>
     </ScrollView>
   );
-}
+});
