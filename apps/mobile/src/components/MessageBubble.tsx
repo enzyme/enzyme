@@ -50,6 +50,40 @@ export function MessageBubble({
   const isEdited = !!message.edited_at;
   const isDeleted = !!message.deleted_at;
 
+  // Deleted messages with no replies: hide entirely (matches web behavior)
+  if (isDeleted && message.reply_count === 0) {
+    return null;
+  }
+
+  // Deleted messages with replies: show placeholder + thread indicator
+  if (isDeleted) {
+    return (
+      <View className="flex-row px-4 py-1.5">
+        <View
+          className="items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-700"
+          style={{ width: 36, height: 36 }}
+        >
+          <Text className="text-sm text-neutral-400 dark:text-neutral-500">🗑</Text>
+        </View>
+        <View className="ml-2.5 flex-1">
+          <Text className="mt-0.5 text-sm italic text-neutral-400 dark:text-neutral-500">
+            This message was deleted.
+          </Text>
+          {message.reply_count > 0 && (
+            <Pressable
+              className="mt-1 flex-row items-center"
+              onPress={() => onThreadPress?.(message.id)}
+            >
+              <Text className="text-sm font-semibold text-blue-500 dark:text-blue-400">
+                {message.reply_count} {message.reply_count === 1 ? 'reply' : 'replies'}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+    );
+  }
+
   const handleLongPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onLongPress?.(message);
@@ -97,22 +131,14 @@ export function MessageBubble({
         )}
 
         {/* Body */}
-        {isDeleted ? (
-          <Text
-            className={`text-sm italic text-neutral-400 dark:text-neutral-500 ${isGrouped ? '' : 'mt-0.5'}`}
-          >
-            This message was deleted.
-          </Text>
-        ) : (
-          <View className={isGrouped ? '' : 'mt-0.5'}>
-            <MrkdwnRenderer
-              content={message.content}
-              members={members}
-              channels={channels}
-              onMentionPress={onAvatarPress}
-            />
-          </View>
-        )}
+        <View className={isGrouped ? '' : 'mt-0.5'}>
+          <MrkdwnRenderer
+            content={message.content}
+            members={members}
+            channels={channels}
+            onMentionPress={onAvatarPress}
+          />
+        </View>
 
         {/* Reactions */}
         {message.reactions && message.reactions.length > 0 && (
