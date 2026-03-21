@@ -58,7 +58,7 @@ export type WorkspaceSettingsTab =
 interface NavItem {
   id: WorkspaceSettingsTab;
   label: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  icon: React.ComponentType<Omit<React.SVGProps<SVGSVGElement>, 'ref'>>;
   adminOnly?: boolean;
 }
 
