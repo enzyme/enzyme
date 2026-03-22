@@ -7,13 +7,11 @@ const monorepoRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
-// Watch only the shared workspace packages the mobile app consumes
-config.watchFolders = [
-  path.resolve(monorepoRoot, 'packages', 'api-client'),
-  path.resolve(monorepoRoot, 'packages', 'shared'),
-];
+// pnpm uses symlinks — Metro must follow them to resolve packages in the store.
+config.resolver.unstable_enableSymlinks = true;
 
-// Let Metro know where to resolve packages and workspace packages
+// Monorepo: let Metro find packages from both project and root node_modules.
+config.watchFolders = [monorepoRoot];
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(monorepoRoot, 'node_modules'),
