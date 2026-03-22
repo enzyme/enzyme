@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { SSEConnection } from '../lib/sse';
 import {
@@ -17,6 +17,8 @@ import {
   handleEmojiCreated,
   handleEmojiDeleted,
   handleWorkspaceUpdated,
+  handleScheduledMessageChange,
+  handleScheduledMessageSent,
   handleMessagePinned,
   handleMessageUnpinned,
   handleMemberBanned,
@@ -28,13 +30,13 @@ import {
   handlePresenceChanged,
   handlePresenceInitial,
   handleNotification,
+  clearPresence,
   authKeys,
 } from '@enzyme/shared';
 
 export function useSSE(workspaceId: string | undefined) {
   const [isConnected, setIsConnected] = useState(false);
   const [hasBeenConnected, setHasBeenConnected] = useState(false);
-  const connectionRef = useRef<SSEConnection | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -43,7 +45,6 @@ export function useSSE(workspaceId: string | undefined) {
     }
 
     const connection = new SSEConnection(workspaceId);
-    connectionRef.current = connection;
 
     // Handle disconnect
     connection.setOnDisconnect(() => {
@@ -126,6 +127,27 @@ export function useSSE(workspaceId: string | undefined) {
       handleWorkspaceUpdated(queryClient, workspaceId);
     });
 
+    // --- Scheduled message events ---
+    connection.on('scheduled_message.created', () => {
+      handleScheduledMessageChange(queryClient, workspaceId);
+    });
+
+    connection.on('scheduled_message.updated', () => {
+      handleScheduledMessageChange(queryClient, workspaceId);
+    });
+
+    connection.on('scheduled_message.deleted', () => {
+      handleScheduledMessageChange(queryClient, workspaceId);
+    });
+
+    connection.on('scheduled_message.sent', (event) => {
+      handleScheduledMessageSent(queryClient, workspaceId, event.data);
+    });
+
+    connection.on('scheduled_message.failed', () => {
+      handleScheduledMessageChange(queryClient, workspaceId);
+    });
+
     // --- Pin events ---
     connection.on('message.pinned', (event) => {
       handleMessagePinned(queryClient, event.data);
@@ -179,7 +201,7 @@ export function useSSE(workspaceId: string | undefined) {
 
     return () => {
       connection.disconnect();
-      connectionRef.current = null;
+      clearPresence();
       setHasBeenConnected(false);
       setIsConnected(false);
     };

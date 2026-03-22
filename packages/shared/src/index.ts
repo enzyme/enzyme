@@ -54,6 +54,8 @@ export {
   addTypingUser,
   removeTypingUser,
   setUserPresence,
+  setMultipleUserPresence,
+  clearPresence,
   useTypingUsers,
   useUserPresence,
 } from './stores/presenceStore';

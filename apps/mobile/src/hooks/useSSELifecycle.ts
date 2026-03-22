@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { channelKeys, unreadKeys } from '@enzyme/shared';
 import { useSSE } from './useSSE';
 import { useAppState } from './useAppState';
 
@@ -8,8 +9,6 @@ export function useSSELifecycle(workspaceId: string | null): {
 } {
   const queryClient = useQueryClient();
   const [isActive, setIsActive] = useState(true);
-  const workspaceIdRef = useRef(workspaceId);
-  workspaceIdRef.current = workspaceId;
 
   // Pass undefined when backgrounded to disconnect SSE (triggers useSSE cleanup)
   const effectiveId = isActive ? (workspaceId ?? undefined) : undefined;
@@ -18,9 +17,10 @@ export function useSSELifecycle(workspaceId: string | null): {
   useAppState({
     onForeground: () => {
       setIsActive(true);
-      // Invalidate all active queries to refetch stale data after resume
-      if (workspaceIdRef.current) {
-        queryClient.invalidateQueries();
+      // Invalidate workspace-scoped queries to refetch stale data after resume
+      if (workspaceId) {
+        queryClient.invalidateQueries({ queryKey: channelKeys.list(workspaceId) });
+        queryClient.invalidateQueries({ queryKey: unreadKeys.list(workspaceId) });
       }
     },
     onBackground: () => {

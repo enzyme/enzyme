@@ -1,4 +1,4 @@
-import { View, Text, Image } from 'react-native';
+import { View, Text, Image, useColorScheme } from 'react-native';
 import { getInitials, getAvatarColor, useUserPresence } from '@enzyme/shared';
 
 const SIZES = {
@@ -29,7 +29,6 @@ const COLOR_MAP: Record<string, string> = {
 
 const PRESENCE_COLORS: Record<string, string> = {
   online: '#22c55e',
-  away: '#f59e0b',
 };
 
 interface AvatarProps {
@@ -40,6 +39,7 @@ interface AvatarProps {
 
 function PresenceDot({ userId, dotSize }: { userId: string; dotSize: number }) {
   const presence = useUserPresence(userId);
+  const colorScheme = useColorScheme();
   const color = presence ? PRESENCE_COLORS[presence] : undefined;
   if (!color) return null;
 
@@ -54,7 +54,7 @@ function PresenceDot({ userId, dotSize }: { userId: string; dotSize: number }) {
         borderRadius: dotSize / 2,
         backgroundColor: color,
         borderWidth: 2,
-        borderColor: '#ffffff',
+        borderColor: colorScheme === 'dark' ? '#171717' : '#ffffff',
       }}
     />
   );

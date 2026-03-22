@@ -9,10 +9,13 @@ type SSEEventByType<T extends SSEEventType> = Extract<SSEEvent, { type: T }>;
 export class SSEConnection {
   private eventSource: RNEventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private handlers: Map<SSEEventType | '*', EventHandler<any>[]> = new Map();
+  private handlers: Map<SSEEventType, EventHandler<any>[]> = new Map();
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private reconnectDelay = 3000;
+  private maxReconnectDelay = 30000;
+  private reconnectAttempts = 0;
   private _isConnecting = false;
+  private lastEventId: string | null = null;
   private workspaceId: string;
   private onDisconnectCallback?: () => void;
   private onForbiddenCallback?: () => void;
@@ -34,38 +37,50 @@ export class SSEConnection {
       return;
     }
 
+    const token = getAuthToken();
+    if (!token) {
+      this.onForbiddenCallback?.();
+      return;
+    }
+
     this._isConnecting = true;
     const url = `${getApiBase()}/workspaces/${this.workspaceId}/events`;
-    const token = getAuthToken();
 
-    this.eventSource = new RNEventSource(url, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+    if (this.lastEventId) {
+      headers['Last-Event-ID'] = this.lastEventId;
+    }
+
+    this.eventSource = new RNEventSource(url, { headers });
 
     this.eventSource.addEventListener('open', () => {
       this._isConnecting = false;
-      console.log('[SSE] Connected to', url);
+      this.reconnectAttempts = 0;
+      if (__DEV__) console.log('[SSE] Connected to', url);
     });
 
     this.eventSource.addEventListener('message', (event) => {
       if (!event.data) return;
       try {
+        if (event.lastEventId) {
+          this.lastEventId = event.lastEventId;
+        }
         const data = JSON.parse(event.data) as SSEEvent;
         this.dispatch(data);
       } catch (e) {
-        console.error('[SSE] Failed to parse event:', e);
+        if (__DEV__) console.error('[SSE] Failed to parse event:', e);
       }
     });
 
     this.eventSource.addEventListener('error', (event) => {
       if (event.type === 'error' && 'xhrStatus' in event && event.xhrStatus === 403) {
-        console.error('[SSE] 403 Forbidden — stopping reconnection');
+        if (__DEV__) console.error('[SSE] 403 Forbidden — stopping reconnection');
         this.onDisconnectCallback?.();
         this.disconnect();
         this.onForbiddenCallback?.();
         return;
       }
-      console.error('[SSE] Connection error, reconnecting...');
+      if (__DEV__) console.error('[SSE] Connection error, reconnecting...');
       this.onDisconnectCallback?.();
       this.disconnect();
       this.scheduleReconnect();
@@ -88,15 +103,18 @@ export class SSEConnection {
     if (this.reconnectTimeout) {
       return;
     }
+    const delay =
+      Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts), this.maxReconnectDelay) *
+      (0.5 + Math.random() * 0.5);
+    this.reconnectAttempts++;
     this.reconnectTimeout = setTimeout(() => {
       this.reconnectTimeout = null;
       this.connect();
-    }, this.reconnectDelay);
+    }, delay);
   }
 
   on<T extends SSEEventType>(eventType: T, handler: EventHandler<SSEEventByType<T>>): () => void;
-  on(eventType: '*', handler: EventHandler<SSEEvent>): () => void;
-  on(eventType: SSEEventType | '*', handler: EventHandler): () => void {
+  on(eventType: SSEEventType, handler: EventHandler): () => void {
     const handlers = this.handlers.get(eventType) || [];
     handlers.push(handler);
     this.handlers.set(eventType, handlers);
@@ -110,16 +128,7 @@ export class SSEConnection {
   }
 
   private dispatch(event: SSEEvent): void {
-    // Call specific handlers
-    const specificHandlers = this.handlers.get(event.type) || [];
-    specificHandlers.forEach((handler) => handler(event));
-
-    // Call wildcard handlers
-    const wildcardHandlers = this.handlers.get('*') || [];
-    wildcardHandlers.forEach((handler) => handler(event));
-  }
-
-  get isConnected(): boolean {
-    return this.eventSource !== null && !this._isConnecting;
+    const handlers = this.handlers.get(event.type) || [];
+    handlers.forEach((handler) => handler(event));
   }
 }
