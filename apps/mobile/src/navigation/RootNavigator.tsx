@@ -3,6 +3,7 @@ import { useAuth } from '@enzyme/shared';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthStack } from './AuthStack';
 import { MainStack } from './MainStack';
+import { WorkspaceProvider } from '../lib/WorkspaceProvider';
 
 export function RootNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -16,6 +17,14 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>{isAuthenticated ? <MainStack /> : <AuthStack />}</NavigationContainer>
+    <NavigationContainer>
+      {isAuthenticated ? (
+        <WorkspaceProvider>
+          <MainStack />
+        </WorkspaceProvider>
+      ) : (
+        <AuthStack />
+      )}
+    </NavigationContainer>
   );
 }

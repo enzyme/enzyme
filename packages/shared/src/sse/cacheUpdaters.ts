@@ -24,7 +24,12 @@ import {
   scheduledMessageKeys,
   pinnedMessageKeys,
 } from '../queryKeys';
-import { addTypingUser, removeTypingUser, setUserPresence } from '../stores/presenceStore';
+import {
+  addTypingUser,
+  removeTypingUser,
+  setUserPresence,
+  setMultipleUserPresence,
+} from '../stores/presenceStore';
 import { getUrls } from '../cache/signedUrlCache';
 
 type MessagePages = { pages: MessageListResult[]; pageParams: (string | undefined)[] };
@@ -603,10 +608,7 @@ export function handlePresenceChanged(data: EventDataOf<'presence.changed'>) {
 }
 
 export function handlePresenceInitial(data: EventDataOf<'presence.initial'>) {
-  const onlineUserIds = data.online_user_ids;
-  for (const userId of onlineUserIds) {
-    setUserPresence(userId, 'online');
-  }
+  setMultipleUserPresence(data.online_user_ids.map((userId) => [userId, 'online']));
 }
 
 // --- Notification Events ---

@@ -107,6 +107,7 @@ export const MessageBubble = memo(function MessageBubble({
               id: message.user_id,
             }}
             size="md"
+            showPresence
           />
         </Pressable>
       )}

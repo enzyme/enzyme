@@ -29,15 +29,6 @@ function subscribe(listener: () => void) {
   };
 }
 
-// Snapshots for useSyncExternalStore
-function getTypingSnapshot() {
-  return typingUsers;
-}
-
-function getPresenceSnapshot() {
-  return userPresence;
-}
-
 // Actions
 export function addTypingUser(channelId: string, data: TypingEventData) {
   const newTyping = new Map(typingUsers);
@@ -77,6 +68,21 @@ export function setUserPresence(userId: string, status: PresenceStatus) {
   const newPresence = new Map(userPresence);
   newPresence.set(userId, status);
   userPresence = newPresence;
+  emitChange();
+}
+
+export function setMultipleUserPresence(entries: Array<[string, PresenceStatus]>) {
+  const newPresence = new Map(userPresence);
+  for (const [userId, status] of entries) {
+    newPresence.set(userId, status);
+  }
+  userPresence = newPresence;
+  emitChange();
+}
+
+export function clearPresence() {
+  userPresence = new Map();
+  typingUsers = new Map();
   emitChange();
 }
 
@@ -121,12 +127,17 @@ function stopCleanupTimer() {
 const EMPTY_TYPERS: TypingUser[] = [];
 
 export function useTypingUsers(channelId: string): TypingUser[] {
-  const map = useSyncExternalStore(subscribe, getTypingSnapshot, getTypingSnapshot);
-  // Expired typers are cleaned up by the interval timer, so no need to filter here
-  return map.get(channelId) || EMPTY_TYPERS;
+  return useSyncExternalStore(
+    subscribe,
+    () => typingUsers.get(channelId) || EMPTY_TYPERS,
+    () => typingUsers.get(channelId) || EMPTY_TYPERS,
+  );
 }
 
 export function useUserPresence(userId: string): PresenceStatus | undefined {
-  const map = useSyncExternalStore(subscribe, getPresenceSnapshot, getPresenceSnapshot);
-  return map.get(userId);
+  return useSyncExternalStore(
+    subscribe,
+    () => userPresence.get(userId),
+    () => userPresence.get(userId),
+  );
 }

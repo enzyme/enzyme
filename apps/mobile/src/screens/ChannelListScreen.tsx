@@ -4,6 +4,8 @@ import { useChannels, useWorkspace } from '@enzyme/shared';
 import type { ChannelWithMembership } from '@enzyme/api-client';
 import type { MainScreenProps } from '../navigation/types';
 import { UnreadBadge } from '../components/UnreadBadge';
+import { Avatar } from '../components/Avatar';
+import { useActiveWorkspace } from '../lib/WorkspaceProvider';
 
 type Section = {
   title: string;
@@ -20,6 +22,12 @@ export function ChannelListScreen({ route, navigation }: MainScreenProps<'Channe
   const { workspaceId } = route.params;
   const { data: workspaceData } = useWorkspace(workspaceId);
   const { data: channelsData, isLoading, refetch, isRefetching } = useChannels(workspaceId);
+  const { setActiveWorkspaceId } = useActiveWorkspace();
+
+  useEffect(() => {
+    setActiveWorkspaceId(workspaceId);
+    return () => setActiveWorkspaceId(null);
+  }, [workspaceId, setActiveWorkspaceId]);
 
   useEffect(() => {
     if (workspaceData?.workspace?.name) {
@@ -55,11 +63,15 @@ export function ChannelListScreen({ route, navigation }: MainScreenProps<'Channe
 
   const renderChannel = useCallback(
     ({ item }: { item: ChannelWithMembership }) => {
-      const icon = channelIcon(item);
+      const isDM = item.type === 'dm' || item.type === 'group_dm';
       const dmName =
-        (item.type === 'dm' || item.type === 'group_dm') && item.dm_participants?.length
+        isDM && item.dm_participants?.length
           ? item.dm_participants.map((p) => p.display_name).join(', ')
           : null;
+
+      // For 1:1 DMs, show the other participant's avatar with presence
+      const dmParticipant =
+        item.type === 'dm' && item.dm_participants?.length === 1 ? item.dm_participants[0] : null;
 
       return (
         <Pressable
@@ -72,7 +84,21 @@ export function ChannelListScreen({ route, navigation }: MainScreenProps<'Channe
             })
           }
         >
-          <Text className="w-8 text-center text-lg">{icon}</Text>
+          {dmParticipant ? (
+            <View className="w-8 items-center">
+              <Avatar
+                user={{
+                  display_name: dmParticipant.display_name,
+                  avatar_url: dmParticipant.avatar_url,
+                  id: dmParticipant.user_id,
+                }}
+                size="sm"
+                showPresence
+              />
+            </View>
+          ) : (
+            <Text className="w-8 text-center text-lg">{channelIcon(item)}</Text>
+          )}
           <View className="ml-1 flex-1">
             <Text
               className={`text-base ${item.unread_count > 0 ? 'font-bold' : 'font-normal'} text-neutral-900 dark:text-white`}

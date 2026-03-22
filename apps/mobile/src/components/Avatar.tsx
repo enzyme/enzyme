@@ -1,10 +1,10 @@
-import { View, Text, Image } from 'react-native';
-import { getInitials, getAvatarColor } from '@enzyme/shared';
+import { View, Text, Image, useColorScheme } from 'react-native';
+import { getInitials, getAvatarColor, useUserPresence } from '@enzyme/shared';
 
 const SIZES = {
-  sm: { container: 28, text: 12 },
-  md: { container: 36, text: 14 },
-  lg: { container: 48, text: 18 },
+  sm: { container: 28, text: 12, dot: 8 },
+  md: { container: 36, text: 14, dot: 10 },
+  lg: { container: 48, text: 18, dot: 12 },
 } as const;
 
 // NativeWind can't resolve dynamic Tailwind classes, so map to hex values.
@@ -27,34 +27,70 @@ const COLOR_MAP: Record<string, string> = {
   'bg-rose-500': '#f43f5e',
 };
 
+const PRESENCE_COLORS: Record<string, string> = {
+  online: '#22c55e',
+};
+
 interface AvatarProps {
   user: { display_name: string; avatar_url?: string | null; id?: string };
   size: 'sm' | 'md' | 'lg';
+  showPresence?: boolean;
 }
 
-export function Avatar({ user, size }: AvatarProps) {
-  const { container, text } = SIZES[size];
-
-  if (user.avatar_url) {
-    return (
-      <Image
-        source={{ uri: user.avatar_url }}
-        style={{ width: container, height: container, borderRadius: container / 2 }}
-      />
-    );
-  }
-
-  const colorClass = getAvatarColor(user.id ?? user.display_name);
-  const bgColor = COLOR_MAP[colorClass] ?? '#6b7280';
+function PresenceDot({ userId, dotSize }: { userId: string; dotSize: number }) {
+  const presence = useUserPresence(userId);
+  const colorScheme = useColorScheme();
+  const color = presence ? PRESENCE_COLORS[presence] : undefined;
+  if (!color) return null;
 
   return (
     <View
+      style={{
+        position: 'absolute',
+        bottom: -1,
+        right: -1,
+        width: dotSize,
+        height: dotSize,
+        borderRadius: dotSize / 2,
+        backgroundColor: color,
+        borderWidth: 2,
+        borderColor: colorScheme === 'dark' ? '#171717' : '#ffffff',
+      }}
+    />
+  );
+}
+
+export function Avatar({ user, size, showPresence }: AvatarProps) {
+  const { container, text, dot } = SIZES[size];
+
+  const avatar = user.avatar_url ? (
+    <Image
+      source={{ uri: user.avatar_url }}
+      style={{ width: container, height: container, borderRadius: container / 2 }}
+    />
+  ) : (
+    <View
       className="items-center justify-center rounded-full"
-      style={{ width: container, height: container, backgroundColor: bgColor }}
+      style={{
+        width: container,
+        height: container,
+        backgroundColor: COLOR_MAP[getAvatarColor(user.id ?? user.display_name)] ?? '#6b7280',
+      }}
     >
       <Text className="font-semibold text-white" style={{ fontSize: text }}>
         {getInitials(user.display_name)}
       </Text>
     </View>
   );
+
+  if (showPresence && user.id) {
+    return (
+      <View style={{ width: container, height: container }}>
+        {avatar}
+        <PresenceDot userId={user.id} dotSize={dot} />
+      </View>
+    );
+  }
+
+  return avatar;
 }
