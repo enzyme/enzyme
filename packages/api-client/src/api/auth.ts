@@ -22,4 +22,10 @@ export const authApi = {
     throwIfError(apiClient.POST('/auth/verify-email', { body: { token } })),
 
   resendVerification: () => throwIfError(apiClient.POST('/auth/resend-verification')),
+
+  registerDeviceToken: (input: { token: string; platform: 'fcm' | 'apns'; device_id: string }) =>
+    throwIfError(apiClient.POST('/auth/device-tokens', { body: input })),
+
+  unregisterDeviceToken: (token: string) =>
+    throwIfError(apiClient.DELETE('/auth/device-tokens/{token}', { params: { path: { token } } })),
 };

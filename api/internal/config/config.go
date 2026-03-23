@@ -3,15 +3,16 @@ package config
 import "time"
 
 type Config struct {
-	Log       LogConfig       `koanf:"log"`
-	Server    ServerConfig    `koanf:"server"`
-	Database  DatabaseConfig  `koanf:"database"`
-	Auth      AuthConfig      `koanf:"auth"`
-	Storage   StorageConfig   `koanf:"storage"`
-	Email     EmailConfig     `koanf:"email"`
-	RateLimit RateLimitConfig `koanf:"rate_limit"`
-	SSE       SSEConfig       `koanf:"sse"`
-	Telemetry TelemetryConfig `koanf:"telemetry"`
+	Log               LogConfig              `koanf:"log"`
+	Server            ServerConfig           `koanf:"server"`
+	Database          DatabaseConfig         `koanf:"database"`
+	Auth              AuthConfig             `koanf:"auth"`
+	Storage           StorageConfig          `koanf:"storage"`
+	Email             EmailConfig            `koanf:"email"`
+	RateLimit         RateLimitConfig        `koanf:"rate_limit"`
+	SSE               SSEConfig              `koanf:"sse"`
+	PushNotifications PushNotificationConfig `koanf:"push_notifications"`
+	Telemetry         TelemetryConfig        `koanf:"telemetry"`
 }
 
 type LogConfig struct {
@@ -109,6 +110,11 @@ type SSEConfig struct {
 	ClientBufferSize  int           `koanf:"client_buffer_size"`
 }
 
+type PushNotificationConfig struct {
+	Enabled  bool   `koanf:"enabled"`
+	RelayURL string `koanf:"relay_url"`
+}
+
 type TelemetryConfig struct {
 	Enabled          bool              `koanf:"enabled"`
 	Endpoint         string            `koanf:"endpoint"`
@@ -182,6 +188,10 @@ func Defaults() *Config {
 			CleanupInterval:   time.Hour,
 			HeartbeatInterval: 30 * time.Second,
 			ClientBufferSize:  256,
+		},
+		PushNotifications: PushNotificationConfig{
+			Enabled:  false,
+			RelayURL: "https://push.enzyme.im",
 		},
 		Telemetry: TelemetryConfig{
 			Enabled:     false,

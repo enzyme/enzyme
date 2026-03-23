@@ -93,6 +93,12 @@ const (
 	Online  PresenceStatus = "online"
 )
 
+// Defines values for RegisterDeviceTokenRequestPlatform.
+const (
+	Apns RegisterDeviceTokenRequestPlatform = "apns"
+	Fcm  RegisterDeviceTokenRequestPlatform = "fcm"
+)
+
 // Defines values for SSEEventChannelArchivedType.
 const (
 	SSEEventChannelArchivedTypeChannelArchived SSEEventChannelArchivedType = "channel.archived"
@@ -757,6 +763,27 @@ type ReactionSummary struct {
 	Count   int      `json:"count"`
 	Emoji   string   `json:"emoji"`
 	UserIds []string `json:"user_ids"`
+}
+
+// RegisterDeviceTokenRequest defines model for RegisterDeviceTokenRequest.
+type RegisterDeviceTokenRequest struct {
+	// DeviceId A unique identifier for the device
+	DeviceId string `json:"device_id"`
+
+	// Platform The push platform
+	Platform RegisterDeviceTokenRequestPlatform `json:"platform"`
+
+	// Token The push notification token (FCM or APNs)
+	Token string `json:"token"`
+}
+
+// RegisterDeviceTokenRequestPlatform The push platform
+type RegisterDeviceTokenRequestPlatform string
+
+// RegisterDeviceTokenResponse defines model for RegisterDeviceTokenResponse.
+type RegisterDeviceTokenResponse struct {
+	// Id The device token record ID
+	Id string `json:"id"`
 }
 
 // RegisterInput defines model for RegisterInput.
@@ -1687,6 +1714,9 @@ type ListAllUnreadsJSONBody struct {
 	Cursor *string `json:"cursor,omitempty"`
 	Limit  *int    `json:"limit,omitempty"`
 }
+
+// RegisterDeviceTokenJSONRequestBody defines body for RegisterDeviceToken for application/json ContentType.
+type RegisterDeviceTokenJSONRequestBody = RegisterDeviceTokenRequest
 
 // ForgotPasswordJSONRequestBody defines body for ForgotPassword for application/json ContentType.
 type ForgotPasswordJSONRequestBody ForgotPasswordJSONBody
@@ -2838,6 +2868,12 @@ func (t *SSEEvent) UnmarshalJSON(b []byte) error {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Register a device token for push notifications
+	// (POST /auth/device-tokens)
+	RegisterDeviceToken(w http.ResponseWriter, r *http.Request)
+	// Unregister a device token
+	// (DELETE /auth/device-tokens/{token})
+	UnregisterDeviceToken(w http.ResponseWriter, r *http.Request, token string)
 	// Request a password reset
 	// (POST /auth/forgot-password)
 	ForgotPassword(w http.ResponseWriter, r *http.Request)
@@ -3092,6 +3128,18 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// Register a device token for push notifications
+// (POST /auth/device-tokens)
+func (_ Unimplemented) RegisterDeviceToken(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Unregister a device token
+// (DELETE /auth/device-tokens/{token})
+func (_ Unimplemented) UnregisterDeviceToken(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Request a password reset
 // (POST /auth/forgot-password)
@@ -3599,6 +3647,57 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// RegisterDeviceToken operation middleware
+func (siw *ServerInterfaceWrapper) RegisterDeviceToken(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RegisterDeviceToken(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnregisterDeviceToken operation middleware
+func (siw *ServerInterfaceWrapper) UnregisterDeviceToken(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnregisterDeviceToken(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ForgotPassword operation middleware
 func (siw *ServerInterfaceWrapper) ForgotPassword(w http.ResponseWriter, r *http.Request) {
@@ -6084,6 +6183,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/device-tokens", wrapper.RegisterDeviceToken)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/auth/device-tokens/{token}", wrapper.UnregisterDeviceToken)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/forgot-password", wrapper.ForgotPassword)
 	})
 	r.Group(func(r chi.Router) {
@@ -6345,6 +6450,75 @@ type ForbiddenJSONResponse ApiErrorResponse
 type NotFoundJSONResponse ApiErrorResponse
 
 type UnauthorizedJSONResponse ApiErrorResponse
+
+type RegisterDeviceTokenRequestObject struct {
+	Body *RegisterDeviceTokenJSONRequestBody
+}
+
+type RegisterDeviceTokenResponseObject interface {
+	VisitRegisterDeviceTokenResponse(w http.ResponseWriter) error
+}
+
+type RegisterDeviceToken200JSONResponse RegisterDeviceTokenResponse
+
+func (response RegisterDeviceToken200JSONResponse) VisitRegisterDeviceTokenResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RegisterDeviceToken400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RegisterDeviceToken400JSONResponse) VisitRegisterDeviceTokenResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RegisterDeviceToken401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RegisterDeviceToken401JSONResponse) VisitRegisterDeviceTokenResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnregisterDeviceTokenRequestObject struct {
+	Token string `json:"token"`
+}
+
+type UnregisterDeviceTokenResponseObject interface {
+	VisitUnregisterDeviceTokenResponse(w http.ResponseWriter) error
+}
+
+type UnregisterDeviceToken204Response struct {
+}
+
+func (response UnregisterDeviceToken204Response) VisitUnregisterDeviceTokenResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnregisterDeviceToken401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnregisterDeviceToken401JSONResponse) VisitUnregisterDeviceTokenResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnregisterDeviceToken404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UnregisterDeviceToken404JSONResponse) VisitUnregisterDeviceTokenResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
 
 type ForgotPasswordRequestObject struct {
 	Body *ForgotPasswordJSONRequestBody
@@ -9755,6 +9929,12 @@ func (response UpdateWorkspace404JSONResponse) VisitUpdateWorkspaceResponse(w ht
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Register a device token for push notifications
+	// (POST /auth/device-tokens)
+	RegisterDeviceToken(ctx context.Context, request RegisterDeviceTokenRequestObject) (RegisterDeviceTokenResponseObject, error)
+	// Unregister a device token
+	// (DELETE /auth/device-tokens/{token})
+	UnregisterDeviceToken(ctx context.Context, request UnregisterDeviceTokenRequestObject) (UnregisterDeviceTokenResponseObject, error)
 	// Request a password reset
 	// (POST /auth/forgot-password)
 	ForgotPassword(ctx context.Context, request ForgotPasswordRequestObject) (ForgotPasswordResponseObject, error)
@@ -10033,6 +10213,63 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// RegisterDeviceToken operation middleware
+func (sh *strictHandler) RegisterDeviceToken(w http.ResponseWriter, r *http.Request) {
+	var request RegisterDeviceTokenRequestObject
+
+	var body RegisterDeviceTokenJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RegisterDeviceToken(ctx, request.(RegisterDeviceTokenRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RegisterDeviceToken")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RegisterDeviceTokenResponseObject); ok {
+		if err := validResponse.VisitRegisterDeviceTokenResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnregisterDeviceToken operation middleware
+func (sh *strictHandler) UnregisterDeviceToken(w http.ResponseWriter, r *http.Request, token string) {
+	var request UnregisterDeviceTokenRequestObject
+
+	request.Token = token
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnregisterDeviceToken(ctx, request.(UnregisterDeviceTokenRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnregisterDeviceToken")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnregisterDeviceTokenResponseObject); ok {
+		if err := validResponse.VisitUnregisterDeviceTokenResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ForgotPassword operation middleware

@@ -14,6 +14,7 @@ import (
 	"github.com/enzyme/api/internal/moderation"
 	"github.com/enzyme/api/internal/notification"
 	"github.com/enzyme/api/internal/openapi"
+	"github.com/enzyme/api/internal/pushnotification"
 	"github.com/enzyme/api/internal/scheduled"
 	"github.com/enzyme/api/internal/signing"
 	"github.com/enzyme/api/internal/sse"
@@ -42,6 +43,7 @@ type Handler struct {
 	scheduledRepo       *scheduled.Repository
 	emailService        *email.Service
 	notificationService *notification.Service
+	pushTokenRepo       *pushnotification.Repository
 	moderationRepo      *moderation.Repository
 	hub                 *sse.Hub
 	signer              *signing.Signer
@@ -66,6 +68,7 @@ type Dependencies struct {
 	ScheduledRepo       *scheduled.Repository
 	EmailService        *email.Service
 	NotificationService *notification.Service
+	PushTokenRepo       *pushnotification.Repository
 	ModerationRepo      *moderation.Repository
 	Hub                 *sse.Hub
 	Signer              *signing.Signer
@@ -91,6 +94,7 @@ func New(deps Dependencies) *Handler {
 		scheduledRepo:       deps.ScheduledRepo,
 		emailService:        deps.EmailService,
 		notificationService: deps.NotificationService,
+		pushTokenRepo:       deps.PushTokenRepo,
 		moderationRepo:      deps.ModerationRepo,
 		hub:                 deps.Hub,
 		signer:              deps.Signer,

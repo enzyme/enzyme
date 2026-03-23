@@ -9,6 +9,7 @@ import (
 	"github.com/enzyme/api/internal/auth"
 	"github.com/enzyme/api/internal/gravatar"
 	"github.com/enzyme/api/internal/openapi"
+	"github.com/enzyme/api/internal/pushnotification"
 	"github.com/enzyme/api/internal/user"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -279,6 +280,51 @@ func (h *Handler) ResendVerification(ctx context.Context, request openapi.Resend
 	return openapi.ResendVerification200JSONResponse{
 		Success: true,
 	}, nil
+}
+
+// RegisterDeviceToken registers a device token for push notifications
+func (h *Handler) RegisterDeviceToken(ctx context.Context, request openapi.RegisterDeviceTokenRequestObject) (openapi.RegisterDeviceTokenResponseObject, error) {
+	userID := h.getUserID(ctx)
+
+	platform := string(request.Body.Platform)
+	if platform != "fcm" && platform != "apns" {
+		return openapi.RegisterDeviceToken400JSONResponse{
+			BadRequestJSONResponse: openapi.BadRequestJSONResponse(newErrorResponse("INVALID_PLATFORM", "Platform must be 'fcm' or 'apns'")),
+		}, nil
+	}
+
+	token := &pushnotification.DeviceToken{
+		UserID:   userID,
+		Token:    request.Body.Token,
+		Platform: platform,
+		DeviceID: request.Body.DeviceId,
+	}
+
+	if err := h.pushTokenRepo.Upsert(ctx, token); err != nil {
+		slog.Error("failed to upsert device token", "error", err)
+		return nil, err
+	}
+
+	return openapi.RegisterDeviceToken200JSONResponse{
+		Id: token.ID,
+	}, nil
+}
+
+// UnregisterDeviceToken removes a device token
+func (h *Handler) UnregisterDeviceToken(ctx context.Context, request openapi.UnregisterDeviceTokenRequestObject) (openapi.UnregisterDeviceTokenResponseObject, error) {
+	userID := h.getUserID(ctx)
+
+	err := h.pushTokenRepo.Delete(ctx, userID, request.Token)
+	if err != nil {
+		if errors.Is(err, pushnotification.ErrTokenNotFound) {
+			return openapi.UnregisterDeviceToken404JSONResponse{
+				NotFoundJSONResponse: openapi.NotFoundJSONResponse(newErrorResponse("TOKEN_NOT_FOUND", "Device token not found")),
+			}, nil
+		}
+		return nil, err
+	}
+
+	return openapi.UnregisterDeviceToken204Response{}, nil
 }
 
 // userToAPI converts a user.User to openapi.User

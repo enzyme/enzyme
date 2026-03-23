@@ -221,6 +221,53 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /auth/device-tokens:
+    post:
+      tags: [auth]
+      summary: Register a device token for push notifications
+      operationId: registerDeviceToken
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDeviceTokenRequest'
+      responses:
+        '200':
+          description: Device token registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterDeviceTokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/device-tokens/{token}:
+    delete:
+      tags: [auth]
+      summary: Unregister a device token
+      operationId: unregisterDeviceToken
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The push token value (URL-encoded)
+      responses:
+        '204':
+          description: Device token removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # Workspace endpoints
   /workspaces/create:
     post:
@@ -4113,6 +4160,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkspaceSummary'
+
+    RegisterDeviceTokenRequest:
+      type: object
+      required: [token, platform, device_id]
+      properties:
+        token:
+          type: string
+          description: The push notification token (FCM or APNs)
+        platform:
+          type: string
+          enum: [fcm, apns]
+          description: The push platform
+        device_id:
+          type: string
+          description: A unique identifier for the device
+
+    RegisterDeviceTokenResponse:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          description: The device token record ID
 
     CreateWorkspaceInput:
       type: object

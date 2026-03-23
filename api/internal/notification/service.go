@@ -50,14 +50,31 @@ type ThreadSubscriptionProvider interface {
 	GetSubscribedUserIDs(ctx context.Context, threadParentID string) ([]string, error)
 }
 
+// PushSender sends push notifications to a user's devices
+type PushSender interface {
+	Send(ctx context.Context, userID string, data PushNotificationData) bool
+}
+
+// PushNotificationData contains push notification payload data
+type PushNotificationData struct {
+	Title       string
+	Body        string
+	ChannelID   string
+	MessageID   string
+	WorkspaceID string
+	ServerURL   string
+}
+
 // Service handles notification logic
 type Service struct {
 	prefsRepo         *PreferencesRepository
 	pendingRepo       *PendingRepository
 	channelProvider   ChannelMemberProvider
 	threadSubProvider ThreadSubscriptionProvider
+	pushService       PushSender
 	hub               *sse.Hub
 	emailDelay        time.Duration
+	publicURL         string
 }
 
 // NewService creates a new notification service
@@ -81,6 +98,12 @@ func NewService(
 // This is done separately to avoid circular dependencies
 func (s *Service) SetThreadSubscriptionProvider(provider ThreadSubscriptionProvider) {
 	s.threadSubProvider = provider
+}
+
+// SetPushService sets the push notification sender
+func (s *Service) SetPushService(sender PushSender, publicURL string) {
+	s.pushService = sender
+	s.publicURL = publicURL
 }
 
 // Notify processes a message and sends notifications to appropriate recipients
@@ -112,8 +135,22 @@ func (s *Service) Notify(ctx context.Context, channel *ChannelInfo, msg *Message
 			// Send real-time SSE notification
 			s.hub.BroadcastToUser(channel.WorkspaceID, userID, sseEvent)
 		} else {
-			// Queue for email notification
-			if s.shouldSendEmail(ctx, userID, channel.ID, channel.Type) {
+			// Try push notification first
+			pushedOK := false
+			if s.pushService != nil {
+				pushData := PushNotificationData{
+					Title:       buildTitle(channel, msg),
+					Body:        truncatePreview(msg.Content, 100),
+					ChannelID:   channel.ID,
+					MessageID:   msg.ID,
+					WorkspaceID: channel.WorkspaceID,
+					ServerURL:   s.publicURL,
+				}
+				pushedOK = s.pushService.Send(ctx, userID, pushData)
+			}
+
+			// Fall back to email only if push didn't fire
+			if !pushedOK && s.shouldSendEmail(ctx, userID, channel.ID, channel.Type) {
 				pending := &PendingNotification{
 					UserID:           userID,
 					WorkspaceID:      channel.WorkspaceID,
@@ -288,6 +325,18 @@ func (s *Service) GetPreferences(ctx context.Context, userID, channelID, channel
 // SetPreferences updates notification preferences for a channel
 func (s *Service) SetPreferences(ctx context.Context, pref *NotificationPreference) error {
 	return s.prefsRepo.Upsert(ctx, pref)
+}
+
+// buildTitle creates a push notification title based on the channel and message context
+func buildTitle(channel *ChannelInfo, msg *MessageInfo) string {
+	sender := "@" + msg.SenderName
+	if msg.ThreadParentID != nil {
+		return sender + " in thread"
+	}
+	if channel.Type == "dm" || channel.Type == "group_dm" {
+		return sender
+	}
+	return sender + " in #" + channel.Name
 }
 
 // truncatePreview truncates content for notification preview
