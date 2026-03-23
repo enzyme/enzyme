@@ -76,6 +76,57 @@ func TestUpsert(t *testing.T) {
 	})
 }
 
+func TestUpsertEvictsOldest(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewRepository(db)
+	user := testutil.CreateTestUser(t, db, "test@example.com", "Test")
+	ctx := context.Background()
+
+	// Register MaxTokensPerUser tokens
+	for i := range MaxTokensPerUser {
+		tok := &DeviceToken{
+			UserID:   user.ID,
+			Token:    "token-" + string(rune('a'+i)),
+			Platform: "fcm",
+			DeviceID: "device-1",
+		}
+		if err := repo.Upsert(ctx, tok); err != nil {
+			t.Fatalf("setup token %d: %v", i, err)
+		}
+		// Backdate earlier tokens so ordering is deterministic
+		_, err := db.ExecContext(ctx, `UPDATE device_tokens SET updated_at = ? WHERE token = ?`,
+			time.Now().Add(time.Duration(-MaxTokensPerUser+i)*time.Hour).Format(time.RFC3339),
+			tok.Token)
+		if err != nil {
+			t.Fatalf("setup backdate: %v", err)
+		}
+	}
+
+	tokens, _ := repo.ListByUserID(ctx, user.ID)
+	if len(tokens) != MaxTokensPerUser {
+		t.Fatalf("expected %d tokens, got %d", MaxTokensPerUser, len(tokens))
+	}
+
+	// Register one more — should evict the oldest (token-a)
+	if err := repo.Upsert(ctx, &DeviceToken{
+		UserID: user.ID, Token: "token-new", Platform: "fcm", DeviceID: "device-2",
+	}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	tokens, _ = repo.ListByUserID(ctx, user.ID)
+	if len(tokens) != MaxTokensPerUser {
+		t.Fatalf("expected %d tokens after eviction, got %d", MaxTokensPerUser, len(tokens))
+	}
+
+	// Verify the oldest token was evicted
+	for _, tk := range tokens {
+		if tk.Token == "token-a" {
+			t.Fatal("expected token-a to be evicted")
+		}
+	}
+}
+
 func TestDelete(t *testing.T) {
 	db := testutil.TestDB(t)
 	repo := NewRepository(db)
@@ -108,38 +159,54 @@ func TestDelete(t *testing.T) {
 	})
 }
 
-func TestDeleteByDeviceID(t *testing.T) {
+func TestDeleteByID(t *testing.T) {
 	db := testutil.TestDB(t)
 	repo := NewRepository(db)
 	user := testutil.CreateTestUser(t, db, "test@example.com", "Test")
 	ctx := context.Background()
 
-	// Insert two tokens for same device
-	for _, tok := range []string{"token-a", "token-b"} {
-		if err := repo.Upsert(ctx, &DeviceToken{
-			UserID: user.ID, Token: tok, Platform: "fcm", DeviceID: "device-x",
-		}); err != nil {
-			t.Fatalf("setup: %v", err)
-		}
+	token := &DeviceToken{
+		UserID:   user.ID,
+		Token:    "token-1",
+		Platform: "fcm",
+		DeviceID: "device-1",
 	}
-	// Insert one token for a different device
-	if err := repo.Upsert(ctx, &DeviceToken{
-		UserID: user.ID, Token: "token-c", Platform: "fcm", DeviceID: "device-y",
-	}); err != nil {
+	if err := repo.Upsert(ctx, token); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
 
-	if err := repo.DeleteByDeviceID(ctx, user.ID, "device-x"); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	t.Run("delete by ID", func(t *testing.T) {
+		err := repo.DeleteByID(ctx, user.ID, token.ID)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		tokens, _ := repo.ListByUserID(ctx, user.ID)
+		if len(tokens) != 0 {
+			t.Fatalf("expected 0 tokens, got %d", len(tokens))
+		}
+	})
 
-	tokens, _ := repo.ListByUserID(ctx, user.ID)
-	if len(tokens) != 1 {
-		t.Fatalf("expected 1 token remaining, got %d", len(tokens))
-	}
-	if tokens[0].Token != "token-c" {
-		t.Errorf("expected token-c to remain, got %s", tokens[0].Token)
-	}
+	t.Run("delete by ID wrong user returns error", func(t *testing.T) {
+		// Re-insert
+		token2 := &DeviceToken{
+			UserID: user.ID, Token: "token-2", Platform: "fcm", DeviceID: "device-1",
+		}
+		if err := repo.Upsert(ctx, token2); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		err := repo.DeleteByID(ctx, "wrong-user", token2.ID)
+		if err != ErrTokenNotFound {
+			t.Fatalf("expected ErrTokenNotFound for wrong user, got %v", err)
+		}
+	})
+
+	t.Run("delete non-existent ID returns error", func(t *testing.T) {
+		err := repo.DeleteByID(ctx, user.ID, "non-existent-id")
+		if err != ErrTokenNotFound {
+			t.Fatalf("expected ErrTokenNotFound, got %v", err)
+		}
+	})
 }
 
 func TestListByUserID(t *testing.T) {
@@ -174,40 +241,6 @@ func TestListByUserID(t *testing.T) {
 		}
 		if len(tokens) != 3 {
 			t.Fatalf("expected 3 tokens, got %d", len(tokens))
-		}
-	})
-}
-
-func TestHasTokens(t *testing.T) {
-	db := testutil.TestDB(t)
-	repo := NewRepository(db)
-	user := testutil.CreateTestUser(t, db, "test@example.com", "Test")
-	ctx := context.Background()
-
-	t.Run("no tokens", func(t *testing.T) {
-		has, err := repo.HasTokens(ctx, user.ID)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if has {
-			t.Fatal("expected false, got true")
-		}
-	})
-
-	// Add a token
-	if err := repo.Upsert(ctx, &DeviceToken{
-		UserID: user.ID, Token: "t1", Platform: "fcm", DeviceID: "d1",
-	}); err != nil {
-		t.Fatalf("setup: %v", err)
-	}
-
-	t.Run("has tokens", func(t *testing.T) {
-		has, err := repo.HasTokens(ctx, user.ID)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if !has {
-			t.Fatal("expected true, got false")
 		}
 	})
 }
@@ -255,28 +288,5 @@ func TestCleanupStale(t *testing.T) {
 	}
 	if tokens[0].Token != "new-token" {
 		t.Errorf("expected new-token to remain, got %s", tokens[0].Token)
-	}
-}
-
-func TestDeleteToken(t *testing.T) {
-	db := testutil.TestDB(t)
-	repo := NewRepository(db)
-	user := testutil.CreateTestUser(t, db, "test@example.com", "Test")
-	ctx := context.Background()
-
-	if err := repo.Upsert(ctx, &DeviceToken{
-		UserID: user.ID, Token: "invalid-token", Platform: "apns", DeviceID: "d1",
-	}); err != nil {
-		t.Fatalf("setup: %v", err)
-	}
-
-	// DeleteToken removes by token value regardless of user
-	if err := repo.DeleteToken(ctx, "invalid-token"); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	tokens, _ := repo.ListByUserID(ctx, user.ID)
-	if len(tokens) != 0 {
-		t.Fatalf("expected 0 tokens, got %d", len(tokens))
 	}
 }

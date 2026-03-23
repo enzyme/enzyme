@@ -135,7 +135,7 @@ func New(cfg *config.Config) (*App, error) {
 	if cfg.PushNotifications.Enabled {
 		pushTokenRepo = pushnotification.NewRepository(db.DB)
 		pushService := pushnotification.NewService(pushTokenRepo, cfg.PushNotifications.RelayURL)
-		notificationService.SetPushService(&pushSenderAdapter{pushService}, cfg.Server.PublicURL)
+		notificationService.SetPushService(pushService, cfg.Server.PublicURL)
 		slog.Info("push notifications enabled", "relay_url", cfg.PushNotifications.RelayURL)
 	}
 
@@ -235,6 +235,8 @@ func New(cfg *config.Config) (*App, error) {
 			{Method: "POST", Path: "/api/auth/reset-password", Limit: cfg.RateLimit.ResetPassword.Limit, Window: cfg.RateLimit.ResetPassword.Window},
 			{Method: "POST", Path: "/api/auth/verify-email", Limit: cfg.RateLimit.VerifyEmail.Limit, Window: cfg.RateLimit.VerifyEmail.Window},
 			{Method: "POST", Path: "/api/auth/resend-verification", Limit: cfg.RateLimit.ResendVerification.Limit, Window: cfg.RateLimit.ResendVerification.Window},
+			{Method: "POST", Path: "/api/auth/device-tokens", Limit: 10, Window: time.Minute},
+			{Method: "DELETE", Path: "/api/auth/device-tokens/", Limit: 30, Window: time.Minute},
 		}
 		limiter = ratelimit.NewLimiter(rules)
 	}
@@ -374,20 +376,4 @@ func (a *App) Shutdown(ctx context.Context) error {
 		slog.Error("telemetry shutdown error", "error", err)
 	}
 	return a.DB.Close()
-}
-
-// pushSenderAdapter bridges pushnotification.Service to the notification.PushSender interface.
-type pushSenderAdapter struct {
-	svc *pushnotification.Service
-}
-
-func (a *pushSenderAdapter) Send(ctx context.Context, userID string, data notification.PushNotificationData) bool {
-	return a.svc.Send(ctx, userID, pushnotification.NotificationData{
-		Title:       data.Title,
-		Body:        data.Body,
-		ChannelID:   data.ChannelID,
-		MessageID:   data.MessageID,
-		WorkspaceID: data.WorkspaceID,
-		ServerURL:   data.ServerURL,
-	})
 }

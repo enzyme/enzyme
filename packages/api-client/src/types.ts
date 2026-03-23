@@ -9,6 +9,7 @@ export type UpdateProfileInput = components['schemas']['UpdateProfileInput'];
 // Auth input types
 export type LoginInput = components['schemas']['LoginInput'];
 export type RegisterInput = components['schemas']['RegisterInput'];
+export type RegisterDeviceTokenInput = components['schemas']['RegisterDeviceTokenRequest'];
 
 // Workspace types
 export type Workspace = components['schemas']['Workspace'];

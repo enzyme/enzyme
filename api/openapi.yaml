@@ -246,7 +246,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /auth/device-tokens/{token}:
+  /auth/device-tokens/{id}:
     delete:
       tags: [auth]
       summary: Unregister a device token
@@ -254,12 +254,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: token
+        - name: id
           in: path
           required: true
           schema:
             type: string
-          description: The push token value (URL-encoded)
+          description: The device token record ID
       responses:
         '204':
           description: Device token removed
@@ -4167,6 +4167,7 @@ components:
       properties:
         token:
           type: string
+          maxLength: 4096
           description: The push notification token (FCM or APNs)
         platform:
           type: string
@@ -4174,6 +4175,7 @@ components:
           description: The push platform
         device_id:
           type: string
+          maxLength: 256
           description: A unique identifier for the device
 
     RegisterDeviceTokenResponse:

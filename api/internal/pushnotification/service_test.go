@@ -65,16 +65,17 @@ func TestSendWithMockRelay(t *testing.T) {
 		t.Fatalf("expected 2 relay requests, got %d", len(receivedRequests))
 	}
 
-	// Verify payload structure
-	req := receivedRequests[0]
-	if req.Title != "@alice in #general" {
-		t.Errorf("expected title '@alice in #general', got %q", req.Title)
-	}
-	if req.Data.ChannelID != "ch-1" {
-		t.Errorf("expected channel_id 'ch-1', got %q", req.Data.ChannelID)
-	}
-	if req.Data.ServerURL != "https://chat.example.com" {
-		t.Errorf("expected server_url 'https://chat.example.com', got %q", req.Data.ServerURL)
+	// Verify payload structure (order may vary due to concurrency)
+	for _, req := range receivedRequests {
+		if req.Title != "@alice in #general" {
+			t.Errorf("expected title '@alice in #general', got %q", req.Title)
+		}
+		if req.Data.ChannelID != "ch-1" {
+			t.Errorf("expected channel_id 'ch-1', got %q", req.Data.ChannelID)
+		}
+		if req.Data.ServerURL != "https://chat.example.com" {
+			t.Errorf("expected server_url 'https://chat.example.com', got %q", req.Data.ServerURL)
+		}
 	}
 }
 

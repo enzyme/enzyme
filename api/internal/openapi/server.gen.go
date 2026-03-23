@@ -2872,8 +2872,8 @@ type ServerInterface interface {
 	// (POST /auth/device-tokens)
 	RegisterDeviceToken(w http.ResponseWriter, r *http.Request)
 	// Unregister a device token
-	// (DELETE /auth/device-tokens/{token})
-	UnregisterDeviceToken(w http.ResponseWriter, r *http.Request, token string)
+	// (DELETE /auth/device-tokens/{id})
+	UnregisterDeviceToken(w http.ResponseWriter, r *http.Request, id string)
 	// Request a password reset
 	// (POST /auth/forgot-password)
 	ForgotPassword(w http.ResponseWriter, r *http.Request)
@@ -3136,8 +3136,8 @@ func (_ Unimplemented) RegisterDeviceToken(w http.ResponseWriter, r *http.Reques
 }
 
 // Unregister a device token
-// (DELETE /auth/device-tokens/{token})
-func (_ Unimplemented) UnregisterDeviceToken(w http.ResponseWriter, r *http.Request, token string) {
+// (DELETE /auth/device-tokens/{id})
+func (_ Unimplemented) UnregisterDeviceToken(w http.ResponseWriter, r *http.Request, id string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -3673,12 +3673,12 @@ func (siw *ServerInterfaceWrapper) UnregisterDeviceToken(w http.ResponseWriter, 
 
 	var err error
 
-	// ------------- Path parameter "token" -------------
-	var token string
+	// ------------- Path parameter "id" -------------
+	var id string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
 		return
 	}
 
@@ -3689,7 +3689,7 @@ func (siw *ServerInterfaceWrapper) UnregisterDeviceToken(w http.ResponseWriter, 
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UnregisterDeviceToken(w, r, token)
+		siw.Handler.UnregisterDeviceToken(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6186,7 +6186,7 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/auth/device-tokens", wrapper.RegisterDeviceToken)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/auth/device-tokens/{token}", wrapper.UnregisterDeviceToken)
+		r.Delete(options.BaseURL+"/auth/device-tokens/{id}", wrapper.UnregisterDeviceToken)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/forgot-password", wrapper.ForgotPassword)
@@ -6487,7 +6487,7 @@ func (response RegisterDeviceToken401JSONResponse) VisitRegisterDeviceTokenRespo
 }
 
 type UnregisterDeviceTokenRequestObject struct {
-	Token string `json:"token"`
+	Id string `json:"id"`
 }
 
 type UnregisterDeviceTokenResponseObject interface {
@@ -9933,7 +9933,7 @@ type StrictServerInterface interface {
 	// (POST /auth/device-tokens)
 	RegisterDeviceToken(ctx context.Context, request RegisterDeviceTokenRequestObject) (RegisterDeviceTokenResponseObject, error)
 	// Unregister a device token
-	// (DELETE /auth/device-tokens/{token})
+	// (DELETE /auth/device-tokens/{id})
 	UnregisterDeviceToken(ctx context.Context, request UnregisterDeviceTokenRequestObject) (UnregisterDeviceTokenResponseObject, error)
 	// Request a password reset
 	// (POST /auth/forgot-password)
@@ -10247,10 +10247,10 @@ func (sh *strictHandler) RegisterDeviceToken(w http.ResponseWriter, r *http.Requ
 }
 
 // UnregisterDeviceToken operation middleware
-func (sh *strictHandler) UnregisterDeviceToken(w http.ResponseWriter, r *http.Request, token string) {
+func (sh *strictHandler) UnregisterDeviceToken(w http.ResponseWriter, r *http.Request, id string) {
 	var request UnregisterDeviceTokenRequestObject
 
-	request.Token = token
+	request.Id = id
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.UnregisterDeviceToken(ctx, request.(UnregisterDeviceTokenRequestObject))

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/enzyme/api/internal/openapi"
+	"github.com/enzyme/api/internal/pushnotification"
 	"github.com/enzyme/api/internal/sse"
 )
 
@@ -52,17 +53,7 @@ type ThreadSubscriptionProvider interface {
 
 // PushSender sends push notifications to a user's devices
 type PushSender interface {
-	Send(ctx context.Context, userID string, data PushNotificationData) bool
-}
-
-// PushNotificationData contains push notification payload data
-type PushNotificationData struct {
-	Title       string
-	Body        string
-	ChannelID   string
-	MessageID   string
-	WorkspaceID string
-	ServerURL   string
+	Send(ctx context.Context, userID string, data pushnotification.NotificationData) bool
 }
 
 // Service handles notification logic
@@ -138,7 +129,7 @@ func (s *Service) Notify(ctx context.Context, channel *ChannelInfo, msg *Message
 			// Try push notification first
 			pushedOK := false
 			if s.pushService != nil {
-				pushData := PushNotificationData{
+				pushData := pushnotification.NotificationData{
 					Title:       buildTitle(channel, msg),
 					Body:        truncatePreview(msg.Content, 100),
 					ChannelID:   channel.ID,
@@ -341,8 +332,9 @@ func buildTitle(channel *ChannelInfo, msg *MessageInfo) string {
 
 // truncatePreview truncates content for notification preview
 func truncatePreview(content string, maxLen int) string {
-	if len(content) <= maxLen {
+	runes := []rune(content)
+	if len(runes) <= maxLen {
 		return content
 	}
-	return content[:maxLen-3] + "..."
+	return string(runes[:maxLen-3]) + "..."
 }

@@ -4,14 +4,18 @@ import "time"
 
 // DeviceToken represents a registered push notification device token.
 type DeviceToken struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	Token     string    `json:"token"`
-	Platform  string    `json:"platform"` // "fcm" or "apns"
-	DeviceID  string    `json:"device_id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        string
+	UserID    string
+	Token     string
+	Platform  string // "fcm" or "apns"
+	DeviceID  string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
+
+// MaxTokensPerUser is the maximum number of device tokens a single user can register.
+// When the limit is reached, the least-recently-updated token is evicted.
+const MaxTokensPerUser = 10
 
 // NotificationData contains the data needed to send a push notification.
 type NotificationData struct {

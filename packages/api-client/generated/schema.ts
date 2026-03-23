@@ -174,7 +174,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/device-tokens/{token}": {
+    "/auth/device-tokens/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2749,8 +2749,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The push token value (URL-encoded) */
-                token: string;
+                /** @description The device token record ID */
+                id: string;
             };
             cookie?: never;
         };
