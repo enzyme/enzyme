@@ -1,16 +1,21 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"io"
 	"log/slog"
 	"net/http"
 	"time"
 )
 
+// Dispatcher abstracts push notification delivery for FCM and APNs.
+type Dispatcher interface {
+	Send(ctx context.Context, req *NotifyRequest) (string, error)
+}
+
 type notifyHandler struct {
-	fcm  *FCMClient
-	apns *APNsClient
+	fcm  Dispatcher
+	apns Dispatcher
 }
 
 func (h *notifyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -18,14 +23,9 @@ func (h *notifyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Limit request body size.
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, `{"error":"request body too large"}`, http.StatusBadRequest)
-		return
-	}
 
 	var req NotifyRequest
-	if err := json.Unmarshal(body, &req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"invalid JSON"}`, http.StatusBadRequest)
 		return
 	}
@@ -59,9 +59,15 @@ func (h *notifyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		status, sendErr = h.apns.Send(r.Context(), &req)
 	}
 
+	httpStatus := http.StatusOK
 	resp := NotifyResponse{Status: status}
 	if sendErr != nil {
-		resp.Error = sendErr.Error()
+		slog.Error("push dispatch failed",
+			"platform", req.Platform,
+			"error", sendErr.Error(),
+		)
+		httpStatus = http.StatusBadGateway
+		resp.Error = "dispatch failed"
 	}
 
 	slog.Info("push notification dispatched",
@@ -70,7 +76,7 @@ func (h *notifyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"latency_ms", time.Since(start).Milliseconds(),
 	)
 
-	writeJSON(w, http.StatusOK, resp)
+	writeJSON(w, httpStatus, resp)
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {

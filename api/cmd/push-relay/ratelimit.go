@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"sync"
@@ -9,7 +10,10 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const staleEntryTTL = 10 * time.Minute
+const (
+	staleEntryTTL = 10 * time.Minute
+	maxEntries    = 100_000
+)
 
 type ipEntry struct {
 	limiter  *rate.Limiter
@@ -25,13 +29,13 @@ type RateLimiter struct {
 }
 
 // NewRateLimiter creates a rate limiter with the given requests-per-minute limit.
-func NewRateLimiter(requestsPerMinute int) *RateLimiter {
+func NewRateLimiter(ctx context.Context, requestsPerMinute int, burst int) *RateLimiter {
 	rl := &RateLimiter{
 		entries: make(map[string]*ipEntry),
 		limit:   rate.Limit(float64(requestsPerMinute) / 60.0),
-		burst:   2,
+		burst:   burst,
 	}
-	go rl.cleanup()
+	go rl.cleanup(ctx)
 	return rl
 }
 
@@ -42,7 +46,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 
 		limiter := rl.getLimiter(ip)
 		if !limiter.Allow() {
-			retryAfter := int(time.Second / time.Duration(rl.limit))
+			retryAfter := max(1, int(1.0/float64(rl.limit)))
 			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
 			http.Error(w, `{"error":"rate limit exceeded"}`, http.StatusTooManyRequests)
 			return
@@ -58,6 +62,9 @@ func (rl *RateLimiter) getLimiter(ip string) *rate.Limiter {
 
 	entry, ok := rl.entries[ip]
 	if !ok {
+		if len(rl.entries) >= maxEntries {
+			return rate.NewLimiter(0, 0)
+		}
 		entry = &ipEntry{
 			limiter: rate.NewLimiter(rl.limit, rl.burst),
 		}
@@ -67,18 +74,23 @@ func (rl *RateLimiter) getLimiter(ip string) *rate.Limiter {
 	return entry.limiter
 }
 
-func (rl *RateLimiter) cleanup() {
+func (rl *RateLimiter) cleanup(ctx context.Context) {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		rl.mu.Lock()
-		cutoff := time.Now().Add(-staleEntryTTL)
-		for ip, entry := range rl.entries {
-			if entry.lastSeen.Before(cutoff) {
-				delete(rl.entries, ip)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			rl.mu.Lock()
+			cutoff := time.Now().Add(-staleEntryTTL)
+			for ip, entry := range rl.entries {
+				if entry.lastSeen.Before(cutoff) {
+					delete(rl.entries, ip)
+				}
 			}
+			rl.mu.Unlock()
 		}
-		rl.mu.Unlock()
 	}
 }

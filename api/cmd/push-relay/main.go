@@ -71,9 +71,24 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Graceful shutdown context.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Rate limiter.
-	rateLimit, _ := strconv.Atoi(envOr("RELAY_RATE_LIMIT", "120"))
-	rateLimiter := NewRateLimiter(rateLimit)
+	rateLimitStr := envOr("RELAY_RATE_LIMIT", "120")
+	rateLimit, err := strconv.Atoi(rateLimitStr)
+	if err != nil || rateLimit <= 0 {
+		slog.Error("invalid RELAY_RATE_LIMIT", "value", rateLimitStr)
+		os.Exit(1)
+	}
+	burstStr := envOr("RELAY_BURST", "5")
+	burst, err := strconv.Atoi(burstStr)
+	if err != nil || burst <= 0 {
+		slog.Error("invalid RELAY_BURST", "value", burstStr)
+		os.Exit(1)
+	}
+	rateLimiter := NewRateLimiter(ctx, rateLimit, burst)
 
 	// Router.
 	router := newRouter(fcm, apns, rateLimiter)
@@ -83,14 +98,11 @@ func main() {
 	srv := &http.Server{
 		Addr:              ":" + port,
 		Handler:           router,
+		ReadTimeout:       15 * time.Second,
 		ReadHeaderTimeout: 10 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-
-	// Graceful shutdown.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)

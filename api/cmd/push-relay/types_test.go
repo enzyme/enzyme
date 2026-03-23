@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -31,6 +33,11 @@ func TestNotifyRequest_Validate(t *testing.T) {
 			wantErr: "device_token is required",
 		},
 		{
+			name:    "device_token too long",
+			req:     NotifyRequest{DeviceToken: strings.Repeat("x", 257), Platform: "fcm", Title: "Hello"},
+			wantErr: "device_token exceeds 256 characters",
+		},
+		{
 			name:    "invalid platform",
 			req:     NotifyRequest{DeviceToken: "tok123", Platform: "web", Title: "Hello"},
 			wantErr: `platform must be "fcm" or "apns"`,
@@ -49,6 +56,21 @@ func TestNotifyRequest_Validate(t *testing.T) {
 			name:    "whitespace title",
 			req:     NotifyRequest{DeviceToken: "tok123", Platform: "fcm", Title: "  "},
 			wantErr: "title is required",
+		},
+		{
+			name:    "title too long",
+			req:     NotifyRequest{DeviceToken: "tok123", Platform: "fcm", Title: strings.Repeat("x", 201)},
+			wantErr: "title exceeds 200 characters",
+		},
+		{
+			name:    "body too long",
+			req:     NotifyRequest{DeviceToken: "tok123", Platform: "fcm", Title: "Hello", Body: strings.Repeat("x", 1001)},
+			wantErr: "body exceeds 1000 characters",
+		},
+		{
+			name:    "too many data keys",
+			req:     NotifyRequest{DeviceToken: "tok123", Platform: "fcm", Title: "Hello", Data: makeDataKeys(11)},
+			wantErr: "data exceeds 10 keys",
 		},
 	}
 
@@ -70,4 +92,12 @@ func TestNotifyRequest_Validate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func makeDataKeys(n int) map[string]string {
+	m := make(map[string]string, n)
+	for i := 0; i < n; i++ {
+		m[fmt.Sprintf("key%d", i)] = "value"
+	}
+	return m
 }

@@ -3,11 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/sideshow/apns2"
 	"github.com/sideshow/apns2/payload"
 	"github.com/sideshow/apns2/token"
 )
+
+var _ Dispatcher = (*APNsClient)(nil)
 
 // APNsClient wraps the Apple Push Notification service client.
 type APNsClient struct {
@@ -41,6 +44,9 @@ func NewAPNsClient(keyFile, keyID, teamID, bundleID string, production bool) (*A
 // Send dispatches a push notification via APNs. It returns "sent", "invalid_token",
 // or "error" along with any error details.
 func (a *APNsClient) Send(ctx context.Context, req *NotifyRequest) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
 	p := payload.NewPayload().
 		AlertTitle(req.Title).
 		AlertBody(req.Body).
@@ -48,6 +54,9 @@ func (a *APNsClient) Send(ctx context.Context, req *NotifyRequest) (string, erro
 		MutableContent()
 
 	for k, v := range req.Data {
+		if k == "aps" {
+			continue
+		}
 		p.Custom(k, v)
 	}
 
