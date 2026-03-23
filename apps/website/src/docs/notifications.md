@@ -37,9 +37,33 @@ Preferences are set per channel via the channel notification settings UI or the 
 
 A user is auto-subscribed to a thread when they post a reply. The parent message author is also auto-subscribed when the first reply is posted. Users can explicitly unsubscribe from a thread, and auto-subscribe respects that choice.
 
+## Delivery Pipeline
+
+When a notification is triggered, the server delivers it through a priority chain:
+
+1. **SSE (real-time)** — if the user has an active connection, the notification is delivered instantly via Server-Sent Events. No further delivery is needed.
+2. **Push notification** — if the user is offline and has registered a mobile device, a push notification is sent via FCM (Android) or APNs (iOS).
+3. **Email** — if the user is offline, has no registered device tokens (or push is disabled), and has email enabled for the channel, a notification email is queued.
+
+Push suppresses email: if a push notification is successfully dispatched to at least one device, email is skipped for that notification.
+
+## Push Notifications
+
+Push notifications deliver alerts to mobile devices when a user is offline. They are sent through a relay service (`push.enzyme.im`) that holds the FCM and APNs credentials for the published app.
+
+**Privacy:** The relay receives only metadata (sender name, channel name, notification type). Message content is not included by default. The mobile app fetches full message content directly from its own Enzyme server when the user taps the notification.
+
+Push notifications are enabled by the server administrator. See [Push Notifications configuration](/docs/configuration/#push-notifications) for setup. No client-side configuration is needed — the mobile app handles device token registration automatically.
+
+**Token lifecycle:**
+
+- Device tokens are registered when the mobile app starts and refreshed on each launch.
+- Tokens are automatically cleaned up when they become invalid (the relay reports `invalid_token`).
+- Tokens not updated in 90 days are removed by a scheduled cleanup task.
+
 ## Email Notifications
 
-When a user is offline and has `email_enabled` turned on for a channel, notifications are queued for email delivery.
+When a user is offline, has no registered mobile devices (or push is disabled), and has `email_enabled` turned on for a channel, notifications are queued for email delivery.
 
 **Delivery timing:**
 

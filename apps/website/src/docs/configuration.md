@@ -165,6 +165,18 @@ Rate limiting protects authentication endpoints from brute-force attacks. Limits
 | `sse.heartbeat_interval` | `ENZYME_SSE_HEARTBEAT_INTERVAL` | `30s`   | How often heartbeat events are sent to keep SSE connections alive. Minimum: 5s.        |
 | `sse.client_buffer_size` | `ENZYME_SSE_CLIENT_BUFFER_SIZE` | `256`   | Channel buffer size per SSE client. Increase for high-traffic workspaces. Minimum: 16. |
 
+## Push Notifications
+
+Push notifications deliver alerts to mobile devices when users are offline. Notifications are forwarded to a push relay service that holds FCM/APNs credentials and dispatches to devices.
+
+| Key                                  | Env Var                                         | CLI Flag                                | Default                  | Description                                                                              |
+| ------------------------------------ | ----------------------------------------------- | --------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------- |
+| `push_notifications.enabled`         | `ENZYME_PUSH_NOTIFICATIONS_ENABLED`             | `--push_notifications.enabled`          | `false`                  | Enable push notifications. Requires a reachable relay service.                           |
+| `push_notifications.relay_url`       | `ENZYME_PUSH_NOTIFICATIONS_RELAY_URL`            | `--push_notifications.relay_url`        | `https://push.enzyme.im` | URL of the push relay service. Must use HTTPS (except for localhost).                    |
+| `push_notifications.include_preview` | `ENZYME_PUSH_NOTIFICATIONS_INCLUDE_PREVIEW`      | `--push_notifications.include_preview`  | `true`                   | Include a short message preview in the push notification body. Set `false` for privacy.  |
+
+The default relay (`push.enzyme.im`) is operated by Enzyme and works out of the box. The relay sees only metadata (sender name, channel name) — message content is fetched by the mobile app directly from your server. See [Notifications](/docs/notifications/#push-notifications) for details on the delivery pipeline and privacy model.
+
 ## Telemetry (OpenTelemetry)
 
 Optional observability via OpenTelemetry. When enabled, Enzyme exports traces and metrics to any OTLP-compatible collector (Jaeger, Grafana Alloy, Datadog Agent, etc.). Disabled by default with zero overhead.
@@ -276,6 +288,11 @@ sse:
   cleanup_interval: '1h'
   heartbeat_interval: '30s'
   client_buffer_size: 256
+
+push_notifications:
+  enabled: true
+  relay_url: 'https://push.enzyme.im'
+  include_preview: true
 
 telemetry:
   enabled: false
