@@ -148,12 +148,27 @@ func Validate(cfg *Config) error {
 			{"rate_limit.register", cfg.RateLimit.Register},
 			{"rate_limit.forgot_password", cfg.RateLimit.ForgotPassword},
 			{"rate_limit.reset_password", cfg.RateLimit.ResetPassword},
+			{"rate_limit.device_token_register", cfg.RateLimit.DeviceTokenRegister},
 		} {
 			if ep.cfg.Limit < 1 {
 				errs = append(errs, fmt.Errorf("%s.limit must be at least 1", ep.name))
 			}
 			if ep.cfg.Window < time.Second {
 				errs = append(errs, fmt.Errorf("%s.window must be at least 1s", ep.name))
+			}
+		}
+	}
+
+	// Push notification validation (only when enabled)
+	if cfg.PushNotifications.Enabled {
+		if cfg.PushNotifications.RelayURL == "" {
+			errs = append(errs, fmt.Errorf("push_notifications.relay_url is required when push notifications are enabled"))
+		} else {
+			u, err := url.Parse(cfg.PushNotifications.RelayURL)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("push_notifications.relay_url is not a valid URL: %w", err))
+			} else if u.Scheme != "https" && u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1" {
+				errs = append(errs, fmt.Errorf("push_notifications.relay_url must use HTTPS (except for localhost)"))
 			}
 		}
 	}

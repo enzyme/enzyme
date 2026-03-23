@@ -30,8 +30,14 @@ func (r *Repository) Upsert(ctx context.Context, token *DeviceToken) error {
 	token.CreatedAt = now
 	token.UpdatedAt = now
 
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback()
+
 	// Evict oldest token if at limit (only matters for new inserts, not upsert updates)
-	_, err := r.db.ExecContext(ctx, `
+	_, err = tx.ExecContext(ctx, `
 		DELETE FROM device_tokens WHERE id IN (
 			SELECT id FROM device_tokens WHERE user_id = ?
 			ORDER BY updated_at DESC
@@ -42,7 +48,7 @@ func (r *Repository) Upsert(ctx context.Context, token *DeviceToken) error {
 		return fmt.Errorf("evicting oldest token: %w", err)
 	}
 
-	return r.db.QueryRowContext(ctx, `
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO device_tokens (id, user_id, token, platform, device_id, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(user_id, token) DO UPDATE SET
@@ -52,6 +58,11 @@ func (r *Repository) Upsert(ctx context.Context, token *DeviceToken) error {
 		RETURNING id
 	`, token.ID, token.UserID, token.Token, token.Platform, token.DeviceID,
 		now.Format(time.RFC3339), now.Format(time.RFC3339)).Scan(&token.ID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // Delete removes a specific token for a user by token value.
@@ -60,7 +71,10 @@ func (r *Repository) Delete(ctx context.Context, userID, tokenValue string) erro
 	if err != nil {
 		return err
 	}
-	n, _ := result.RowsAffected()
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
 	if n == 0 {
 		return ErrTokenNotFound
 	}
@@ -73,7 +87,10 @@ func (r *Repository) DeleteByID(ctx context.Context, userID, id string) error {
 	if err != nil {
 		return err
 	}
-	n, _ := result.RowsAffected()
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
 	if n == 0 {
 		return ErrTokenNotFound
 	}
@@ -93,11 +110,22 @@ func (r *Repository) ListByUserID(ctx context.Context, userID string) ([]*Device
 
 	var tokens []*DeviceToken
 	for rows.Next() {
-		t, err := scanDeviceToken(rows)
-		if err != nil {
+		var t DeviceToken
+		var createdAt, updatedAt string
+
+		if err := rows.Scan(&t.ID, &t.UserID, &t.Token, &t.Platform, &t.DeviceID, &createdAt, &updatedAt); err != nil {
 			return nil, err
 		}
-		tokens = append(tokens, t)
+
+		t.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("parsing created_at: %w", err)
+		}
+		t.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("parsing updated_at: %w", err)
+		}
+		tokens = append(tokens, &t)
 	}
 	return tokens, rows.Err()
 }
@@ -109,28 +137,4 @@ func (r *Repository) CleanupStale(ctx context.Context, olderThan time.Time) (int
 		return 0, err
 	}
 	return result.RowsAffected()
-}
-
-type scanner interface {
-	Scan(dest ...any) error
-}
-
-func scanDeviceToken(row scanner) (*DeviceToken, error) {
-	var t DeviceToken
-	var createdAt, updatedAt string
-
-	err := row.Scan(&t.ID, &t.UserID, &t.Token, &t.Platform, &t.DeviceID, &createdAt, &updatedAt)
-	if err != nil {
-		return nil, err
-	}
-
-	t.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
-	if err != nil {
-		return nil, fmt.Errorf("parsing created_at: %w", err)
-	}
-	t.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
-	if err != nil {
-		return nil, fmt.Errorf("parsing updated_at: %w", err)
-	}
-	return &t, nil
 }

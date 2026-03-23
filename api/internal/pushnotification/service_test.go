@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 
 	"github.com/enzyme/api/internal/testutil"
@@ -26,7 +25,6 @@ func TestSendWithMockRelay(t *testing.T) {
 		}
 	}
 
-	var mu sync.Mutex
 	var receivedRequests []RelayRequest
 
 	relay := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -36,9 +34,7 @@ func TestSendWithMockRelay(t *testing.T) {
 			http.Error(w, "bad request", 400)
 			return
 		}
-		mu.Lock()
 		receivedRequests = append(receivedRequests, req)
-		mu.Unlock()
 
 		json.NewEncoder(w).Encode(RelayResponse{Status: "sent"})
 	}))
@@ -59,13 +55,10 @@ func TestSendWithMockRelay(t *testing.T) {
 		t.Fatal("expected Send to return true")
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
 	if len(receivedRequests) != 2 {
 		t.Fatalf("expected 2 relay requests, got %d", len(receivedRequests))
 	}
 
-	// Verify payload structure (order may vary due to concurrency)
 	for _, req := range receivedRequests {
 		if req.Title != "@alice in #general" {
 			t.Errorf("expected title '@alice in #general', got %q", req.Title)

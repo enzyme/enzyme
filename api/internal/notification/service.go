@@ -66,6 +66,7 @@ type Service struct {
 	hub               *sse.Hub
 	emailDelay        time.Duration
 	publicURL         string
+	includePreview    bool
 }
 
 // NewService creates a new notification service
@@ -91,10 +92,12 @@ func (s *Service) SetThreadSubscriptionProvider(provider ThreadSubscriptionProvi
 	s.threadSubProvider = provider
 }
 
-// SetPushService sets the push notification sender
-func (s *Service) SetPushService(sender PushSender, publicURL string) {
+// SetPushService sets the push notification sender.
+// Must be called before any Notify calls (during initialization only).
+func (s *Service) SetPushService(sender PushSender, publicURL string, includePreview bool) {
 	s.pushService = sender
 	s.publicURL = publicURL
+	s.includePreview = includePreview
 }
 
 // Notify processes a message and sends notifications to appropriate recipients
@@ -129,9 +132,13 @@ func (s *Service) Notify(ctx context.Context, channel *ChannelInfo, msg *Message
 			// Try push notification first
 			pushedOK := false
 			if s.pushService != nil {
+				body := "New message"
+				if s.includePreview {
+					body = truncatePreview(msg.Content, 100)
+				}
 				pushData := pushnotification.NotificationData{
 					Title:       buildTitle(channel, msg),
-					Body:        truncatePreview(msg.Content, 100),
+					Body:        body,
 					ChannelID:   channel.ID,
 					MessageID:   msg.ID,
 					WorkspaceID: channel.WorkspaceID,
@@ -321,13 +328,15 @@ func (s *Service) SetPreferences(ctx context.Context, pref *NotificationPreferen
 // buildTitle creates a push notification title based on the channel and message context
 func buildTitle(channel *ChannelInfo, msg *MessageInfo) string {
 	sender := "@" + msg.SenderName
+	var title string
 	if msg.ThreadParentID != nil {
-		return sender + " in thread"
+		title = sender + " in thread"
+	} else if channel.Type == "dm" || channel.Type == "group_dm" {
+		title = sender
+	} else {
+		title = sender + " in #" + channel.Name
 	}
-	if channel.Type == "dm" || channel.Type == "group_dm" {
-		return sender
-	}
-	return sender + " in #" + channel.Name
+	return truncatePreview(title, 200)
 }
 
 // truncatePreview truncates content for notification preview

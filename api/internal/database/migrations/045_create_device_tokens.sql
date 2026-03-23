@@ -9,7 +9,6 @@ CREATE TABLE device_tokens (
     updated_at TEXT NOT NULL,
     UNIQUE(user_id, token)
 );
-CREATE INDEX idx_device_tokens_token ON device_tokens(token);
 
 -- +goose Down
 DROP TABLE device_tokens;

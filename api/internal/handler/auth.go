@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -316,8 +317,7 @@ func (h *Handler) RegisterDeviceToken(ctx context.Context, request openapi.Regis
 	}
 
 	if err := h.pushTokenRepo.Upsert(ctx, token); err != nil {
-		slog.Error("failed to upsert device token", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("upserting device token: %w", err)
 	}
 
 	return openapi.RegisterDeviceToken200JSONResponse{
@@ -336,7 +336,7 @@ func (h *Handler) UnregisterDeviceToken(ctx context.Context, request openapi.Unr
 
 	if h.pushTokenRepo == nil {
 		return openapi.UnregisterDeviceToken404JSONResponse{
-			NotFoundJSONResponse: openapi.NotFoundJSONResponse(newErrorResponse("TOKEN_NOT_FOUND", "Device token not found")),
+			NotFoundJSONResponse: openapi.NotFoundJSONResponse(newErrorResponse("PUSH_NOT_ENABLED", "Push notifications are not enabled on this server")),
 		}, nil
 	}
 

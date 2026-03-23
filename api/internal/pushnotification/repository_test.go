@@ -2,6 +2,7 @@ package pushnotification
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -86,7 +87,7 @@ func TestUpsertEvictsOldest(t *testing.T) {
 	for i := range MaxTokensPerUser {
 		tok := &DeviceToken{
 			UserID:   user.ID,
-			Token:    "token-" + string(rune('a'+i)),
+			Token:    fmt.Sprintf("token-%d", i),
 			Platform: "fcm",
 			DeviceID: "device-1",
 		}
@@ -121,8 +122,8 @@ func TestUpsertEvictsOldest(t *testing.T) {
 
 	// Verify the oldest token was evicted
 	for _, tk := range tokens {
-		if tk.Token == "token-a" {
-			t.Fatal("expected token-a to be evicted")
+		if tk.Token == "token-0" {
+			t.Fatal("expected token-0 to be evicted")
 		}
 	}
 }

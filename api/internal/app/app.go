@@ -135,7 +135,7 @@ func New(cfg *config.Config) (*App, error) {
 	if cfg.PushNotifications.Enabled {
 		pushTokenRepo = pushnotification.NewRepository(db.DB)
 		pushService := pushnotification.NewService(pushTokenRepo, cfg.PushNotifications.RelayURL)
-		notificationService.SetPushService(pushService, cfg.Server.PublicURL)
+		notificationService.SetPushService(pushService, cfg.Server.PublicURL, cfg.PushNotifications.IncludePreview)
 		slog.Info("push notifications enabled", "relay_url", cfg.PushNotifications.RelayURL)
 	}
 
@@ -235,8 +235,7 @@ func New(cfg *config.Config) (*App, error) {
 			{Method: "POST", Path: "/api/auth/reset-password", Limit: cfg.RateLimit.ResetPassword.Limit, Window: cfg.RateLimit.ResetPassword.Window},
 			{Method: "POST", Path: "/api/auth/verify-email", Limit: cfg.RateLimit.VerifyEmail.Limit, Window: cfg.RateLimit.VerifyEmail.Window},
 			{Method: "POST", Path: "/api/auth/resend-verification", Limit: cfg.RateLimit.ResendVerification.Limit, Window: cfg.RateLimit.ResendVerification.Window},
-			{Method: "POST", Path: "/api/auth/device-tokens", Limit: 10, Window: time.Minute},
-			{Method: "DELETE", Path: "/api/auth/device-tokens/", Limit: 30, Window: time.Minute},
+			{Method: "POST", Path: "/api/auth/device-tokens", Limit: cfg.RateLimit.DeviceTokenRegister.Limit, Window: cfg.RateLimit.DeviceTokenRegister.Window},
 		}
 		limiter = ratelimit.NewLimiter(rules)
 	}

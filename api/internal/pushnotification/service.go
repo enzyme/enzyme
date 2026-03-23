@@ -8,7 +8,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"sync"
 	"time"
 )
 
@@ -27,8 +26,8 @@ func NewService(repo *Repository, relayURL string) *Service {
 		client: &http.Client{
 			Timeout: 5 * time.Second,
 			Transport: &http.Transport{
-				MaxIdleConns:        20,
-				MaxIdleConnsPerHost: 20,
+				MaxIdleConns:        10,
+				MaxIdleConnsPerHost: 10,
 				IdleConnTimeout:     90 * time.Second,
 			},
 		},
@@ -47,56 +46,40 @@ func (s *Service) Send(ctx context.Context, userID string, data NotificationData
 		return false
 	}
 
-	var (
-		mu         sync.Mutex
-		dispatched bool
-		wg         sync.WaitGroup
-		sem        = make(chan struct{}, 5) // max 5 concurrent relay calls
-	)
+	dispatched := false
+	for _, t := range tokens {
+		req := RelayRequest{
+			DeviceToken: t.Token,
+			Platform:    t.Platform,
+			Title:       data.Title,
+			Body:        data.Body,
+			Data: RelayRequestData{
+				ChannelID:   data.ChannelID,
+				MessageID:   data.MessageID,
+				WorkspaceID: data.WorkspaceID,
+				ServerURL:   data.ServerURL,
+			},
+		}
 
-	for _, token := range tokens {
-		wg.Add(1)
-		sem <- struct{}{}
-		go func(t *DeviceToken) {
-			defer wg.Done()
-			defer func() { <-sem }()
+		resp, err := s.sendToRelay(ctx, req)
+		if err != nil {
+			slog.Error("push: relay request failed", "token_id", t.ID, "error", err)
+			continue
+		}
 
-			req := RelayRequest{
-				DeviceToken: t.Token,
-				Platform:    t.Platform,
-				Title:       data.Title,
-				Body:        data.Body,
-				Data: RelayRequestData{
-					ChannelID:   data.ChannelID,
-					MessageID:   data.MessageID,
-					WorkspaceID: data.WorkspaceID,
-					ServerURL:   data.ServerURL,
-				},
+		switch resp.Status {
+		case "sent":
+			dispatched = true
+		case "invalid_token":
+			slog.Info("push: removing invalid token", "token_id", t.ID)
+			if err := s.repo.Delete(ctx, userID, t.Token); err != nil {
+				slog.Error("push: failed to delete invalid token", "token_id", t.ID, "error", err)
 			}
-
-			resp, err := s.sendToRelay(ctx, req)
-			if err != nil {
-				slog.Error("push: relay request failed", "token_id", t.ID, "error", err)
-				return
-			}
-
-			switch resp.Status {
-			case "sent":
-				mu.Lock()
-				dispatched = true
-				mu.Unlock()
-			case "invalid_token":
-				slog.Info("push: removing invalid token", "token_id", t.ID)
-				if err := s.repo.Delete(ctx, userID, t.Token); err != nil {
-					slog.Error("push: failed to delete invalid token", "token_id", t.ID, "error", err)
-				}
-			default:
-				slog.Error("push: relay returned error", "token_id", t.ID, "status", resp.Status, "error", resp.Error)
-			}
-		}(token)
+		default:
+			slog.Error("push: relay returned error", "token_id", t.ID, "status", resp.Status, "error", resp.Error)
+		}
 	}
 
-	wg.Wait()
 	return dispatched
 }
 
