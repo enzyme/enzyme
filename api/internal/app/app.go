@@ -25,6 +25,7 @@ import (
 	"github.com/enzyme/api/internal/moderation"
 	"github.com/enzyme/api/internal/notification"
 	"github.com/enzyme/api/internal/presence"
+	"github.com/enzyme/api/internal/pushnotification"
 	"github.com/enzyme/api/internal/ratelimit"
 	"github.com/enzyme/api/internal/scheduled"
 	"github.com/enzyme/api/internal/scheduler"
@@ -55,6 +56,7 @@ type App struct {
 	LinkPreviewRepo       *linkpreview.Repository
 	ScheduledWorker       *scheduled.Worker
 	passwordResetRepo     *auth.PasswordResetRepo
+	pushTokenRepo         *pushnotification.Repository
 	moderationRepo        *moderation.Repository
 	scheduler             *scheduler.Scheduler
 	Telemetry             *telemetry.Telemetry
@@ -127,6 +129,15 @@ func New(cfg *config.Config) (*App, error) {
 	notificationPendingRepo := notification.NewPendingRepository(db.DB)
 	notificationService := notification.NewService(notificationPrefsRepo, notificationPendingRepo, channelRepo, hub)
 	notificationService.SetThreadSubscriptionProvider(threadRepo)
+
+	// Initialize push notification service
+	var pushTokenRepo *pushnotification.Repository
+	if cfg.PushNotifications.Enabled {
+		pushTokenRepo = pushnotification.NewRepository(db.DB)
+		pushService := pushnotification.NewService(pushTokenRepo, cfg.PushNotifications.RelayURL)
+		notificationService.SetPushService(pushService, cfg.Server.PublicURL, cfg.PushNotifications.IncludePreview)
+		slog.Info("push notifications enabled", "relay_url", cfg.PushNotifications.RelayURL)
+	}
 
 	// Initialize email worker
 	emailWorker := notification.NewEmailWorker(notificationPendingRepo, userRepo, emailService, hub)
@@ -202,6 +213,7 @@ func New(cfg *config.Config) (*App, error) {
 		ScheduledRepo:       scheduledRepo,
 		EmailService:        emailService,
 		NotificationService: notificationService,
+		PushTokenRepo:       pushTokenRepo,
 		ModerationRepo:      moderationRepo,
 		Hub:                 hub,
 		Signer:              signer,
@@ -223,6 +235,7 @@ func New(cfg *config.Config) (*App, error) {
 			{Method: "POST", Path: "/api/auth/reset-password", Limit: cfg.RateLimit.ResetPassword.Limit, Window: cfg.RateLimit.ResetPassword.Window},
 			{Method: "POST", Path: "/api/auth/verify-email", Limit: cfg.RateLimit.VerifyEmail.Limit, Window: cfg.RateLimit.VerifyEmail.Window},
 			{Method: "POST", Path: "/api/auth/resend-verification", Limit: cfg.RateLimit.ResendVerification.Limit, Window: cfg.RateLimit.ResendVerification.Window},
+			{Method: "POST", Path: "/api/auth/device-tokens", Limit: cfg.RateLimit.DeviceTokenRegister.Limit, Window: cfg.RateLimit.DeviceTokenRegister.Window},
 		}
 		limiter = ratelimit.NewLimiter(rules)
 	}
@@ -280,6 +293,7 @@ func New(cfg *config.Config) (*App, error) {
 		LinkPreviewRepo:       linkPreviewRepo,
 		ScheduledWorker:       scheduledWorker,
 		passwordResetRepo:     passwordResetRepo,
+		pushTokenRepo:         pushTokenRepo,
 		moderationRepo:        moderationRepo,
 		scheduler:             scheduler.New(),
 		Telemetry:             tel,
@@ -315,6 +329,16 @@ func (a *App) Start(ctx context.Context) error {
 		s.Register(scheduler.Task{Name: "email-notifications", Interval: time.Minute, Fn: a.EmailWorker.ProcessPending})
 		s.Register(scheduler.Task{Name: "password-reset-cleanup", Interval: 24 * time.Hour, Fn: a.passwordResetRepo.DeleteExpired})
 		s.Register(scheduler.Task{Name: "email-verification-cleanup", Interval: 24 * time.Hour, Fn: a.emailVerificationRepo.DeleteExpired})
+	}
+
+	if a.pushTokenRepo != nil {
+		s.Register(scheduler.Task{Name: "push-token-cleanup", Interval: 24 * time.Hour, Fn: func(ctx context.Context) error {
+			n, err := a.pushTokenRepo.CleanupStale(ctx, time.Now().Add(-90*24*time.Hour))
+			if err == nil && n > 0 {
+				slog.Info("cleaned up stale push tokens", "count", n)
+			}
+			return err
+		}})
 	}
 
 	s.Start(ctx)

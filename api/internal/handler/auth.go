@@ -3,12 +3,14 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/enzyme/api/internal/auth"
 	"github.com/enzyme/api/internal/gravatar"
 	"github.com/enzyme/api/internal/openapi"
+	"github.com/enzyme/api/internal/pushnotification"
 	"github.com/enzyme/api/internal/user"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -279,6 +281,76 @@ func (h *Handler) ResendVerification(ctx context.Context, request openapi.Resend
 	return openapi.ResendVerification200JSONResponse{
 		Success: true,
 	}, nil
+}
+
+// RegisterDeviceToken registers a device token for push notifications
+func (h *Handler) RegisterDeviceToken(ctx context.Context, request openapi.RegisterDeviceTokenRequestObject) (openapi.RegisterDeviceTokenResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.RegisterDeviceToken401JSONResponse{
+			UnauthorizedJSONResponse: openapi.UnauthorizedJSONResponse(newErrorResponse(ErrCodeNotAuthenticated, "Not authenticated")),
+		}, nil
+	}
+
+	if h.pushTokenRepo == nil {
+		return openapi.RegisterDeviceToken400JSONResponse{
+			BadRequestJSONResponse: openapi.BadRequestJSONResponse(newErrorResponse("PUSH_NOT_ENABLED", "Push notifications are not enabled on this server")),
+		}, nil
+	}
+
+	if len(request.Body.Token) == 0 || len(request.Body.Token) > 4096 {
+		return openapi.RegisterDeviceToken400JSONResponse{
+			BadRequestJSONResponse: openapi.BadRequestJSONResponse(newErrorResponse("INVALID_TOKEN", "Token must be between 1 and 4096 characters")),
+		}, nil
+	}
+	if len(request.Body.DeviceId) == 0 || len(request.Body.DeviceId) > 256 {
+		return openapi.RegisterDeviceToken400JSONResponse{
+			BadRequestJSONResponse: openapi.BadRequestJSONResponse(newErrorResponse("INVALID_DEVICE_ID", "Device ID must be between 1 and 256 characters")),
+		}, nil
+	}
+
+	token := &pushnotification.DeviceToken{
+		UserID:   userID,
+		Token:    request.Body.Token,
+		Platform: string(request.Body.Platform),
+		DeviceID: request.Body.DeviceId,
+	}
+
+	if err := h.pushTokenRepo.Upsert(ctx, token); err != nil {
+		return nil, fmt.Errorf("upserting device token: %w", err)
+	}
+
+	return openapi.RegisterDeviceToken200JSONResponse{
+		Id: token.ID,
+	}, nil
+}
+
+// UnregisterDeviceToken removes a device token
+func (h *Handler) UnregisterDeviceToken(ctx context.Context, request openapi.UnregisterDeviceTokenRequestObject) (openapi.UnregisterDeviceTokenResponseObject, error) {
+	userID := h.getUserID(ctx)
+	if userID == "" {
+		return openapi.UnregisterDeviceToken401JSONResponse{
+			UnauthorizedJSONResponse: openapi.UnauthorizedJSONResponse(newErrorResponse(ErrCodeNotAuthenticated, "Not authenticated")),
+		}, nil
+	}
+
+	if h.pushTokenRepo == nil {
+		return openapi.UnregisterDeviceToken404JSONResponse{
+			NotFoundJSONResponse: openapi.NotFoundJSONResponse(newErrorResponse("PUSH_NOT_ENABLED", "Push notifications are not enabled on this server")),
+		}, nil
+	}
+
+	err := h.pushTokenRepo.DeleteByID(ctx, userID, request.Id)
+	if err != nil {
+		if errors.Is(err, pushnotification.ErrTokenNotFound) {
+			return openapi.UnregisterDeviceToken404JSONResponse{
+				NotFoundJSONResponse: openapi.NotFoundJSONResponse(newErrorResponse("TOKEN_NOT_FOUND", "Device token not found")),
+			}, nil
+		}
+		return nil, err
+	}
+
+	return openapi.UnregisterDeviceToken204Response{}, nil
 }
 
 // userToAPI converts a user.User to openapi.User

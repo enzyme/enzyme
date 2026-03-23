@@ -157,6 +157,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/device-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register a device token for push notifications */
+        post: operations["registerDeviceToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/device-tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unregister a device token */
+        delete: operations["unregisterDeviceToken"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/create": {
         parameters: {
             query?: never;
@@ -2241,6 +2275,21 @@ export interface components {
             user: components["schemas"]["User"];
             workspaces?: components["schemas"]["WorkspaceSummary"][];
         };
+        RegisterDeviceTokenRequest: {
+            /** @description The push notification token (FCM or APNs) */
+            token: string;
+            /**
+             * @description The push platform
+             * @enum {string}
+             */
+            platform: "fcm" | "apns";
+            /** @description A unique identifier for the device */
+            device_id: string;
+        };
+        RegisterDeviceTokenResponse: {
+            /** @description The device token record ID */
+            id: string;
+        };
         CreateWorkspaceInput: {
             name: string;
         };
@@ -2667,6 +2716,55 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    registerDeviceToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterDeviceTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Device token registered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisterDeviceTokenResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    unregisterDeviceToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The device token record ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Device token removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
     createWorkspace: {

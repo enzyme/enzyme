@@ -1,5 +1,5 @@
 import { apiClient, throwIfError } from '../client';
-import type { LoginInput, RegisterInput } from '../types';
+import type { LoginInput, RegisterDeviceTokenInput, RegisterInput } from '../types';
 
 export const authApi = {
   login: (input: LoginInput) =>
@@ -22,4 +22,10 @@ export const authApi = {
     throwIfError(apiClient.POST('/auth/verify-email', { body: { token } })),
 
   resendVerification: () => throwIfError(apiClient.POST('/auth/resend-verification')),
+
+  registerDeviceToken: (input: RegisterDeviceTokenInput) =>
+    throwIfError(apiClient.POST('/auth/device-tokens', { body: input })),
+
+  unregisterDeviceToken: (id: string) =>
+    throwIfError(apiClient.DELETE('/auth/device-tokens/{id}', { params: { path: { id } } })),
 };

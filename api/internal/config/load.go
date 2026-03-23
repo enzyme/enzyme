@@ -185,6 +185,23 @@ func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 				"limit":  d.defaults.RateLimit.ResetPassword.Limit,
 				"window": d.defaults.RateLimit.ResetPassword.Window.String(),
 			},
+			"verify_email": map[string]interface{}{
+				"limit":  d.defaults.RateLimit.VerifyEmail.Limit,
+				"window": d.defaults.RateLimit.VerifyEmail.Window.String(),
+			},
+			"resend_verification": map[string]interface{}{
+				"limit":  d.defaults.RateLimit.ResendVerification.Limit,
+				"window": d.defaults.RateLimit.ResendVerification.Window.String(),
+			},
+			"device_token_register": map[string]interface{}{
+				"limit":  d.defaults.RateLimit.DeviceTokenRegister.Limit,
+				"window": d.defaults.RateLimit.DeviceTokenRegister.Window.String(),
+			},
+		},
+		"push_notifications": map[string]interface{}{
+			"enabled":         d.defaults.PushNotifications.Enabled,
+			"relay_url":       d.defaults.PushNotifications.RelayURL,
+			"include_preview": d.defaults.PushNotifications.IncludePreview,
 		},
 		"sse": map[string]interface{}{
 			"event_retention":    d.defaults.SSE.EventRetention.String(),

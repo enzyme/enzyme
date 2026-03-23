@@ -3,15 +3,16 @@ package config
 import "time"
 
 type Config struct {
-	Log       LogConfig       `koanf:"log"`
-	Server    ServerConfig    `koanf:"server"`
-	Database  DatabaseConfig  `koanf:"database"`
-	Auth      AuthConfig      `koanf:"auth"`
-	Storage   StorageConfig   `koanf:"storage"`
-	Email     EmailConfig     `koanf:"email"`
-	RateLimit RateLimitConfig `koanf:"rate_limit"`
-	SSE       SSEConfig       `koanf:"sse"`
-	Telemetry TelemetryConfig `koanf:"telemetry"`
+	Log               LogConfig              `koanf:"log"`
+	Server            ServerConfig           `koanf:"server"`
+	Database          DatabaseConfig         `koanf:"database"`
+	Auth              AuthConfig             `koanf:"auth"`
+	Storage           StorageConfig          `koanf:"storage"`
+	Email             EmailConfig            `koanf:"email"`
+	RateLimit         RateLimitConfig        `koanf:"rate_limit"`
+	SSE               SSEConfig              `koanf:"sse"`
+	PushNotifications PushNotificationConfig `koanf:"push_notifications"`
+	Telemetry         TelemetryConfig        `koanf:"telemetry"`
 }
 
 type LogConfig struct {
@@ -88,13 +89,14 @@ type EmailConfig struct {
 }
 
 type RateLimitConfig struct {
-	Enabled            bool              `koanf:"enabled"`
-	Login              RateLimitEndpoint `koanf:"login"`
-	Register           RateLimitEndpoint `koanf:"register"`
-	ForgotPassword     RateLimitEndpoint `koanf:"forgot_password"`
-	ResetPassword      RateLimitEndpoint `koanf:"reset_password"`
-	VerifyEmail        RateLimitEndpoint `koanf:"verify_email"`
-	ResendVerification RateLimitEndpoint `koanf:"resend_verification"`
+	Enabled             bool              `koanf:"enabled"`
+	Login               RateLimitEndpoint `koanf:"login"`
+	Register            RateLimitEndpoint `koanf:"register"`
+	ForgotPassword      RateLimitEndpoint `koanf:"forgot_password"`
+	ResetPassword       RateLimitEndpoint `koanf:"reset_password"`
+	VerifyEmail         RateLimitEndpoint `koanf:"verify_email"`
+	ResendVerification  RateLimitEndpoint `koanf:"resend_verification"`
+	DeviceTokenRegister RateLimitEndpoint `koanf:"device_token_register"`
 }
 
 type RateLimitEndpoint struct {
@@ -107,6 +109,12 @@ type SSEConfig struct {
 	CleanupInterval   time.Duration `koanf:"cleanup_interval"`
 	HeartbeatInterval time.Duration `koanf:"heartbeat_interval"`
 	ClientBufferSize  int           `koanf:"client_buffer_size"`
+}
+
+type PushNotificationConfig struct {
+	Enabled        bool   `koanf:"enabled"`
+	RelayURL       string `koanf:"relay_url"`
+	IncludePreview bool   `koanf:"include_preview"`
 }
 
 type TelemetryConfig struct {
@@ -169,19 +177,25 @@ func Defaults() *Config {
 			Port:    587,
 		},
 		RateLimit: RateLimitConfig{
-			Enabled:            true,
-			Login:              RateLimitEndpoint{Limit: 10, Window: time.Minute},
-			Register:           RateLimitEndpoint{Limit: 5, Window: time.Hour},
-			ForgotPassword:     RateLimitEndpoint{Limit: 5, Window: 15 * time.Minute},
-			ResetPassword:      RateLimitEndpoint{Limit: 10, Window: 15 * time.Minute},
-			VerifyEmail:        RateLimitEndpoint{Limit: 10, Window: 15 * time.Minute},
-			ResendVerification: RateLimitEndpoint{Limit: 5, Window: time.Hour},
+			Enabled:             true,
+			Login:               RateLimitEndpoint{Limit: 10, Window: time.Minute},
+			Register:            RateLimitEndpoint{Limit: 5, Window: time.Hour},
+			ForgotPassword:      RateLimitEndpoint{Limit: 5, Window: 15 * time.Minute},
+			ResetPassword:       RateLimitEndpoint{Limit: 10, Window: 15 * time.Minute},
+			VerifyEmail:         RateLimitEndpoint{Limit: 10, Window: 15 * time.Minute},
+			ResendVerification:  RateLimitEndpoint{Limit: 5, Window: time.Hour},
+			DeviceTokenRegister: RateLimitEndpoint{Limit: 10, Window: time.Minute},
 		},
 		SSE: SSEConfig{
 			EventRetention:    24 * time.Hour,
 			CleanupInterval:   time.Hour,
 			HeartbeatInterval: 30 * time.Second,
 			ClientBufferSize:  256,
+		},
+		PushNotifications: PushNotificationConfig{
+			Enabled:        false,
+			RelayURL:       "https://push.enzyme.im",
+			IncludePreview: true,
 		},
 		Telemetry: TelemetryConfig{
 			Enabled:     false,
