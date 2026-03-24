@@ -21,6 +21,22 @@
       },
       "package": "im.enzyme.mobile"
     },
-    "plugins": ["expo-secure-store"]
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#4F46E5",
+          "defaultChannel": {
+            "name": "Messages",
+            "description": "New message notifications",
+            "importance": 4,
+            "vibrationPattern": [0, 250, 250, 250],
+            "sound": "default"
+          }
+        }
+      ]
+    ]
   }
 }

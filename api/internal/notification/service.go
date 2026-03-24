@@ -142,6 +142,7 @@ func (s *Service) Notify(ctx context.Context, channel *ChannelInfo, msg *Message
 					ChannelID:   channel.ID,
 					MessageID:   msg.ID,
 					WorkspaceID: channel.WorkspaceID,
+					ChannelName: channel.Name,
 					ServerURL:   s.publicURL,
 				}
 				pushedOK = s.pushService.Send(ctx, userID, pushData)

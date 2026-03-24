@@ -3,10 +3,16 @@ import { useAuth } from '@enzyme/shared';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthStack } from './AuthStack';
 import { MainStack } from './MainStack';
+import { navigationRef } from './navigationRef';
 import { WorkspaceProvider } from '../lib/WorkspaceProvider';
+import { usePushNotifications } from '../hooks/usePushNotifications';
+import { useNotificationHandler } from '../hooks/useNotificationHandler';
 
 export function RootNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
+
+  usePushNotifications(isAuthenticated);
+  useNotificationHandler(isAuthenticated);
 
   if (isLoading) {
     return (
@@ -17,7 +23,7 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {isAuthenticated ? (
         <WorkspaceProvider>
           <MainStack />

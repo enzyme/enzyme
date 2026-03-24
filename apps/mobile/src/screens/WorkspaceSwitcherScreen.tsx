@@ -3,6 +3,7 @@ import { useAuth } from '@enzyme/shared';
 import type { MainScreenProps } from '../navigation/types';
 import type { WorkspaceSummary } from '@enzyme/api-client';
 import { Avatar } from '../components/Avatar';
+import { unregisterPushToken } from '../lib/notifications';
 
 export function WorkspaceSwitcherScreen({ navigation }: MainScreenProps<'WorkspaceSwitcher'>) {
   const { user, workspaces, logout, isLoggingOut } = useAuth();
@@ -10,7 +11,14 @@ export function WorkspaceSwitcherScreen({ navigation }: MainScreenProps<'Workspa
   const handleLogout = () => {
     Alert.alert('Sign out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => logout() },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: async () => {
+          await unregisterPushToken();
+          logout();
+        },
+      },
     ]);
   };
 

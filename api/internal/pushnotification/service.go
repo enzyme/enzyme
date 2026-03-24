@@ -57,6 +57,7 @@ func (s *Service) Send(ctx context.Context, userID string, data NotificationData
 				ChannelID:   data.ChannelID,
 				MessageID:   data.MessageID,
 				WorkspaceID: data.WorkspaceID,
+				ChannelName: data.ChannelName,
 				ServerURL:   data.ServerURL,
 			},
 		}

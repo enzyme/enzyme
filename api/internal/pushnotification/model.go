@@ -24,6 +24,7 @@ type NotificationData struct {
 	ChannelID   string
 	MessageID   string
 	WorkspaceID string
+	ChannelName string
 	ServerURL   string
 }
 
@@ -41,6 +42,7 @@ type RelayRequestData struct {
 	ChannelID   string `json:"channel_id"`
 	MessageID   string `json:"message_id"`
 	WorkspaceID string `json:"workspace_id"`
+	ChannelName string `json:"channel_name"`
 	ServerURL   string `json:"server_url"`
 }
 
