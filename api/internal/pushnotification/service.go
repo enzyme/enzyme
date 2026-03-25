@@ -8,7 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -58,14 +58,10 @@ func (s *Service) Send(ctx context.Context, userID string, data NotificationData
 		ServerURL:      data.ServerURL,
 	}
 
-	var (
-		mu         sync.Mutex
-		dispatched bool
-	)
+	var dispatched atomic.Bool
 
 	g, gCtx := errgroup.WithContext(ctx)
 	for _, t := range tokens {
-		t := t // capture loop var
 		g.Go(func() error {
 			req := RelayRequest{
 				DeviceToken: t.Token,
@@ -83,12 +79,10 @@ func (s *Service) Send(ctx context.Context, userID string, data NotificationData
 
 			switch resp.Status {
 			case "sent":
-				mu.Lock()
-				dispatched = true
-				mu.Unlock()
+				dispatched.Store(true)
 			case "invalid_token":
 				slog.Info("push: removing invalid token", "token_id", t.ID)
-				if err := s.repo.Delete(ctx, userID, t.Token); err != nil {
+				if err := s.repo.Delete(gCtx, userID, t.Token); err != nil {
 					slog.Error("push: failed to delete invalid token", "token_id", t.ID, "error", err)
 				}
 			default:
@@ -99,7 +93,7 @@ func (s *Service) Send(ctx context.Context, userID string, data NotificationData
 	}
 	_ = g.Wait() // errors are handled per-goroutine above
 
-	return dispatched
+	return dispatched.Load()
 }
 
 func (s *Service) sendToRelay(ctx context.Context, payload RelayRequest) (*RelayResponse, error) {

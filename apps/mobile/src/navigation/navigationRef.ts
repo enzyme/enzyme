@@ -15,7 +15,11 @@ function deferredNavigate(fn: () => void) {
   }
 }
 
-function resetToScreen(workspaceId: string, screen: { name: string; params: object }) {
+type ScreenRoute<K extends keyof MainStackParamList = keyof MainStackParamList> = {
+  [P in K]: { name: P; params: MainStackParamList[P] };
+}[K];
+
+function resetToScreen(workspaceId: string, screen: ScreenRoute) {
   deferredNavigate(() => {
     // Reset the stack so ChannelList mounts (establishing SSE connection)
     // and the target screen is pushed on top.

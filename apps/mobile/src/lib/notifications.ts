@@ -37,12 +37,22 @@ export async function registerPushToken(): Promise<void> {
     const result = await Notifications.getDevicePushTokenAsync();
     if (typeof result.data !== 'string') return;
     token = result.data;
-  } catch {
+  } catch (err) {
+    console.warn('Failed to get device push token:', err);
     return;
   }
 
+  await registerPushTokenWithValue(token);
+}
+
+/** Register a known token value with the backend. Used by token refresh listener. */
+export async function registerPushTokenWithValue(token: string): Promise<void> {
+  if (!getAuthToken()) return;
+  if (!Device.isDevice) return;
+
   const deviceId = await getDeviceId();
-  const platform = Platform.OS === 'ios' ? 'apns' : 'fcm';
+  const platform = Platform.OS === 'ios' ? 'apns' : Platform.OS === 'android' ? 'fcm' : null;
+  if (!platform) return;
 
   const response = await authApi.registerDeviceToken({
     token,

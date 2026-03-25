@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
-import { requestPermissions, registerPushToken } from '../lib/notifications';
+import {
+  requestPermissions,
+  registerPushToken,
+  registerPushTokenWithValue,
+} from '../lib/notifications';
 
 /** Manage push notification token lifecycle tied to authentication state. */
 export function usePushNotifications(isAuthenticated: boolean): void {
@@ -16,8 +20,13 @@ export function usePushNotifications(isAuthenticated: boolean): void {
       console.warn('Push notification setup failed:', err);
     });
 
-    const subscription = Notifications.addPushTokenListener(() => {
-      registerPushToken().catch((err) => {
+    // Use the token provided by the listener directly to avoid calling
+    // getDevicePushTokenAsync inside the callback (which re-triggers the
+    // listener and can cause an infinite loop per expo docs).
+    const subscription = Notifications.addPushTokenListener((devicePushToken) => {
+      const token = devicePushToken.data;
+      if (typeof token !== 'string') return;
+      registerPushTokenWithValue(token).catch((err) => {
         console.warn('Push token refresh failed:', err);
       });
     });

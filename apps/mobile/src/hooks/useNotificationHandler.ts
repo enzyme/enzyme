@@ -58,7 +58,9 @@ export function useNotificationHandler(isAuthenticated: boolean): void {
 
   // Clear badge on foreground
   useAppState({
-    onForeground: () => Notifications.setBadgeCountAsync(0),
+    onForeground: () => {
+      if (isAuthenticated) Notifications.setBadgeCountAsync(0);
+    },
   });
 }
 
@@ -67,7 +69,7 @@ function handleNotificationTap(data: Record<string, unknown> | undefined) {
 
   const workspaceId = typeof data.workspace_id === 'string' ? data.workspace_id : undefined;
   const channelId = typeof data.channel_id === 'string' ? data.channel_id : undefined;
-  const channelName = typeof data.channel_name === 'string' ? data.channel_name : '#channel';
+  const channelName = typeof data.channel_name === 'string' ? data.channel_name : '';
   const threadParentId =
     typeof data.thread_parent_id === 'string' ? data.thread_parent_id : undefined;
 

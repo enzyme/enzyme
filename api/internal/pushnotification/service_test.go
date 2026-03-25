@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/enzyme/api/internal/testutil"
@@ -27,7 +28,10 @@ func TestSendWithMockRelay(t *testing.T) {
 		}
 	}
 
-	var receivedRequests []RelayRequest
+	var (
+		mu               sync.Mutex
+		receivedRequests []RelayRequest
+	)
 
 	relay := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req RelayRequest
@@ -36,7 +40,9 @@ func TestSendWithMockRelay(t *testing.T) {
 			http.Error(w, "bad request", 400)
 			return
 		}
+		mu.Lock()
 		receivedRequests = append(receivedRequests, req)
+		mu.Unlock()
 
 		json.NewEncoder(w).Encode(RelayResponse{Status: "sent"})
 	}))
