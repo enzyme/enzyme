@@ -140,7 +140,7 @@ jobs:
         run: eas build --platform all --profile production --non-interactive
 
   release:
-    needs: [build-backend, build-mobile]
+    needs: [build-frontend, build-backend, build-mobile]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
