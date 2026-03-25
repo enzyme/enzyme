@@ -19,12 +19,14 @@ const MaxTokensPerUser = 10
 
 // NotificationData contains the data needed to send a push notification.
 type NotificationData struct {
-	Title       string
-	Body        string
-	ChannelID   string
-	MessageID   string
-	WorkspaceID string
-	ServerURL   string
+	Title          string
+	Body           string
+	ChannelID      string
+	MessageID      string
+	WorkspaceID    string
+	ChannelName    string
+	ThreadParentID string
+	ServerURL      string
 }
 
 // RelayRequest is the payload sent to the push relay service.
@@ -38,10 +40,12 @@ type RelayRequest struct {
 
 // RelayRequestData contains deep-linking metadata for the push notification.
 type RelayRequestData struct {
-	ChannelID   string `json:"channel_id"`
-	MessageID   string `json:"message_id"`
-	WorkspaceID string `json:"workspace_id"`
-	ServerURL   string `json:"server_url"`
+	ChannelID      string `json:"channel_id"`
+	MessageID      string `json:"message_id"`
+	WorkspaceID    string `json:"workspace_id"`
+	ChannelName    string `json:"channel_name,omitempty"`
+	ThreadParentID string `json:"thread_parent_id,omitempty"`
+	ServerURL      string `json:"server_url"`
 }
 
 // RelayResponse is the response from the push relay service.

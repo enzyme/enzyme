@@ -38,10 +38,12 @@ const (
 )
 
 var allowedDataKeys = map[string]bool{
-	"channel_id":   true,
-	"message_id":   true,
-	"workspace_id": true,
-	"server_url":   true,
+	"channel_id":       true,
+	"message_id":       true,
+	"workspace_id":     true,
+	"channel_name":     true,
+	"thread_parent_id": true,
+	"server_url":       true,
 }
 
 func (r *NotifyRequest) Validate() error {

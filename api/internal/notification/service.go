@@ -136,13 +136,19 @@ func (s *Service) Notify(ctx context.Context, channel *ChannelInfo, msg *Message
 				if s.includePreview {
 					body = truncatePreview(msg.Content, 100)
 				}
+				threadParentID := ""
+				if msg.ThreadParentID != nil {
+					threadParentID = *msg.ThreadParentID
+				}
 				pushData := pushnotification.NotificationData{
-					Title:       buildTitle(channel, msg),
-					Body:        body,
-					ChannelID:   channel.ID,
-					MessageID:   msg.ID,
-					WorkspaceID: channel.WorkspaceID,
-					ServerURL:   s.publicURL,
+					Title:          buildTitle(channel, msg),
+					Body:           body,
+					ChannelID:      channel.ID,
+					MessageID:      msg.ID,
+					WorkspaceID:    channel.WorkspaceID,
+					ChannelName:    channel.Name,
+					ThreadParentID: threadParentID,
+					ServerURL:      s.publicURL,
 				}
 				pushedOK = s.pushService.Send(ctx, userID, pushData)
 			}
