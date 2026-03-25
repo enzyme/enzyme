@@ -16,18 +16,16 @@ import (
 
 // Service handles sending push notifications via the relay.
 type Service struct {
-	repo       *Repository
-	relayURL   string
-	authSecret string
-	client     *http.Client
+	repo     *Repository
+	relayURL string
+	client   *http.Client
 }
 
 // NewService creates a new push notification service.
-func NewService(repo *Repository, relayURL string, authSecret string) *Service {
+func NewService(repo *Repository, relayURL string) *Service {
 	return &Service{
-		repo:       repo,
-		relayURL:   relayURL,
-		authSecret: authSecret,
+		repo:     repo,
+		relayURL: relayURL,
 		client: &http.Client{
 			Timeout: 5 * time.Second,
 			Transport: &http.Transport{
@@ -115,9 +113,6 @@ func (s *Service) sendToRelay(ctx context.Context, payload RelayRequest) (*Relay
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if s.authSecret != "" {
-		req.Header.Set("Authorization", "Bearer "+s.authSecret)
-	}
 
 	resp, err := s.client.Do(req)
 	if err != nil {

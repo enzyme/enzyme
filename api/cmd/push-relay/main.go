@@ -79,15 +79,9 @@ func main() {
 	}
 	rateLimiter := NewRateLimiter(ctx, rateLimit, burst)
 
-	// Authentication.
-	authSecret := os.Getenv("RELAY_AUTH_SECRET")
-	if authSecret == "" {
-		slog.Warn("RELAY_AUTH_SECRET not set, relay is unauthenticated — set this in production")
-	}
-
 	// Router.
 	trustProxy := envOr("RELAY_TRUST_PROXY", "false") == "true"
-	router := newRouter(fcm, apns, rateLimiter, trustProxy, authSecret)
+	router := newRouter(fcm, apns, rateLimiter, trustProxy)
 
 	// HTTP server.
 	port := envOr("RELAY_PORT", "8090")

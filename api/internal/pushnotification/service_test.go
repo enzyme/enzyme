@@ -42,7 +42,7 @@ func TestSendWithMockRelay(t *testing.T) {
 	}))
 	defer relay.Close()
 
-	svc := NewService(repo, relay.URL, "")
+	svc := NewService(repo, relay.URL)
 	data := NotificationData{
 		Title:          "@alice in #general",
 		Body:           "Hello world",
@@ -99,7 +99,7 @@ func TestSendInvalidTokenCleanup(t *testing.T) {
 	}))
 	defer relay.Close()
 
-	svc := NewService(repo, relay.URL, "")
+	svc := NewService(repo, relay.URL)
 	ok := svc.Send(ctx, user.ID, NotificationData{Title: "test", Body: "test"})
 	if ok {
 		t.Fatal("expected Send to return false when token is invalid")
@@ -125,7 +125,7 @@ func TestSendNoTokens(t *testing.T) {
 	}))
 	defer relay.Close()
 
-	svc := NewService(repo, relay.URL, "")
+	svc := NewService(repo, relay.URL)
 	ok := svc.Send(ctx, user.ID, NotificationData{Title: "test", Body: "test"})
 	if ok {
 		t.Fatal("expected Send to return false when no tokens exist")
@@ -153,7 +153,7 @@ func TestSendRelayError(t *testing.T) {
 	}))
 	defer relay.Close()
 
-	svc := NewService(repo, relay.URL, "")
+	svc := NewService(repo, relay.URL)
 	ok := svc.Send(ctx, user.ID, NotificationData{Title: "test", Body: "test"})
 	if ok {
 		t.Fatal("expected Send to return false on relay error")
@@ -190,7 +190,7 @@ func TestSendOmitsEmptyOptionalFields(t *testing.T) {
 	}))
 	defer relay.Close()
 
-	svc := NewService(repo, relay.URL, "")
+	svc := NewService(repo, relay.URL)
 	// Send with empty ThreadParentID and ChannelName — both should be omitted from JSON.
 	data := NotificationData{
 		Title:       "@alice in #general",
@@ -212,36 +212,5 @@ func TestSendOmitsEmptyOptionalFields(t *testing.T) {
 	}
 	if strings.Contains(bodyStr, "channel_name") {
 		t.Errorf("expected channel_name to be omitted from JSON, got: %s", bodyStr)
-	}
-}
-
-func TestSendWithAuthSecret(t *testing.T) {
-	db := testutil.TestDB(t)
-	repo := NewRepository(db)
-	user := testutil.CreateTestUser(t, db, "test@example.com", "Test")
-	ctx := context.Background()
-
-	if err := repo.Upsert(ctx, &DeviceToken{
-		UserID: user.ID, Token: "token-1", Platform: "fcm", DeviceID: "device-1",
-	}); err != nil {
-		t.Fatalf("setup: %v", err)
-	}
-
-	var receivedAuthHeader string
-
-	relay := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		receivedAuthHeader = r.Header.Get("Authorization")
-		json.NewEncoder(w).Encode(RelayResponse{Status: "sent"})
-	}))
-	defer relay.Close()
-
-	svc := NewService(repo, relay.URL, "my-secret")
-	ok := svc.Send(ctx, user.ID, NotificationData{Title: "test", Body: "test"})
-	if !ok {
-		t.Fatal("expected Send to return true")
-	}
-
-	if receivedAuthHeader != "Bearer my-secret" {
-		t.Errorf("expected Authorization header 'Bearer my-secret', got %q", receivedAuthHeader)
 	}
 }

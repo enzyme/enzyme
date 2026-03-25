@@ -22,14 +22,10 @@ func (m *mockDispatcher) Send(_ context.Context, _ *NotifyRequest) (string, erro
 
 // setupTestRouter creates a real router with mock dispatchers and a permissive rate limiter.
 func setupTestRouter(t *testing.T, fcm, apns Dispatcher) http.Handler {
-	return setupTestRouterWithAuth(t, fcm, apns, "")
-}
-
-func setupTestRouterWithAuth(t *testing.T, fcm, apns Dispatcher, authSecret string) http.Handler {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	rl := NewRateLimiter(ctx, 100000, 100000)
-	return newRouter(fcm, apns, rl, false, authSecret)
+	return newRouter(fcm, apns, rl, false)
 }
 
 func TestHandler_ValidFCMRequest(t *testing.T) {
@@ -231,61 +227,5 @@ func TestHealth_OnlyFCM(t *testing.T) {
 	}
 	if resp.APNs {
 		t.Error("expected APNs false")
-	}
-}
-
-func TestHandler_AuthSecret_ValidToken(t *testing.T) {
-	handler := setupTestRouterWithAuth(t, &mockDispatcher{status: "sent"}, nil, "test-secret")
-	body := `{"device_token":"tok123","platform":"fcm","title":"Hello","body":"World"}`
-	req := httptest.NewRequest(http.MethodPost, "/notify", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer test-secret")
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
-	}
-}
-
-func TestHandler_AuthSecret_MissingToken(t *testing.T) {
-	handler := setupTestRouterWithAuth(t, &mockDispatcher{status: "sent"}, nil, "test-secret")
-	body := `{"device_token":"tok123","platform":"fcm","title":"Hello","body":"World"}`
-	req := httptest.NewRequest(http.MethodPost, "/notify", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
-	}
-}
-
-func TestHandler_AuthSecret_WrongToken(t *testing.T) {
-	handler := setupTestRouterWithAuth(t, &mockDispatcher{status: "sent"}, nil, "test-secret")
-	body := `{"device_token":"tok123","platform":"fcm","title":"Hello","body":"World"}`
-	req := httptest.NewRequest(http.MethodPost, "/notify", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer wrong-secret")
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
-	}
-}
-
-func TestHandler_AuthSecret_HealthBypassesAuth(t *testing.T) {
-	handler := setupTestRouterWithAuth(t, &mockDispatcher{status: "sent"}, nil, "test-secret")
-	req := httptest.NewRequest(http.MethodGet, "/health", nil)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200 for health (no auth required), got %d", w.Code)
 	}
 }
