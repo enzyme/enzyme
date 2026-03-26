@@ -11,9 +11,7 @@ export const usersApi = {
   uploadAvatar: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return throwIfError(
-      apiClient.POST('/users/me/avatar', multipartRequest(formData)),
-    );
+    return throwIfError(apiClient.POST('/users/me/avatar', multipartRequest(formData)));
   },
 
   deleteAvatar: () => throwIfError(apiClient.DELETE('/users/me/avatar')),

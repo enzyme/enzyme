@@ -29,7 +29,5 @@ export const scheduledMessagesApi = {
     throwIfError(apiClient.POST('/scheduled-messages/{id}/delete', { params: { path: { id } } })),
 
   sendNow: (id: string) =>
-    throwIfError(
-      apiClient.POST('/scheduled-messages/{id}/send-now', { params: { path: { id } } }),
-    ),
+    throwIfError(apiClient.POST('/scheduled-messages/{id}/send-now', { params: { path: { id } } })),
 };

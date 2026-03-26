@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25.5'
-          cache-dependency-path: api/go.sum
+          cache-dependency-path: server/go.sum
 
       - uses: pnpm/action-setup@v4
         with:
@@ -50,17 +50,17 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25.5'
-          cache-dependency-path: api/go.sum
+          cache-dependency-path: server/go.sum
 
       - name: Install oapi-codegen
         run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.1
 
-      - run: cd api && make generate
+      - run: cd server && make generate
 
       - uses: golangci/golangci-lint-action@v7
         with:
           version: v2.8
-          working-directory: api
+          working-directory: server
 
   lint-ts:
     name: Lint TypeScript
@@ -95,14 +95,14 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25.5'
-          cache-dependency-path: api/go.sum
+          cache-dependency-path: server/go.sum
 
       - name: Install oapi-codegen
         run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.1
 
-      - run: cd api && make generate
+      - run: cd server && make generate
 
-      - run: cd api && make test
+      - run: cd server && make test
 
   test-ts:
     name: Test TypeScript
@@ -135,7 +135,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25.5'
-          cache-dependency-path: api/go.sum
+          cache-dependency-path: server/go.sum
 
       - uses: pnpm/action-setup@v4
         with:
@@ -154,7 +154,7 @@ jobs:
       - run: make generate-types
 
       - name: Build Go
-        run: cd api && go build -o /dev/null ./cmd/enzyme
+        run: cd server && go build -o /dev/null ./cmd/enzyme
 
       - name: Build Web
         run: pnpm --filter @enzyme/web build

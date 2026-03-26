@@ -37,7 +37,7 @@ Run `make seed` to populate the database with sample users, workspaces, channels
 
 ```
 enzyme/
-├── api/                        # Go backend server
+├── server/                     # Go backend server
 │   ├── openapi.yaml            # API specification (source of truth)
 │   ├── cmd/enzyme/main.go      # Entry point
 │   └── internal/
@@ -78,9 +78,9 @@ enzyme/
 
 ## Type Generation
 
-Types flow from the OpenAPI spec (`api/openapi.yaml`):
+Types flow from the OpenAPI spec (`server/openapi.yaml`):
 
-1. **Go server** — `oapi-codegen` generates typed interfaces in `api/internal/openapi/server.gen.go`
+1. **Go server** — `oapi-codegen` generates typed interfaces in `server/internal/openapi/server.gen.go`
 2. **TypeScript** — `openapi-typescript` generates types in `packages/api-client/generated/schema.ts`
 
 After changing the API spec, regenerate both:
@@ -96,13 +96,13 @@ make generate-types
 make test
 
 # Go tests only
-cd api && go test ./...
+cd server && go test ./...
 
 # Go tests with verbose output
-cd api && go test -v ./...
+cd server && go test -v ./...
 
 # Specific package
-cd api && go test ./internal/user/...
+cd server && go test ./internal/user/...
 ```
 
 ## Code Style

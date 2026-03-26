@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "generate": "openapi-typescript ../../api/openapi.yaml -o ./generated/schema.ts",
+    "generate": "openapi-typescript ../../server/openapi.yaml -o ./generated/schema.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run"

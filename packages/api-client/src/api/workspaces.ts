@@ -11,9 +11,7 @@ export const workspacesApi = {
     throwIfError(apiClient.POST('/workspaces/create', { body: input })),
 
   get: (workspaceId: string) =>
-    throwIfError(
-      apiClient.GET('/workspaces/{wid}', { params: { path: { wid: workspaceId } } }),
-    ),
+    throwIfError(apiClient.GET('/workspaces/{wid}', { params: { path: { wid: workspaceId } } })),
 
   update: (workspaceId: string, input: UpdateWorkspaceInput) =>
     throwIfError(
@@ -90,9 +88,7 @@ export const workspacesApi = {
     ),
 
   reorder: (workspaceIds: string[]) =>
-    throwIfError(
-      apiClient.POST('/workspaces/reorder', { body: { workspace_ids: workspaceIds } }),
-    ),
+    throwIfError(apiClient.POST('/workspaces/reorder', { body: { workspace_ids: workspaceIds } })),
 
   leave: (workspaceId: string) =>
     throwIfError(

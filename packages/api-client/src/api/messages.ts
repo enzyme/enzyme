@@ -30,9 +30,7 @@ export const messagesApi = {
     ),
 
   delete: (messageId: string) =>
-    throwIfError(
-      apiClient.POST('/messages/{id}/delete', { params: { path: { id: messageId } } }),
-    ),
+    throwIfError(apiClient.POST('/messages/{id}/delete', { params: { path: { id: messageId } } })),
 
   deleteLinkPreview: (messageId: string) =>
     throwIfError(

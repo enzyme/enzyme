@@ -41,9 +41,7 @@ export const channelsApi = {
     ),
 
   archive: (channelId: string) =>
-    throwIfError(
-      apiClient.POST('/channels/{id}/archive', { params: { path: { id: channelId } } }),
-    ),
+    throwIfError(apiClient.POST('/channels/{id}/archive', { params: { path: { id: channelId } } })),
 
   addMember: (channelId: string, userId: string, role?: ChannelRole) =>
     throwIfError(
@@ -96,9 +94,7 @@ export const channelsApi = {
     throwIfError(apiClient.POST('/channels/{id}/star', { params: { path: { id: channelId } } })),
 
   unstar: (channelId: string) =>
-    throwIfError(
-      apiClient.DELETE('/channels/{id}/star', { params: { path: { id: channelId } } }),
-    ),
+    throwIfError(apiClient.DELETE('/channels/{id}/star', { params: { path: { id: channelId } } })),
 
   convertGroupDM: (channelId: string, input: ConvertGroupDMInput) =>
     throwIfError(

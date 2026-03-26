@@ -364,7 +364,7 @@ make install
 make build
 ```
 
-The binary at `api/bin/enzyme` includes the embedded web client. Run it directly — no separate frontend serving needed.
+The binary at `server/bin/enzyme` includes the embedded web client. Run it directly — no separate frontend serving needed.
 
 ### Automatic Updates
 

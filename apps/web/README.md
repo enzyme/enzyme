@@ -48,11 +48,6 @@ pnpm --filter @enzyme/web build
 
 ```
 src/
-├── api/              # API endpoint modules
-│   ├── auth.ts       # Login, register, logout, me
-│   ├── workspaces.ts # Workspace CRUD, members, invites
-│   ├── channels.ts   # Channel CRUD, members, join/leave
-│   └── messages.ts   # Messages CRUD, reactions, threads
 ├── hooks/            # Custom React hooks
 │   ├── useAuth.ts    # Auth state + login/register/logout mutations
 │   ├── useSSE.ts     # SSE connection with React Query cache updates

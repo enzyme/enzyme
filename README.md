@@ -61,7 +61,7 @@ Enzyme is configured via config file, environment variables, or CLI flags. See t
 | [Security]       | Security model and best practices       |
 | [Notifications]  | Notification preferences and behavior   |
 | [Messages]       | Message formatting and features         |
-| [API]            | Go backend architecture and development |
+| [Server]         | Go backend architecture and development |
 | [Web]            | React frontend architecture             |
 
 [Self-Hosting]: https://enzyme.im/docs/self-hosting/
@@ -72,7 +72,7 @@ Enzyme is configured via config file, environment variables, or CLI flags. See t
 [Security]: https://enzyme.im/docs/security/
 [Notifications]: https://enzyme.im/docs/notifications/
 [Messages]: https://enzyme.im/docs/messages/
-[API]: api/README.md
+[Server]: server/README.md
 [Web]: apps/web/README.md
 
 ## Contributing

@@ -85,7 +85,9 @@ describe('authApi', () => {
 
   describe('forgotPassword', () => {
     it('POST /auth/forgot-password with email', async () => {
-      mockApiClient.POST.mockResolvedValue(mockResponse({ success: true, message: 'Reset email sent' }));
+      mockApiClient.POST.mockResolvedValue(
+        mockResponse({ success: true, message: 'Reset email sent' }),
+      );
 
       const result = await authApi.forgotPassword('user@example.com');
 

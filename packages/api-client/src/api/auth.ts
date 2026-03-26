@@ -2,8 +2,7 @@ import { apiClient, throwIfError } from '../client';
 import type { LoginInput, RegisterDeviceTokenInput, RegisterInput } from '../types';
 
 export const authApi = {
-  login: (input: LoginInput) =>
-    throwIfError(apiClient.POST('/auth/login', { body: input })),
+  login: (input: LoginInput) => throwIfError(apiClient.POST('/auth/login', { body: input })),
 
   register: (input: RegisterInput) =>
     throwIfError(apiClient.POST('/auth/register', { body: input })),
