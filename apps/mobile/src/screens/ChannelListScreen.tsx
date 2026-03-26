@@ -90,6 +90,7 @@ export function ChannelListScreen({ route, navigation }: MainScreenProps<'Channe
                 user={{
                   display_name: dmParticipant.display_name,
                   avatar_url: dmParticipant.avatar_url,
+                  gravatar_url: dmParticipant.gravatar_url,
                   id: dmParticipant.user_id,
                 }}
                 size="sm"

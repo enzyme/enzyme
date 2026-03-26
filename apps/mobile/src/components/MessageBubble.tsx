@@ -112,6 +112,7 @@ export const MessageBubble = memo(function MessageBubble({
             user={{
               display_name: message.user_display_name ?? '',
               avatar_url: message.user_avatar_url,
+              gravatar_url: message.user_gravatar_url,
               id: message.user_id,
             }}
             size="md"

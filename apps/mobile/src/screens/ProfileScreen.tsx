@@ -35,7 +35,11 @@ export function ProfileScreen({ route, navigation }: MainScreenProps<'Profile'>)
     <View className="flex-1 bg-white px-6 pt-8 dark:bg-neutral-900">
       <View className="items-center">
         <Avatar
-          user={{ display_name: member.display_name, avatar_url: member.avatar_url }}
+          user={{
+            display_name: member.display_name,
+            avatar_url: member.avatar_url,
+            gravatar_url: member.gravatar_url,
+          }}
           size="lg"
         />
         <Text className="mt-4 text-xl font-bold text-neutral-900 dark:text-white">

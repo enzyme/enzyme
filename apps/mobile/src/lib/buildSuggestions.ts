@@ -5,13 +5,19 @@ export interface Suggestion {
   displayText: string;
   token: string;
   icon?: string;
-  avatarUser?: { display_name: string; avatar_url?: string | null; id?: string };
+  avatarUser?: {
+    display_name: string;
+    avatar_url?: string | null;
+    gravatar_url?: string | null;
+    id?: string;
+  };
 }
 
 interface Member {
   user_id: string;
   display_name: string;
   avatar_url?: string | null;
+  gravatar_url?: string | null;
 }
 
 interface Channel {
@@ -88,6 +94,7 @@ export function buildSuggestions(
             avatarUser: {
               display_name: member.display_name,
               avatar_url: member.avatar_url,
+              gravatar_url: member.gravatar_url,
               id: member.user_id,
             },
           });

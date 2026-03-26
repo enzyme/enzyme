@@ -32,7 +32,12 @@ const PRESENCE_COLORS: Record<string, string> = {
 };
 
 interface AvatarProps {
-  user: { display_name: string; avatar_url?: string | null; id?: string };
+  user: {
+    display_name: string;
+    avatar_url?: string | null;
+    gravatar_url?: string | null;
+    id?: string;
+  };
   size: 'sm' | 'md' | 'lg';
   showPresence?: boolean;
 }
@@ -63,9 +68,11 @@ function PresenceDot({ userId, dotSize }: { userId: string; dotSize: number }) {
 export function Avatar({ user, size, showPresence }: AvatarProps) {
   const { container, text, dot } = SIZES[size];
 
-  const avatar = user.avatar_url ? (
+  const imageUrl = user.avatar_url || user.gravatar_url;
+
+  const avatar = imageUrl ? (
     <Image
-      source={{ uri: user.avatar_url }}
+      source={{ uri: imageUrl }}
       style={{ width: container, height: container, borderRadius: container / 2 }}
     />
   ) : (
