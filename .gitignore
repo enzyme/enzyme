@@ -24,8 +24,8 @@ bin/
 vendor/
 
 # Embedded web client (copied during build)
-api/internal/web/dist/*
-!api/internal/web/dist/.gitkeep
+server/internal/web/dist/*
+!server/internal/web/dist/.gitkeep
 
 # Data directory (database and uploads)
 data/

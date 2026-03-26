@@ -81,7 +81,7 @@ Changes take effect immediately. Existing workspaces that haven't configured the
 
 ### Permission Functions (Go)
 
-These are defined in `api/internal/workspace/model.go`:
+These are defined in `server/internal/workspace/model.go`:
 
 | Function               | Returns true for | Used for                                              |
 | ---------------------- | ---------------- | ----------------------------------------------------- |
@@ -113,7 +113,7 @@ Channel members can optionally have a channel-specific role. The role is nullabl
 
 ### Permission Functions (Go)
 
-These are defined in `api/internal/channel/model.go`:
+These are defined in `server/internal/channel/model.go`:
 
 | Function             | Returns true for      | Used for                  |
 | -------------------- | --------------------- | ------------------------- |

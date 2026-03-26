@@ -72,7 +72,7 @@ Enzyme is configured via config file, environment variables, or CLI flags. See t
 [Security]: https://enzyme.im/docs/security/
 [Notifications]: https://enzyme.im/docs/notifications/
 [Messages]: https://enzyme.im/docs/messages/
-[API]: api/README.md
+[API]: server/README.md
 [Web]: apps/web/README.md
 
 ## Contributing
