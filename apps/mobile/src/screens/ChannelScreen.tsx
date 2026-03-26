@@ -8,7 +8,7 @@ import {
   useChannels,
   useAuth,
 } from '@enzyme/shared';
-import type { MessageWithUser } from '@enzyme/api-client';
+import type { Attachment, MessageWithUser } from '@enzyme/api-client';
 import type { MainScreenProps } from '../navigation/types';
 import { MessageBubble } from '../components/MessageBubble';
 import { DateSeparator } from '../components/DateSeparator';
@@ -16,6 +16,7 @@ import { MessageComposer } from '../components/MessageComposer';
 import { MessageActions } from '../components/MessageActions';
 import { TypingIndicator } from '../components/TypingIndicator';
 import { FullScreenLoader } from '../components/FullScreenLoader';
+import { ImageViewer } from '../components/ImageViewer';
 import { buildListItems, type ListItem } from '../lib/buildListItems';
 
 const CONTENT_STYLE = { paddingVertical: 8 };
@@ -36,6 +37,8 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
 
   const [actionMessage, setActionMessage] = useState<MessageWithUser | null>(null);
   const [reactionMessage, setReactionMessage] = useState<MessageWithUser | null>(null);
+  const [viewerImages, setViewerImages] = useState<Attachment[] | null>(null);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   // Mark as read on mount and when new messages arrive
   const latestMessageId = data?.pages[0]?.messages[0]?.id;
@@ -75,6 +78,11 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
     [navigation, workspaceId, channelId],
   );
 
+  const handleImagePress = useCallback((images: Attachment[], index: number) => {
+    setViewerImages(images);
+    setViewerIndex(index);
+  }, []);
+
   const renderItem = useCallback(
     ({ item }: { item: ListItem }) => {
       if (item.type === 'date') {
@@ -85,6 +93,7 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
         <MessageBubble
           message={item.data}
           channelId={channelId}
+          workspaceId={workspaceId}
           members={members}
           channels={channels}
           currentUserId={user?.id}
@@ -93,10 +102,20 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
           onThreadPress={handleThreadPress}
           onLongPress={setActionMessage}
           onReactionPress={setReactionMessage}
+          onImagePress={handleImagePress}
         />
       );
     },
-    [channelId, members, channels, user?.id, handleAvatarPress, handleThreadPress],
+    [
+      channelId,
+      workspaceId,
+      members,
+      channels,
+      user?.id,
+      handleAvatarPress,
+      handleThreadPress,
+      handleImagePress,
+    ],
   );
 
   if (isLoading) {
@@ -144,6 +163,15 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
         channelId={channelId}
         currentUserId={user?.id}
       />
+
+      {viewerImages && (
+        <ImageViewer
+          images={viewerImages}
+          initialIndex={viewerIndex}
+          visible
+          onClose={() => setViewerImages(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

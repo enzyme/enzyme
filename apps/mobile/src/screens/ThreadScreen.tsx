@@ -16,12 +16,13 @@ import {
   useChannels,
   useAuth,
 } from '@enzyme/shared';
-import type { MessageWithUser } from '@enzyme/api-client';
+import type { Attachment, MessageWithUser } from '@enzyme/api-client';
 import type { MainScreenProps } from '../navigation/types';
 import { MessageBubble } from '../components/MessageBubble';
 import { MessageComposer } from '../components/MessageComposer';
 import { MessageActions } from '../components/MessageActions';
 import { FullScreenLoader } from '../components/FullScreenLoader';
+import { ImageViewer } from '../components/ImageViewer';
 import { shouldGroupMessages } from '../lib/buildListItems';
 
 const threadKeyExtractor = (item: MessageWithUser) => item.id;
@@ -43,6 +44,8 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
   const [actionMessage, setActionMessage] = useState<MessageWithUser | null>(null);
   const [reactionMessage, setReactionMessage] = useState<MessageWithUser | null>(null);
   const [alsoSendToChannel, setAlsoSendToChannel] = useState(false);
+  const [viewerImages, setViewerImages] = useState<Attachment[] | null>(null);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const handleDismissActions = useCallback(() => {
     setActionMessage(null);
@@ -70,6 +73,11 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
     [navigation, workspaceId],
   );
 
+  const handleImagePress = useCallback((images: Attachment[], index: number) => {
+    setViewerImages(images);
+    setViewerIndex(index);
+  }, []);
+
   const renderItem = useCallback(
     ({ item, index }: { item: MessageWithUser; index: number }) => {
       const isGrouped = shouldGroupMessages(item, replies[index + 1]);
@@ -78,6 +86,7 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
         <MessageBubble
           message={item}
           channelId={channelId}
+          workspaceId={workspaceId}
           members={members}
           channels={channels}
           currentUserId={user?.id}
@@ -85,10 +94,20 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
           onAvatarPress={handleAvatarPress}
           onLongPress={setActionMessage}
           onReactionPress={setReactionMessage}
+          onImagePress={handleImagePress}
         />
       );
     },
-    [channelId, members, channels, user?.id, handleAvatarPress, replies],
+    [
+      channelId,
+      workspaceId,
+      members,
+      channels,
+      user?.id,
+      handleAvatarPress,
+      handleImagePress,
+      replies,
+    ],
   );
 
   if (isLoading) {
@@ -107,10 +126,12 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
           <MessageBubble
             message={parentMessage}
             channelId={channelId}
+            workspaceId={workspaceId}
             members={members}
             channels={channels}
             currentUserId={user?.id}
             onAvatarPress={handleAvatarPress}
+            onImagePress={handleImagePress}
           />
         </View>
       )}
@@ -160,6 +181,15 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
         channelId={channelId}
         currentUserId={user?.id}
       />
+
+      {viewerImages && (
+        <ImageViewer
+          images={viewerImages}
+          initialIndex={viewerIndex}
+          visible
+          onClose={() => setViewerImages(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

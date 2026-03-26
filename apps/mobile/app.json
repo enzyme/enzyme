@@ -57,6 +57,12 @@
         }
       ],
       [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Enzyme to save images to your photo library."
+        }
+      ],
+      [
         "expo-updates",
         {
           "username": "enzyme"
