@@ -16,13 +16,14 @@ import {
   useChannels,
   useAuth,
 } from '@enzyme/shared';
-import type { Attachment, MessageWithUser } from '@enzyme/api-client';
+import type { MessageWithUser } from '@enzyme/api-client';
 import type { MainScreenProps } from '../navigation/types';
 import { MessageBubble } from '../components/MessageBubble';
 import { MessageComposer } from '../components/MessageComposer';
 import { MessageActions } from '../components/MessageActions';
 import { FullScreenLoader } from '../components/FullScreenLoader';
 import { ImageViewer } from '../components/ImageViewer';
+import { useImageViewer } from '../hooks/useImageViewer';
 import { shouldGroupMessages } from '../lib/buildListItems';
 
 const threadKeyExtractor = (item: MessageWithUser) => item.id;
@@ -44,8 +45,7 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
   const [actionMessage, setActionMessage] = useState<MessageWithUser | null>(null);
   const [reactionMessage, setReactionMessage] = useState<MessageWithUser | null>(null);
   const [alsoSendToChannel, setAlsoSendToChannel] = useState(false);
-  const [viewerImages, setViewerImages] = useState<Attachment[] | null>(null);
-  const [viewerIndex, setViewerIndex] = useState(0);
+  const { viewer, openViewer, closeViewer } = useImageViewer();
 
   const handleDismissActions = useCallback(() => {
     setActionMessage(null);
@@ -73,11 +73,6 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
     [navigation, workspaceId],
   );
 
-  const handleImagePress = useCallback((images: Attachment[], index: number) => {
-    setViewerImages(images);
-    setViewerIndex(index);
-  }, []);
-
   const renderItem = useCallback(
     ({ item, index }: { item: MessageWithUser; index: number }) => {
       const isGrouped = shouldGroupMessages(item, replies[index + 1]);
@@ -94,20 +89,11 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
           onAvatarPress={handleAvatarPress}
           onLongPress={setActionMessage}
           onReactionPress={setReactionMessage}
-          onImagePress={handleImagePress}
+          onImagePress={openViewer}
         />
       );
     },
-    [
-      channelId,
-      workspaceId,
-      members,
-      channels,
-      user?.id,
-      handleAvatarPress,
-      handleImagePress,
-      replies,
-    ],
+    [channelId, workspaceId, members, channels, user?.id, handleAvatarPress, openViewer, replies],
   );
 
   if (isLoading) {
@@ -131,7 +117,7 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
             channels={channels}
             currentUserId={user?.id}
             onAvatarPress={handleAvatarPress}
-            onImagePress={handleImagePress}
+            onImagePress={openViewer}
           />
         </View>
       )}
@@ -182,13 +168,8 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
         currentUserId={user?.id}
       />
 
-      {viewerImages && (
-        <ImageViewer
-          images={viewerImages}
-          initialIndex={viewerIndex}
-          visible
-          onClose={() => setViewerImages(null)}
-        />
+      {viewer && (
+        <ImageViewer images={viewer.images} initialIndex={viewer.index} onClose={closeViewer} />
       )}
     </KeyboardAvoidingView>
   );

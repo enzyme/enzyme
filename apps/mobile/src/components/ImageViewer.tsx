@@ -12,26 +12,16 @@ import {
   Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { cacheDirectory, downloadAsync } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import type { Attachment } from '@enzyme/api-client';
-import { getUrl } from '@enzyme/shared';
+import { downloadToCache } from '../lib/fileDownload';
 import { AuthImage } from './AuthImage';
 
 interface ImageViewerProps {
   images: Attachment[];
   initialIndex: number;
-  visible: boolean;
   onClose: () => void;
-}
-
-function ViewerImage({ fileId, width, height }: { fileId: string; width: number; height: number }) {
-  return (
-    <View style={{ width, height, justifyContent: 'center', alignItems: 'center' }}>
-      <AuthImage fileId={fileId} style={{ width, height }} contentFit="contain" />
-    </View>
-  );
 }
 
 function ActionButton({ label, onPress }: { label: string; onPress: () => void }) {
@@ -42,7 +32,9 @@ function ActionButton({ label, onPress }: { label: string; onPress: () => void }
   );
 }
 
-export function ImageViewer({ images, initialIndex, visible, onClose }: ImageViewerProps) {
+const keyExtractor = (item: Attachment) => item.id;
+
+export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps) {
   const { width, height } = useWindowDimensions();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const flatListRef = useRef<FlatList>(null);
@@ -63,12 +55,10 @@ export function ImageViewer({ images, initialIndex, visible, onClose }: ImageVie
   async function handleShare() {
     if (!currentImage) return;
     try {
-      const url = await getUrl(currentImage.id);
-      const localUri = cacheDirectory + currentImage.filename;
-      const { uri } = await downloadAsync(url, localUri);
+      const uri = await downloadToCache(currentImage.id, currentImage.filename);
       await Sharing.shareAsync(uri);
     } catch {
-      // Share failed
+      Alert.alert('Error', 'Failed to share the image.');
     }
   }
 
@@ -83,33 +73,25 @@ export function ImageViewer({ images, initialIndex, visible, onClose }: ImageVie
         );
         return;
       }
-      const url = await getUrl(currentImage.id);
-      const localUri = cacheDirectory + currentImage.filename;
-      const { uri } = await downloadAsync(url, localUri);
+      const uri = await downloadToCache(currentImage.id, currentImage.filename);
       await MediaLibrary.saveToLibraryAsync(uri);
       Alert.alert('Saved', 'Image saved to your photo library.');
     } catch {
-      // Save failed
+      Alert.alert('Error', 'Failed to save the image.');
     }
   }
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<Attachment>) => (
-      <ViewerImage fileId={item.id} width={width} height={height} />
+      <View style={{ width, height, justifyContent: 'center', alignItems: 'center' }}>
+        <AuthImage fileId={item.id} style={{ width, height }} contentFit="contain" />
+      </View>
     ),
     [width, height],
   );
 
-  const keyExtractor = useCallback((item: Attachment) => item.id, []);
-
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
+    <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <StatusBar hidden />
       <View className="flex-1 bg-black">
         {/* Header overlay */}
@@ -137,6 +119,9 @@ export function ImageViewer({ images, initialIndex, visible, onClose }: ImageVie
           onMomentumScrollEnd={handleScroll}
           initialScrollIndex={initialIndex}
           getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+          windowSize={3}
+          initialNumToRender={1}
+          maxToRenderPerBatch={2}
         />
 
         {/* Footer overlay */}

@@ -15,7 +15,7 @@ export function LinkPreview({ preview }: LinkPreviewProps) {
   const showImage = preview.image_url && !imageError;
 
   function handlePress() {
-    if (preview.url) {
+    if (preview.url && /^https?:\/\//i.test(preview.url)) {
       Linking.openURL(preview.url);
     }
   }

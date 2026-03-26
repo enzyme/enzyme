@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { View, type StyleProp, type ImageStyle, type ViewStyle } from 'react-native';
 import { Image, type ImageContentFit } from 'expo-image';
 import { useSignedUrl, getUrl, invalidate } from '@enzyme/shared';
@@ -8,7 +8,6 @@ interface AuthImageProps {
   style?: StyleProp<ImageStyle>;
   placeholderStyle?: StyleProp<ViewStyle>;
   contentFit?: ImageContentFit;
-  className?: string;
 }
 
 export function AuthImage({
@@ -16,46 +15,44 @@ export function AuthImage({
   style,
   placeholderStyle,
   contentFit = 'cover',
-  className,
 }: AuthImageProps) {
   const url = useSignedUrl(fileId);
-  const [src, setSrc] = useState<string | null>(url);
+  const [overrideUrl, setOverrideUrl] = useState<string | null>(null);
   const retryCountRef = useRef(0);
-  const prevFileIdRef = useRef(fileId);
+  const mountedRef = useRef(true);
+  const [prevFileId, setPrevFileId] = useState(fileId);
 
-  // Sync src with the hook's url
   useEffect(() => {
-    setSrc(url);
-  }, [url]);
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
-  // Reset retry count when fileId changes
-  if (fileId !== prevFileIdRef.current) {
-    prevFileIdRef.current = fileId;
+  // Reset state when fileId changes (synchronous render-phase pattern)
+  if (fileId !== prevFileId) {
+    setPrevFileId(fileId);
+    setOverrideUrl(null);
     retryCountRef.current = 0;
   }
 
-  function handleError() {
+  const handleError = useCallback(() => {
     if (retryCountRef.current >= 1) return;
     retryCountRef.current += 1;
     invalidate(fileId);
     getUrl(fileId)
-      .then((newUrl) => setSrc(newUrl))
+      .then((newUrl) => {
+        if (mountedRef.current) setOverrideUrl(newUrl);
+      })
       .catch(() => {});
-  }
+  }, [fileId]);
+
+  const src = overrideUrl ?? url;
 
   if (!src) {
-    return (
-      <View className={className} style={[{ backgroundColor: '#e5e7eb' }, placeholderStyle]} />
-    );
+    return <View style={[{ backgroundColor: '#e5e7eb' }, placeholderStyle]} />;
   }
 
   return (
-    <Image
-      source={{ uri: src }}
-      style={style}
-      className={className}
-      contentFit={contentFit}
-      onError={handleError}
-    />
+    <Image source={{ uri: src }} style={style} contentFit={contentFit} onError={handleError} />
   );
 }

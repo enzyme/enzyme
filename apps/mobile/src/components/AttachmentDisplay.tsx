@@ -1,24 +1,17 @@
 import { useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
-import { cacheDirectory, downloadAsync } from 'expo-file-system/legacy';
+import { View, Text, Pressable, ActivityIndicator, Alert } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import type { Attachment } from '@enzyme/api-client';
 import { useSignedUrl } from '@enzyme/shared';
+import { downloadToCache } from '../lib/fileDownload';
+import { isImageType, formatFileSize } from '../lib/attachmentUtils';
 import { AuthImage } from './AuthImage';
+
+export { isImageType, formatFileSize } from '../lib/attachmentUtils';
 
 interface AttachmentDisplayProps {
   attachments: Attachment[];
   onImagePress?: (images: Attachment[], index: number) => void;
-}
-
-function isImageType(contentType: string): boolean {
-  return contentType.startsWith('image/');
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // --- FileAttachment ---
@@ -31,11 +24,10 @@ function FileAttachment({ attachment }: { attachment: Attachment }) {
     if (!url || downloading) return;
     setDownloading(true);
     try {
-      const localUri = cacheDirectory + attachment.filename;
-      const { uri } = await downloadAsync(url, localUri);
+      const uri = await downloadToCache(attachment.id, attachment.filename);
       await Sharing.shareAsync(uri);
     } catch {
-      // Download or share failed silently
+      Alert.alert('Error', 'Failed to download or share the file.');
     } finally {
       setDownloading(false);
     }
@@ -108,7 +100,6 @@ function ImageGrid({
   const showOverlay = images.length > 4;
   const visibleCount = showOverlay ? 4 : images.length;
   const visibleImages = images.slice(0, visibleCount);
-  const remainingCount = images.length - 3;
 
   return (
     <View className="flex-row flex-wrap" style={{ gap: 4 }}>
@@ -129,7 +120,7 @@ function ImageGrid({
               />
               {isOverlayCell && (
                 <View className="absolute inset-0 items-center justify-center bg-black/50">
-                  <Text className="text-2xl font-semibold text-white">+{remainingCount}</Text>
+                  <Text className="text-2xl font-semibold text-white">+{images.length - 3}</Text>
                 </View>
               )}
             </Pressable>

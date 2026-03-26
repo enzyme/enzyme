@@ -1,17 +1,5 @@
 import { describe, it, expect } from 'vitest';
-
-// Test the pure utility functions extracted from AttachmentDisplay
-// Since these are inline in the component, we test the same logic here
-
-function isImageType(contentType: string): boolean {
-  return contentType.startsWith('image/');
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+import { isImageType, formatFileSize } from '../lib/attachmentUtils';
 
 describe('isImageType', () => {
   it('returns true for image content types', () => {

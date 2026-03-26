@@ -18,7 +18,7 @@ import { MessagePreview } from './MessagePreview';
 interface MessageBubbleProps {
   message: MessageWithUser;
   channelId: string;
-  workspaceId?: string;
+  workspaceId: string;
   members?: WorkspaceMemberWithUser[];
   channels?: ChannelWithMembership[];
   onAvatarPress?: (userId: string) => void;
@@ -161,7 +161,7 @@ export const MessageBubble = memo(function MessageBubble({
               preview={message.link_preview}
               members={members}
               channels={channels}
-              workspaceId={workspaceId ?? ''}
+              workspaceId={workspaceId}
             />
           ) : (
             <LinkPreview preview={message.link_preview} />
