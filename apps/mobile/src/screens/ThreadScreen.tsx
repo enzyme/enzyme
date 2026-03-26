@@ -22,6 +22,8 @@ import { MessageBubble } from '../components/MessageBubble';
 import { MessageComposer } from '../components/MessageComposer';
 import { MessageActions } from '../components/MessageActions';
 import { FullScreenLoader } from '../components/FullScreenLoader';
+import { ImageViewer } from '../components/ImageViewer';
+import { useImageViewer } from '../hooks/useImageViewer';
 import { shouldGroupMessages } from '../lib/buildListItems';
 
 const threadKeyExtractor = (item: MessageWithUser) => item.id;
@@ -43,6 +45,7 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
   const [actionMessage, setActionMessage] = useState<MessageWithUser | null>(null);
   const [reactionMessage, setReactionMessage] = useState<MessageWithUser | null>(null);
   const [alsoSendToChannel, setAlsoSendToChannel] = useState(false);
+  const { viewer, openViewer, closeViewer } = useImageViewer();
 
   const handleDismissActions = useCallback(() => {
     setActionMessage(null);
@@ -78,6 +81,7 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
         <MessageBubble
           message={item}
           channelId={channelId}
+          workspaceId={workspaceId}
           members={members}
           channels={channels}
           currentUserId={user?.id}
@@ -85,10 +89,11 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
           onAvatarPress={handleAvatarPress}
           onLongPress={setActionMessage}
           onReactionPress={setReactionMessage}
+          onImagePress={openViewer}
         />
       );
     },
-    [channelId, members, channels, user?.id, handleAvatarPress, replies],
+    [channelId, workspaceId, members, channels, user?.id, handleAvatarPress, openViewer, replies],
   );
 
   if (isLoading) {
@@ -107,10 +112,12 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
           <MessageBubble
             message={parentMessage}
             channelId={channelId}
+            workspaceId={workspaceId}
             members={members}
             channels={channels}
             currentUserId={user?.id}
             onAvatarPress={handleAvatarPress}
+            onImagePress={openViewer}
           />
         </View>
       )}
@@ -160,6 +167,10 @@ export function ThreadScreen({ route, navigation }: MainScreenProps<'Thread'>) {
         channelId={channelId}
         currentUserId={user?.id}
       />
+
+      {viewer && (
+        <ImageViewer images={viewer.images} initialIndex={viewer.index} onClose={closeViewer} />
+      )}
     </KeyboardAvoidingView>
   );
 }

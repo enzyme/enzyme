@@ -10,7 +10,12 @@ export type AuthStackParamList = {
 export type MainStackParamList = {
   WorkspaceSwitcher: undefined;
   ChannelList: { workspaceId: string };
-  Channel: { workspaceId: string; channelId: string; channelName: string };
+  Channel: {
+    workspaceId: string;
+    channelId: string;
+    channelName: string;
+    scrollToMessageId?: string;
+  };
   Thread: { workspaceId: string; channelId: string; parentMessageId: string };
   Profile: { workspaceId: string; userId: string };
 };

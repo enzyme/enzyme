@@ -1,4 +1,5 @@
 export { useAuth } from './useAuth';
+export { useSignedUrl } from './useSignedUrl';
 export {
   useMessage,
   useMessages,

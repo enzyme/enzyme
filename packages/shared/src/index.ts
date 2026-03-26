@@ -73,6 +73,7 @@ export { getCachedIfFresh, getUrl, getUrls, invalidate } from './cache/signedUrl
 // Hooks
 export {
   useAuth,
+  useSignedUrl,
   useMessage,
   useMessages,
   useThreadMessages,

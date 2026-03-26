@@ -3,6 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { formatTime } from '@enzyme/shared';
 import type {
+  Attachment,
   MessageWithUser,
   WorkspaceMemberWithUser,
   ChannelWithMembership,
@@ -10,16 +11,21 @@ import type {
 import { Avatar } from './Avatar';
 import { MrkdwnRenderer } from './MrkdwnRenderer';
 import { ReactionsDisplay } from './ReactionsDisplay';
+import { AttachmentDisplay } from './AttachmentDisplay';
+import { LinkPreview } from './LinkPreview';
+import { MessagePreview } from './MessagePreview';
 
 interface MessageBubbleProps {
   message: MessageWithUser;
   channelId: string;
+  workspaceId: string;
   members?: WorkspaceMemberWithUser[];
   channels?: ChannelWithMembership[];
   onAvatarPress?: (userId: string) => void;
   onThreadPress?: (messageId: string) => void;
   onLongPress?: (message: MessageWithUser) => void;
   onReactionPress?: (message: MessageWithUser) => void;
+  onImagePress?: (images: Attachment[], index: number) => void;
   currentUserId?: string;
   isGrouped?: boolean;
 }
@@ -27,12 +33,14 @@ interface MessageBubbleProps {
 export const MessageBubble = memo(function MessageBubble({
   message,
   channelId,
+  workspaceId,
   members,
   channels,
   onAvatarPress,
   onThreadPress,
   onLongPress,
   onReactionPress,
+  onImagePress,
   currentUserId,
   isGrouped = false,
 }: MessageBubbleProps) {
@@ -140,6 +148,24 @@ export const MessageBubble = memo(function MessageBubble({
             onMentionPress={onAvatarPress}
           />
         </View>
+
+        {/* Attachments */}
+        {message.attachments && message.attachments.length > 0 && (
+          <AttachmentDisplay attachments={message.attachments} onImagePress={onImagePress} />
+        )}
+
+        {/* Link preview */}
+        {message.link_preview &&
+          (message.link_preview.type === 'message' ? (
+            <MessagePreview
+              preview={message.link_preview}
+              members={members}
+              channels={channels}
+              workspaceId={workspaceId}
+            />
+          ) : (
+            <LinkPreview preview={message.link_preview} />
+          ))}
 
         {/* Reactions */}
         {message.reactions && message.reactions.length > 0 && (

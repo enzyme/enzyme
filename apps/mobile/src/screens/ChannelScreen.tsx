@@ -16,6 +16,9 @@ import { MessageComposer } from '../components/MessageComposer';
 import { MessageActions } from '../components/MessageActions';
 import { TypingIndicator } from '../components/TypingIndicator';
 import { FullScreenLoader } from '../components/FullScreenLoader';
+import { ImageViewer } from '../components/ImageViewer';
+import { useImageViewer } from '../hooks/useImageViewer';
+import { usePrewarmSignedUrls } from '../hooks/usePrewarmSignedUrls';
 import { buildListItems, type ListItem } from '../lib/buildListItems';
 
 const CONTENT_STYLE = { paddingVertical: 8 };
@@ -36,6 +39,9 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
 
   const [actionMessage, setActionMessage] = useState<MessageWithUser | null>(null);
   const [reactionMessage, setReactionMessage] = useState<MessageWithUser | null>(null);
+  const { viewer, openViewer, closeViewer } = useImageViewer();
+
+  usePrewarmSignedUrls(data?.pages);
 
   // Mark as read on mount and when new messages arrive
   const latestMessageId = data?.pages[0]?.messages[0]?.id;
@@ -85,6 +91,7 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
         <MessageBubble
           message={item.data}
           channelId={channelId}
+          workspaceId={workspaceId}
           members={members}
           channels={channels}
           currentUserId={user?.id}
@@ -93,10 +100,20 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
           onThreadPress={handleThreadPress}
           onLongPress={setActionMessage}
           onReactionPress={setReactionMessage}
+          onImagePress={openViewer}
         />
       );
     },
-    [channelId, members, channels, user?.id, handleAvatarPress, handleThreadPress],
+    [
+      channelId,
+      workspaceId,
+      members,
+      channels,
+      user?.id,
+      handleAvatarPress,
+      handleThreadPress,
+      openViewer,
+    ],
   );
 
   if (isLoading) {
@@ -144,6 +161,10 @@ export function ChannelScreen({ route, navigation }: MainScreenProps<'Channel'>)
         channelId={channelId}
         currentUserId={user?.id}
       />
+
+      {viewer && (
+        <ImageViewer images={viewer.images} initialIndex={viewer.index} onClose={closeViewer} />
+      )}
     </KeyboardAvoidingView>
   );
 }
