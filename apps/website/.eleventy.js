@@ -17,6 +17,9 @@ module.exports = function (eleventyConfig) {
     });
   });
 
+  // Don't inherit .gitignore (src/docs/api/ is gitignored but needed by Eleventy)
+  eleventyConfig.setUseGitIgnore(false);
+
   // Passthrough copy
   eleventyConfig.addPassthroughCopy({ 'src/assets': 'assets' });
 
@@ -26,6 +29,7 @@ module.exports = function (eleventyConfig) {
     'Using Enzyme',
     'Administration',
     'Self-Hosting & Operations',
+    'API Reference',
   ];
 
   eleventyConfig.addCollection('docs', function (collectionApi) {

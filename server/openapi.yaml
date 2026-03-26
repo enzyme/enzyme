@@ -36,6 +36,8 @@ paths:
     get:
       tags: [server]
       summary: Get server information
+      description: |
+        Returns server version, feature flags, and capability information. Useful for clients to detect which features are available (e.g. email, file uploads) before making further requests. Does not require authentication.
       operationId: getServerInfo
       responses:
         '200':
@@ -50,6 +52,8 @@ paths:
     post:
       tags: [auth]
       summary: Register a new user
+      description: |
+        Create a new user account with an email, password, and display name. Returns a session token that can be used for subsequent authenticated requests. If email verification is enabled on the server, a verification email will be sent.
       operationId: register
       requestBody:
         required: true
@@ -71,6 +75,8 @@ paths:
     post:
       tags: [auth]
       summary: Log in a user
+      description: |
+        Authenticate with email and password. Returns a session token and user object. The token should be included as a Bearer token in the Authorization header for all authenticated requests.
       operationId: login
       requestBody:
         required: true
@@ -92,6 +98,8 @@ paths:
     post:
       tags: [auth]
       summary: Log out the current user
+      description: |
+        Invalidate the current session token. After logging out, the token can no longer be used for authenticated requests.
       operationId: logout
       responses:
         '200':
@@ -105,6 +113,8 @@ paths:
     post:
       tags: [auth]
       summary: Request a password reset
+      description: |
+        Send a password reset email to the specified address. Always returns success regardless of whether the email exists, to prevent email enumeration. Requires email to be enabled on the server.
       operationId: forgotPassword
       requestBody:
         required: true
@@ -117,6 +127,7 @@ paths:
                 email:
                   type: string
                   format: email
+                  example: 'alice@example.com'
       responses:
         '200':
           description: Password reset email sent
@@ -137,6 +148,8 @@ paths:
     post:
       tags: [auth]
       summary: Reset password with token
+      description: |
+        Set a new password using a reset token received via email. The token is single-use and expires after a configured duration.
       operationId: resetPassword
       requestBody:
         required: true
@@ -148,8 +161,10 @@ paths:
               properties:
                 token:
                   type: string
+                  example: 'enz_v1_01JQ3KMWX8FVN4CPRD6BHTYGSZ'
                 new_password:
                   type: string
+                  example: 'newsecurepassword456'
       responses:
         '200':
           description: Password reset successfully
@@ -164,6 +179,8 @@ paths:
     post:
       tags: [auth]
       summary: Verify email address with token
+      description: |
+        Confirm ownership of an email address using a verification token received via email. The token is single-use.
       operationId: verifyEmail
       requestBody:
         required: true
@@ -175,6 +192,7 @@ paths:
               properties:
                 token:
                   type: string
+                  example: 'enz_v1_01JQ3KMWX8FVN4CPRD6BHTYGSZ'
                   minLength: 1
                   maxLength: 128
       responses:
@@ -191,6 +209,8 @@ paths:
     post:
       tags: [auth]
       summary: Resend verification email
+      description: |
+        Request a new email verification link. Useful if the original verification email was lost or expired. Requires the user to be logged in but not yet verified.
       operationId: resendVerification
       security:
         - bearerAuth: []
@@ -210,6 +230,8 @@ paths:
     get:
       tags: [auth]
       summary: Get current user info
+      description: |
+        Returns the currently authenticated user along with their workspace memberships. This is typically the first call a client makes after login to bootstrap the UI.
       operationId: getMe
       responses:
         '200':
@@ -225,6 +247,8 @@ paths:
     post:
       tags: [auth]
       summary: Register a device token for push notifications
+      description: |
+        Register a device token for push notifications (FCM for Android, APNs for iOS). Each token is associated with the current user and session. Re-registering an existing token updates its association.
       operationId: registerDeviceToken
       security:
         - bearerAuth: []
@@ -250,6 +274,8 @@ paths:
     delete:
       tags: [auth]
       summary: Unregister a device token
+      description: |
+        Remove a previously registered device token to stop receiving push notifications on that device.
       operationId: unregisterDeviceToken
       security:
         - bearerAuth: []
@@ -273,6 +299,8 @@ paths:
     post:
       tags: [workspaces]
       summary: Create a new workspace
+      description: |
+        Create a new workspace. The authenticated user becomes the owner. Workspace names must be unique and a URL-friendly slug is generated automatically.
       operationId: createWorkspace
       security:
         - bearerAuth: []
@@ -302,6 +330,8 @@ paths:
     get:
       tags: [workspaces]
       summary: Get workspace details
+      description: |
+        Retrieve details for a workspace including its name, icon, settings, and the current user's membership role.
       operationId: getWorkspace
       security:
         - bearerAuth: []
@@ -327,6 +357,8 @@ paths:
     post:
       tags: [workspaces]
       summary: Update workspace
+      description: |
+        Update workspace properties such as name or settings. Requires admin or owner role in the workspace.
       operationId: updateWorkspace
       security:
         - bearerAuth: []
@@ -362,6 +394,8 @@ paths:
     post:
       tags: [workspaces]
       summary: List workspace members
+      description: |
+        List all members of a workspace with their roles, display names, and ban status.
       operationId: listWorkspaceMembers
       security:
         - bearerAuth: []
@@ -389,6 +423,8 @@ paths:
     post:
       tags: [workspaces]
       summary: Remove a member from workspace
+      description: |
+        Remove a member from the workspace. Admins can remove members, owners can remove anyone except themselves. The removed user loses access to all workspace channels.
       operationId: removeWorkspaceMember
       security:
         - bearerAuth: []
@@ -404,6 +440,7 @@ paths:
               properties:
                 user_id:
                   type: string
+                  example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
       responses:
         '200':
           description: Member removed
@@ -422,6 +459,8 @@ paths:
     post:
       tags: [workspaces]
       summary: Leave a workspace
+      description: |
+        Voluntarily leave a workspace. The workspace owner cannot leave without first transferring ownership. Leaving removes access to all channels in the workspace.
       operationId: leaveWorkspace
       security:
         - bearerAuth: []
@@ -445,6 +484,8 @@ paths:
     post:
       tags: [workspaces]
       summary: Update member role
+      description: |
+        Change a member's role within the workspace (e.g. member to admin). Only owners can promote to admin, and only admins/owners can change roles. Cannot change your own role.
       operationId: updateWorkspaceMemberRole
       security:
         - bearerAuth: []
@@ -460,6 +501,7 @@ paths:
               properties:
                 user_id:
                   type: string
+                  example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
                 role:
                   $ref: '#/components/schemas/WorkspaceRole'
       responses:
@@ -482,6 +524,8 @@ paths:
     post:
       tags: [workspaces]
       summary: Create an invite
+      description: |
+        Generate an invite link for the workspace. Invites can be configured with a maximum number of uses and an expiration date. Requires the appropriate permission level configured in workspace settings.
       operationId: createWorkspaceInvite
       security:
         - bearerAuth: []
@@ -513,6 +557,8 @@ paths:
     get:
       tags: [workspaces]
       summary: Get notification summaries for all workspaces
+      description: |
+        Get unread message counts and mention counts for all workspaces the current user belongs to. Useful for showing notification badges in the workspace switcher.
       operationId: getWorkspaceNotifications
       security:
         - bearerAuth: []
@@ -536,6 +582,8 @@ paths:
     post:
       tags: [workspaces]
       summary: Reorder workspaces for current user
+      description: |
+        Set a custom display order for workspaces in the sidebar. Accepts a mapping of workspace IDs to sort positions. Only affects the current user's view.
       operationId: reorderWorkspaces
       security:
         - bearerAuth: []
@@ -561,6 +609,8 @@ paths:
     post:
       tags: [workspaces]
       summary: Accept an invite
+      description: |
+        Join a workspace using an invite code. The invite must be valid (not expired, not at max uses). The user is added as a member and automatically joins the workspace's default channels.
       operationId: acceptInvite
       security:
         - bearerAuth: []
@@ -593,6 +643,8 @@ paths:
     post:
       tags: [channels]
       summary: Create a channel
+      description: |
+        Create a new channel in the workspace. Channel names must be unique within the workspace and contain only lowercase letters, numbers, and hyphens. The creator is automatically added as a member with admin role.
       operationId: createChannel
       security:
         - bearerAuth: []
@@ -626,6 +678,8 @@ paths:
     post:
       tags: [channels]
       summary: List channels in workspace
+      description: |
+        List all channels in the workspace that the current user has access to. Includes the user's membership status and unread counts for each channel. Private channels are only listed if the user is a member.
       operationId: listChannels
       security:
         - bearerAuth: []
@@ -651,6 +705,8 @@ paths:
     post:
       tags: [channels]
       summary: Create or get DM channel
+      description: |
+        Create a direct message channel with one or more users. If a DM already exists between the same set of users, returns the existing channel. For two users, creates a 1:1 DM; for more, creates a group DM.
       operationId: createDM
       security:
         - bearerAuth: []
@@ -682,6 +738,8 @@ paths:
     post:
       tags: [channels]
       summary: Update channel
+      description: |
+        Update channel properties such as name, description, or visibility (public/private). Requires channel admin role or workspace admin/owner role.
       operationId: updateChannel
       security:
         - bearerAuth: []
@@ -717,6 +775,8 @@ paths:
     post:
       tags: [channels]
       summary: Convert group DM to channel
+      description: |
+        Convert a group DM into a named public or private channel. Requires the caller to be a member of the group DM. All existing members and message history are preserved.
       operationId: convertGroupDMToChannel
       security:
         - bearerAuth: []
@@ -750,6 +810,8 @@ paths:
     post:
       tags: [channels]
       summary: Archive channel
+      description: |
+        Archive a channel, preventing new messages from being sent. Archived channels remain visible and searchable but are moved to an archived section. Requires channel admin or workspace admin/owner role.
       operationId: archiveChannel
       security:
         - bearerAuth: []
@@ -775,6 +837,8 @@ paths:
     post:
       tags: [channels]
       summary: Add member to channel
+      description: |
+        Add a workspace member to a channel. For public channels, any member can add others. For private channels, only channel members can add others.
       operationId: addChannelMember
       security:
         - bearerAuth: []
@@ -790,6 +854,7 @@ paths:
               properties:
                 user_id:
                   type: string
+                  example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
                 role:
                   $ref: '#/components/schemas/ChannelRole'
       responses:
@@ -812,6 +877,8 @@ paths:
     post:
       tags: [channels]
       summary: List channel members
+      description: |
+        List all members of a channel with their roles and join dates.
       operationId: listChannelMembers
       security:
         - bearerAuth: []
@@ -839,6 +906,8 @@ paths:
     post:
       tags: [channels]
       summary: Join a channel
+      description: |
+        Join a public channel. Private channels cannot be joined directly — a current member must add you using the add member endpoint.
       operationId: joinChannel
       security:
         - bearerAuth: []
@@ -862,6 +931,8 @@ paths:
     post:
       tags: [channels]
       summary: Leave a channel
+      description: |
+        Leave a channel. You will no longer receive messages or notifications from this channel. The channel owner cannot leave without first transferring ownership.
       operationId: leaveChannel
       security:
         - bearerAuth: []
@@ -885,6 +956,8 @@ paths:
     post:
       tags: [channels]
       summary: Star a channel
+      description: |
+        Star a channel to pin it to the top of your sidebar. Starred channels appear in a separate section for quick access.
       operationId: starChannel
       security:
         - bearerAuth: []
@@ -904,6 +977,8 @@ paths:
     delete:
       tags: [channels]
       summary: Unstar a channel
+      description: |
+        Remove a channel from your starred list.
       operationId: unstarChannel
       security:
         - bearerAuth: []
@@ -925,6 +1000,8 @@ paths:
     post:
       tags: [channels]
       summary: Mark channel as read
+      description: |
+        Mark a channel as read up to a specific message, or up to the latest message if no message ID is provided. Updates the unread count and clears notification badges for this channel.
       operationId: markChannelRead
       security:
         - bearerAuth: []
@@ -938,6 +1015,7 @@ paths:
               properties:
                 message_id:
                   type: string
+                  example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
                   description: Message ID to mark as last read (defaults to latest message)
       responses:
         '200':
@@ -955,6 +1033,8 @@ paths:
     get:
       tags: [channels]
       summary: Get channel notification preferences
+      description: |
+        Get the current user's notification preferences for a specific channel, such as whether to receive notifications for all messages, mentions only, or nothing.
       operationId: getChannelNotifications
       security:
         - bearerAuth: []
@@ -978,6 +1058,8 @@ paths:
     post:
       tags: [channels]
       summary: Update channel notification preferences
+      description: |
+        Set notification preferences for a specific channel. Overrides the workspace-level notification defaults for this channel only.
       operationId: updateChannelNotifications
       security:
         - bearerAuth: []
@@ -1011,6 +1093,8 @@ paths:
     post:
       tags: [channels]
       summary: Mark all channels as read
+      description: |
+        Mark all channels in the workspace as read. Clears all unread counts and notification badges across every channel the user is a member of.
       operationId: markAllChannelsRead
       security:
         - bearerAuth: []
@@ -1030,6 +1114,8 @@ paths:
     post:
       tags: [messages]
       summary: List all unread messages across channels
+      description: |
+        Fetch unread messages across all channels in the workspace. Returns messages grouped by channel with cursor-based pagination. Useful for building an "All Unreads" view.
       operationId: listAllUnreads
       security:
         - bearerAuth: []
@@ -1046,6 +1132,7 @@ paths:
                   default: 50
                 cursor:
                   type: string
+                  example: 'eyJpZCI6IjAxSkVYQU1QTEUifQ'
       responses:
         '200':
           description: List of unread messages
@@ -1060,6 +1147,8 @@ paths:
     post:
       tags: [messages]
       summary: Search messages in workspace
+      description: |
+        Full-text search across messages in the workspace. Supports filtering by channel, user, and date range. Results include surrounding context and are ranked by relevance.
       operationId: searchMessages
       security:
         - bearerAuth: []
@@ -1089,6 +1178,8 @@ paths:
     post:
       tags: [messages]
       summary: List threads user is subscribed to
+      description: |
+        List threads that the current user is subscribed to in the workspace. Includes the root message and latest replies with unread counts. Supports cursor-based pagination.
       operationId: listUserThreads
       security:
         - bearerAuth: []
@@ -1105,6 +1196,7 @@ paths:
                   default: 20
                 cursor:
                   type: string
+                  example: 'eyJpZCI6IjAxSkVYQU1QTEUifQ'
       responses:
         '200':
           description: List of user threads
@@ -1120,6 +1212,8 @@ paths:
     get:
       tags: [messages]
       summary: Get a single message
+      description: |
+        Retrieve a single message by ID, including its author, reactions, thread metadata, and file attachments.
       operationId: getMessage
       security:
         - bearerAuth: []
@@ -1145,6 +1239,8 @@ paths:
     post:
       tags: [messages]
       summary: Send a message
+      description: |
+        Send a new message to a channel. Supports plain text content, file attachments (by referencing previously uploaded file IDs), and threading (by setting a parent message ID). The sender must be a member of the channel.
       operationId: sendMessage
       security:
         - bearerAuth: []
@@ -1180,6 +1276,8 @@ paths:
     post:
       tags: [messages]
       summary: List messages in channel
+      description: |
+        List messages in a channel with cursor-based pagination. Returns messages in reverse chronological order by default. Supports fetching around a specific message for scroll-to-message functionality.
       operationId: listMessages
       security:
         - bearerAuth: []
@@ -1208,6 +1306,8 @@ paths:
     post:
       tags: [messages]
       summary: Update a message
+      description: |
+        Edit the content of a previously sent message. Only the message author can edit their own messages. An edit indicator is shown on the message after updating.
       operationId: updateMessage
       security:
         - bearerAuth: []
@@ -1223,6 +1323,7 @@ paths:
               properties:
                 content:
                   type: string
+                  example: 'Hello, world!'
                   maxLength: 40000
       responses:
         '200':
@@ -1248,6 +1349,8 @@ paths:
     post:
       tags: [messages]
       summary: Delete a message
+      description: |
+        Delete a message. Authors can delete their own messages. Channel admins and workspace admins/owners can delete any message in channels they have access to.
       operationId: deleteMessage
       security:
         - bearerAuth: []
@@ -1271,6 +1374,8 @@ paths:
     post:
       tags: [messages]
       summary: Delete a message's link preview
+      description: |
+        Remove the link preview (unfurl) from a message. Only the message author can remove link previews from their own messages.
       operationId: deleteLinkPreview
       security:
         - bearerAuth: []
@@ -1294,6 +1399,8 @@ paths:
     post:
       tags: [messages]
       summary: Add reaction to message
+      description: |
+        Add an emoji reaction to a message. Each user can only add each unique emoji once per message. Supports both standard Unicode emoji and custom workspace emoji.
       operationId: addReaction
       security:
         - bearerAuth: []
@@ -1309,6 +1416,7 @@ paths:
               properties:
                 emoji:
                   type: string
+                  example: '👍'
       responses:
         '200':
           description: Reaction added
@@ -1333,6 +1441,8 @@ paths:
     post:
       tags: [messages]
       summary: Remove reaction from message
+      description: |
+        Remove your emoji reaction from a message. You can only remove reactions that you previously added.
       operationId: removeReaction
       security:
         - bearerAuth: []
@@ -1348,6 +1458,7 @@ paths:
               properties:
                 emoji:
                   type: string
+                  example: '👍'
       responses:
         '200':
           description: Reaction removed
@@ -1364,6 +1475,8 @@ paths:
     post:
       tags: [messages]
       summary: Mark message as unread
+      description: |
+        Mark a message as unread, setting the channel's read position to just before this message. The channel will appear as having unread messages starting from this point.
       operationId: markMessageUnread
       security:
         - bearerAuth: []
@@ -1387,6 +1500,8 @@ paths:
     post:
       tags: [messages]
       summary: Mark thread as read
+      description: |
+        Mark a thread as read up to a specific reply, or up to the latest reply if no reply ID is provided. Updates the thread's unread count.
       operationId: markThreadRead
       security:
         - bearerAuth: []
@@ -1400,6 +1515,7 @@ paths:
               properties:
                 last_read_reply_id:
                   type: string
+                  example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
                   description: ID of the last read reply (defaults to latest reply)
       responses:
         '200':
@@ -1417,6 +1533,8 @@ paths:
     post:
       tags: [messages]
       summary: List thread replies
+      description: |
+        List replies in a message thread with cursor-based pagination. Returns the thread replies in chronological order.
       operationId: listThread
       security:
         - bearerAuth: []
@@ -1445,6 +1563,8 @@ paths:
     get:
       tags: [messages]
       summary: Get thread subscription status
+      description: |
+        Check whether the current user is subscribed to a thread. Subscribed users receive notifications for new replies.
       operationId: getThreadSubscription
       security:
         - bearerAuth: []
@@ -1470,6 +1590,8 @@ paths:
     post:
       tags: [messages]
       summary: Subscribe to thread
+      description: |
+        Subscribe to a thread to receive notifications for new replies. Users are automatically subscribed when they reply to a thread.
       operationId: subscribeToThread
       security:
         - bearerAuth: []
@@ -1495,6 +1617,8 @@ paths:
     post:
       tags: [messages]
       summary: Unsubscribe from thread
+      description: |
+        Unsubscribe from a thread to stop receiving notifications for new replies.
       operationId: unsubscribeFromThread
       security:
         - bearerAuth: []
@@ -1612,6 +1736,7 @@ paths:
               properties:
                 cursor:
                   type: string
+                  example: 'eyJpZCI6IjAxSkVYQU1QTEUifQ'
                 limit:
                   type: integer
                   default: 50
@@ -1632,6 +1757,7 @@ paths:
                     type: boolean
                   next_cursor:
                     type: string
+                    example: 'eyJpZCI6IjAxSkVYQU1QTEUifQ'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1644,6 +1770,8 @@ paths:
     post:
       tags: [files]
       summary: Upload a file
+      description: |
+        Upload a file to a channel. The file is stored on the server and a file object is returned with an ID that can be referenced when sending a message. Maximum file size and allowed types are configured server-side.
       operationId: uploadFile
       security:
         - bearerAuth: []
@@ -1675,12 +1803,16 @@ paths:
                     properties:
                       id:
                         type: string
+                        example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
                       filename:
                         type: string
+                        example: 'report.pdf'
                       size:
                         type: integer
+                        example: 1048576
                       content_type:
                         type: string
+                        example: 'application/pdf'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1694,6 +1826,8 @@ paths:
     get:
       tags: [files]
       summary: Download a file
+      description: |
+        Download a file by ID. Supports both authenticated requests (Bearer token) and signed URLs (with expires, uid, and sig query parameters) for sharing files externally.
       operationId: downloadFile
       parameters:
         - name: id
@@ -1736,6 +1870,8 @@ paths:
     post:
       tags: [files]
       summary: Get a signed download URL for a file
+      description: |
+        Generate a time-limited signed URL for downloading a file without authentication. Useful for embedding file links in emails or sharing with external users.
       operationId: signFileUrl
       security:
         - bearerAuth: []
@@ -1763,6 +1899,8 @@ paths:
     post:
       tags: [files]
       summary: Get signed download URLs for multiple files
+      description: |
+        Generate signed download URLs for multiple files in a single request. More efficient than calling the single-file endpoint repeatedly.
       operationId: signFileUrls
       security:
         - bearerAuth: []
@@ -1800,6 +1938,8 @@ paths:
     post:
       tags: [files]
       summary: Delete a file
+      description: |
+        Delete a file from the server. Only the file uploader or a workspace admin/owner can delete files.
       operationId: deleteFile
       security:
         - bearerAuth: []
@@ -1828,6 +1968,8 @@ paths:
     post:
       tags: [emojis]
       summary: Upload a custom emoji
+      description: |
+        Upload a custom emoji image for the workspace. Accepts PNG, GIF, or WebP. The emoji name must be unique within the workspace and use only lowercase letters, numbers, and underscores.
       operationId: uploadCustomEmoji
       security:
         - bearerAuth: []
@@ -1850,6 +1992,7 @@ paths:
                   format: binary
                 name:
                   type: string
+                  example: 'general'
       responses:
         '200':
           description: Emoji uploaded
@@ -1872,6 +2015,8 @@ paths:
     post:
       tags: [emojis]
       summary: List custom emojis for a workspace
+      description: |
+        List all custom emojis available in the workspace. Returns emoji names and their image URLs.
       operationId: listCustomEmojis
       security:
         - bearerAuth: []
@@ -1903,6 +2048,8 @@ paths:
     post:
       tags: [emojis]
       summary: Delete a custom emoji
+      description: |
+        Delete a custom emoji from the workspace. Only the emoji uploader or a workspace admin/owner can delete custom emojis.
       operationId: deleteCustomEmoji
       security:
         - bearerAuth: []
@@ -1931,6 +2078,8 @@ paths:
     post:
       tags: [messages]
       summary: Schedule a message for future delivery
+      description: |
+        Schedule a message for future delivery to a channel. The message will be automatically sent at the specified time. Scheduled messages can be edited or cancelled before delivery.
       operationId: scheduleMessage
       security:
         - bearerAuth: []
@@ -1969,6 +2118,8 @@ paths:
     post:
       tags: [messages]
       summary: List user's scheduled messages in a workspace
+      description: |
+        List all pending scheduled messages created by the current user in a workspace.
       operationId: listScheduledMessages
       security:
         - bearerAuth: []
@@ -1994,6 +2145,7 @@ paths:
                       $ref: '#/components/schemas/ScheduledMessage'
                   count:
                     type: integer
+                    example: 5
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -2001,6 +2153,8 @@ paths:
     post:
       tags: [messages]
       summary: Get a scheduled message
+      description: |
+        Retrieve a single scheduled message by ID, including its content, target channel, and scheduled delivery time.
       operationId: getScheduledMessage
       security:
         - bearerAuth: []
@@ -2030,6 +2184,8 @@ paths:
     post:
       tags: [messages]
       summary: Update a scheduled message
+      description: |
+        Update the content or delivery time of a pending scheduled message. Cannot update messages that have already been sent.
       operationId: updateScheduledMessage
       security:
         - bearerAuth: []
@@ -2071,6 +2227,8 @@ paths:
     post:
       tags: [messages]
       summary: Delete a scheduled message
+      description: |
+        Cancel and delete a pending scheduled message. Cannot delete messages that have already been sent.
       operationId: deleteScheduledMessage
       security:
         - bearerAuth: []
@@ -2100,6 +2258,8 @@ paths:
     post:
       tags: [messages]
       summary: Send a scheduled message immediately
+      description: |
+        Immediately send a scheduled message instead of waiting for its scheduled delivery time. The message is sent and the scheduled entry is removed.
       operationId: sendScheduledMessageNow
       security:
         - bearerAuth: []
@@ -2136,6 +2296,8 @@ paths:
     get:
       tags: [users]
       summary: Get user profile
+      description: |
+        Retrieve a user's public profile by ID, including display name, avatar, and status.
       operationId: getUser
       security:
         - bearerAuth: []
@@ -2166,6 +2328,8 @@ paths:
     post:
       tags: [users]
       summary: Update own profile
+      description: |
+        Update the current user's profile fields such as display name and status. Changes are reflected across all workspaces.
       operationId: updateProfile
       security:
         - bearerAuth: []
@@ -2195,6 +2359,8 @@ paths:
     post:
       tags: [users]
       summary: Upload avatar image
+      description: |
+        Upload a profile avatar image. Accepts JPEG, PNG, GIF, or WebP. The image is resized and stored on the server, replacing any existing avatar.
       operationId: uploadAvatar
       security:
         - bearerAuth: []
@@ -2225,6 +2391,8 @@ paths:
     delete:
       tags: [users]
       summary: Remove avatar
+      description: |
+        Remove the current user's avatar, reverting to the default Gravatar-based avatar.
       operationId: deleteAvatar
       security:
         - bearerAuth: []
@@ -2242,6 +2410,8 @@ paths:
     post:
       tags: [workspaces]
       summary: Upload workspace icon
+      description: |
+        Upload an image to use as the workspace icon. Accepts JPEG, PNG, GIF, or WebP. The image is resized to fit. Requires admin or owner role.
       operationId: uploadWorkspaceIcon
       security:
         - bearerAuth: []
@@ -2274,6 +2444,8 @@ paths:
     delete:
       tags: [workspaces]
       summary: Remove workspace icon
+      description: |
+        Remove the workspace icon, reverting to the default. Requires admin or owner role.
       operationId: deleteWorkspaceIcon
       security:
         - bearerAuth: []
@@ -2367,6 +2539,7 @@ paths:
               properties:
                 user_id:
                   type: string
+                  example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
       responses:
         '200':
           description: User unbanned
@@ -2404,6 +2577,7 @@ paths:
               properties:
                 cursor:
                   type: string
+                  example: 'eyJpZCI6IjAxSkVYQU1QTEUifQ'
                 limit:
                   type: integer
                   default: 50
@@ -2424,6 +2598,7 @@ paths:
                     type: boolean
                   next_cursor:
                     type: string
+                    example: 'eyJpZCI6IjAxSkVYQU1QTEUifQ'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -2456,6 +2631,7 @@ paths:
               properties:
                 user_id:
                   type: string
+                  example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
       responses:
         '200':
           description: User blocked
@@ -2497,6 +2673,7 @@ paths:
               properties:
                 user_id:
                   type: string
+                  example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
       responses:
         '200':
           description: User unblocked
@@ -2565,6 +2742,7 @@ paths:
               properties:
                 cursor:
                   type: string
+                  example: 'eyJpZCI6IjAxSkVYQU1QTEUifQ'
                 limit:
                   type: integer
                   default: 50
@@ -2585,6 +2763,7 @@ paths:
                     type: boolean
                   next_cursor:
                     type: string
+                    example: 'eyJpZCI6IjAxSkVYQU1QTEUifQ'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -2595,6 +2774,8 @@ paths:
     get:
       tags: [sse]
       summary: SSE event stream
+      description: |
+        Open a Server-Sent Events stream for real-time updates in a workspace. Events include new messages, reactions, typing indicators, presence changes, and channel updates. Supports reconnection with Last-Event-ID header to catch up on missed events.
       operationId: events
       security:
         - bearerAuth: []
@@ -2612,6 +2793,8 @@ paths:
     post:
       tags: [sse]
       summary: Start typing indicator
+      description: |
+        Broadcast a typing indicator to other members of a channel. The indicator automatically expires after a few seconds if not refreshed.
       operationId: startTyping
       security:
         - bearerAuth: []
@@ -2627,6 +2810,7 @@ paths:
               properties:
                 channel_id:
                   type: string
+                  example: '01JQ3KMQ8YNBC3DFHM6RWVS7AG'
       responses:
         '200':
           description: Typing started
@@ -2639,6 +2823,8 @@ paths:
     post:
       tags: [sse]
       summary: Stop typing indicator
+      description: |
+        Clear the typing indicator for a channel. Called when the user stops typing or sends their message.
       operationId: stopTyping
       security:
         - bearerAuth: []
@@ -2654,6 +2840,7 @@ paths:
               properties:
                 channel_id:
                   type: string
+                  example: '01JQ3KMQ8YNBC3DFHM6RWVS7AG'
       responses:
         '200':
           description: Typing stopped
@@ -2698,30 +2885,50 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Invalid request parameters
     Unauthorized:
       description: Unauthorized
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            error:
+              code: NOT_AUTHENTICATED
+              message: Not authenticated
     NotFound:
       description: Not found
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            error:
+              code: NOT_FOUND
+              message: Resource not found
     Forbidden:
       description: Forbidden
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            error:
+              code: PERMISSION_DENIED
+              message: You do not have permission to perform this action
     Conflict:
       description: Conflict with current resource state
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            error:
+              code: CONFLICT
+              message: Resource already exists
 
   schemas:
     # User schemas
@@ -2731,14 +2938,19 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         display_name:
           type: string
+          example: 'Alice Chen'
         avatar_url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
         gravatar_url:
           type: string
+          example: 'https://www.gravatar.com/avatar/abc123?d=mp'
         status:
           type: string
+          example: 'In a meeting'
         created_at:
           type: string
           format: date-time
@@ -2748,6 +2960,7 @@ components:
       properties:
         display_name:
           type: string
+          example: 'Alice Chen'
 
     AvatarUploadResponse:
       type: object
@@ -2755,6 +2968,7 @@ components:
       properties:
         avatar_url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
 
     WorkspaceIconUploadResponse:
       type: object
@@ -2762,6 +2976,7 @@ components:
       properties:
         icon_url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
 
     User:
       type: object
@@ -2769,20 +2984,26 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         email:
           type: string
           format: email
+          example: 'alice@example.com'
         email_verified_at:
           type: string
           format: date-time
         display_name:
           type: string
+          example: 'Alice Chen'
         avatar_url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
         gravatar_url:
           type: string
+          example: 'https://www.gravatar.com/avatar/abc123?d=mp'
         status:
           type: string
+          example: 'In a meeting'
         created_at:
           type: string
           format: date-time
@@ -2822,10 +3043,13 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         name:
           type: string
+          example: 'general'
         icon_url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
         settings:
           type: string
           description: JSON string containing workspace settings (for backward compatibility)
@@ -2844,14 +3068,18 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         name:
           type: string
+          example: 'general'
         icon_url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
         role:
           $ref: '#/components/schemas/WorkspaceRole'
         sort_order:
           type: integer
+          example: 1
           description: User's custom sort order for this workspace
         ban:
           type: object
@@ -2859,6 +3087,7 @@ components:
           properties:
             reason:
               type: string
+              example: 'Repeated spam'
             expires_at:
               type: string
               format: date-time
@@ -2869,10 +3098,13 @@ components:
       properties:
         workspace_id:
           type: string
+          example: '01JQ3KMP2RQHYJ5ZV8NMWCX4ET'
         unread_count:
           type: integer
+          example: 12
         notification_count:
           type: integer
+          example: 3
 
     WorkspaceMembership:
       type: object
@@ -2880,10 +3112,13 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         workspace_id:
           type: string
+          example: '01JQ3KMP2RQHYJ5ZV8NMWCX4ET'
         role:
           $ref: '#/components/schemas/WorkspaceRole'
         display_name_override:
@@ -2904,12 +3139,16 @@ components:
             email:
               type: string
               format: email
+              example: 'alice@example.com'
             display_name:
               type: string
+              example: 'Alice Chen'
             avatar_url:
               type: string
+              example: '/files/01JQ3KMT6B/download?sig=abc'
             gravatar_url:
               type: string
+              example: 'https://www.gravatar.com/avatar/abc123?d=mp'
             is_banned:
               type: boolean
               description: Whether the user is currently banned from the workspace
@@ -2924,21 +3163,28 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         workspace_id:
           type: string
+          example: '01JQ3KMP2RQHYJ5ZV8NMWCX4ET'
         code:
           type: string
+          example: 'abc123def'
         invited_email:
           type: string
           format: email
+          example: 'newuser@example.com'
         role:
           $ref: '#/components/schemas/WorkspaceRole'
         created_by:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         max_uses:
           type: integer
+          example: 25
         use_count:
           type: integer
+          example: 5
         expires_at:
           type: string
           format: date-time
@@ -2953,10 +3199,13 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         workspace_id:
           type: string
+          example: '01JQ3KMP2RQHYJ5ZV8NMWCX4ET'
         name:
           type: string
+          example: 'general'
         description:
           type: string
         type:
@@ -2966,11 +3215,13 @@ components:
           description: Whether this is the default channel (like #general in Slack)
         dm_participant_hash:
           type: string
+          example: 'hash_abc123'
         archived_at:
           type: string
           format: date-time
         created_by:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         created_at:
           type: string
           format: date-time
@@ -2988,10 +3239,13 @@ components:
               $ref: '#/components/schemas/ChannelRole'
             last_read_message_id:
               type: string
+              example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
             unread_count:
               type: integer
+              example: 12
             notification_count:
               type: integer
+              example: 3
             is_starred:
               type: boolean
             dm_participants:
@@ -3014,15 +3268,20 @@ components:
       properties:
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         email:
           type: string
           format: email
+          example: 'alice@example.com'
         display_name:
           type: string
+          example: 'Alice Chen'
         avatar_url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
         gravatar_url:
           type: string
+          example: 'https://www.gravatar.com/avatar/abc123?d=mp'
         channel_role:
           $ref: '#/components/schemas/ChannelRole'
 
@@ -3043,27 +3302,35 @@ components:
           $ref: '#/components/schemas/SystemEventType'
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
           description: The user who joined/left/was added
         user_display_name:
           type: string
+          example: 'Alice Chen'
           description: Display name of the user at the time of the event
         channel_name:
           type: string
+          example: 'general'
           description: Name of the channel
         actor_id:
           type: string
+          example: '01JQ3KMS4WTVY6BN8FRCJD2HAQ'
           description: The user who performed the action (for user_added)
         actor_display_name:
           type: string
+          example: 'Bob Martinez'
           description: Display name of the actor
         old_channel_name:
           type: string
+          example: 'old-channel-name'
           description: Previous channel name (for rename events)
         channel_type:
           type: string
+          example: 'public'
           description: New channel type (for visibility change events)
         message_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
           description: Referenced message ID (for pin/unpin events)
 
     Message:
@@ -3072,20 +3339,26 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         channel_id:
           type: string
+          example: '01JQ3KMQ8YNBC3DFHM6RWVS7AG'
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         content:
           type: string
+          example: 'Hello, world!'
         type:
           $ref: '#/components/schemas/MessageType'
         system_event:
           $ref: '#/components/schemas/SystemEventData'
         thread_parent_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
         reply_count:
           type: integer
+          example: 3
         last_reply_at:
           type: string
           format: date-time
@@ -3108,6 +3381,7 @@ components:
           format: date-time
         pinned_by:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
 
     MessageWithUser:
       allOf:
@@ -3116,10 +3390,13 @@ components:
           properties:
             user_display_name:
               type: string
+              example: 'Alice Chen'
             user_avatar_url:
               type: string
+              example: '/files/01JQ3KMT6B/download?sig=abc'
             user_gravatar_url:
               type: string
+              example: 'https://www.gravatar.com/avatar/abc123?d=mp'
             reactions:
               type: array
               items:
@@ -3141,12 +3418,16 @@ components:
       properties:
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         display_name:
           type: string
+          example: 'Alice Chen'
         avatar_url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
         gravatar_url:
           type: string
+          example: 'https://www.gravatar.com/avatar/abc123?d=mp'
 
     Attachment:
       type: object
@@ -3154,15 +3435,20 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         filename:
           type: string
+          example: 'report.pdf'
         content_type:
           type: string
+          example: 'application/pdf'
         size_bytes:
           type: integer
           format: int64
+          example: 1048576
         url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
           description: Download URL for the attachment
         created_at:
           type: string
@@ -3174,36 +3460,49 @@ components:
       properties:
         url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
         type:
           type: string
           enum: [external, message]
           default: external
         title:
           type: string
+          example: 'Example Page'
         description:
           type: string
         image_url:
           type: string
+          example: 'https://example.com/image.png'
         site_name:
           type: string
+          example: 'example.com'
         linked_message_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
         linked_channel_id:
           type: string
+          example: '01JQ3KMQ8YNBC3DFHM6RWVS7AG'
         linked_channel_name:
           type: string
+          example: 'random'
         linked_channel_type:
           type: string
+          example: 'public'
         message_author_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         message_author_name:
           type: string
+          example: 'Alice Chen'
         message_author_avatar_url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
         message_author_gravatar_url:
           type: string
+          example: 'https://www.gravatar.com/avatar/abc123?d=mp'
         message_content:
           type: string
+          example: 'Check out this link!'
         message_created_at:
           type: string
           format: date-time
@@ -3214,12 +3513,16 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         message_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         emoji:
           type: string
+          example: '👍'
         created_at:
           type: string
           format: date-time
@@ -3230,8 +3533,10 @@ components:
       properties:
         emoji:
           type: string
+          example: '👍'
         count:
           type: integer
+          example: 5
         user_ids:
           type: array
           items:
@@ -3251,6 +3556,7 @@ components:
           type: boolean
         next_cursor:
           type: string
+          example: 'eyJpZCI6IjAxSkVYQU1QTEUifQ'
 
     UnreadMessage:
       allOf:
@@ -3260,6 +3566,7 @@ components:
           properties:
             channel_name:
               type: string
+              example: 'general'
             channel_type:
               $ref: '#/components/schemas/ChannelType'
 
@@ -3275,6 +3582,7 @@ components:
           type: boolean
         next_cursor:
           type: string
+          example: 'eyJpZCI6IjAxSkVYQU1QTEUifQ'
 
     SearchMessagesInput:
       type: object
@@ -3282,10 +3590,13 @@ components:
       properties:
         query:
           type: string
+          example: 'search term'
         channel_id:
           type: string
+          example: '01JQ3KMQ8YNBC3DFHM6RWVS7AG'
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         before:
           type: string
           format: date-time
@@ -3307,6 +3618,7 @@ components:
           properties:
             channel_name:
               type: string
+              example: 'general'
             channel_type:
               $ref: '#/components/schemas/ChannelType'
 
@@ -3320,10 +3632,12 @@ components:
             $ref: '#/components/schemas/SearchMessage'
         total_count:
           type: integer
+          example: 42
         has_more:
           type: boolean
         query:
           type: string
+          example: 'search term'
 
     ThreadMessage:
       allOf:
@@ -3333,6 +3647,7 @@ components:
           properties:
             channel_name:
               type: string
+              example: 'general'
             channel_type:
               $ref: '#/components/schemas/ChannelType'
             has_new_replies:
@@ -3350,8 +3665,10 @@ components:
           type: boolean
         next_cursor:
           type: string
+          example: 'eyJpZCI6IjAxSkVYQU1QTEUifQ'
         unread_thread_count:
           type: integer
+          example: 2
 
     # API response schemas
     ApiError:
@@ -3360,8 +3677,10 @@ components:
       properties:
         code:
           type: string
+          example: VALIDATION_ERROR
         message:
           type: string
+          example: Invalid request parameters
 
     ApiErrorResponse:
       type: object
@@ -3376,19 +3695,26 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         workspace_id:
           type: string
+          example: '01JQ3KMP2RQHYJ5ZV8NMWCX4ET'
         name:
           type: string
+          example: 'general'
         created_by:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         content_type:
           type: string
+          example: 'application/pdf'
         size_bytes:
           type: integer
           format: int64
+          example: 1048576
         url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
         created_at:
           type: string
           format: date-time
@@ -3399,8 +3725,10 @@ components:
       properties:
         file_id:
           type: string
+          example: '01JQ3KMT6BMRXP0WCDG9HQSYNF'
         url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
         expires_at:
           type: string
           format: date-time
@@ -3411,6 +3739,7 @@ components:
       properties:
         version:
           type: string
+          example: '0.2.0'
         email_enabled:
           type: boolean
         files_enabled:
@@ -3429,6 +3758,7 @@ components:
       properties:
         last_read_message_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
 
     ChannelReadEventData:
       type: object
@@ -3436,8 +3766,10 @@ components:
       properties:
         channel_id:
           type: string
+          example: '01JQ3KMQ8YNBC3DFHM6RWVS7AG'
         last_read_message_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
 
     # SSE schemas
     SSEEventType:
@@ -3555,6 +3887,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [connected]
@@ -3567,6 +3900,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [heartbeat]
@@ -3579,6 +3913,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [message.new]
@@ -3591,6 +3926,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [message.updated]
@@ -3603,6 +3939,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [message.deleted]
@@ -3615,6 +3952,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [reaction.added]
@@ -3627,6 +3965,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [reaction.removed]
@@ -3639,6 +3978,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [channel.created]
@@ -3651,6 +3991,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [channel.updated]
@@ -3663,6 +4004,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [channel.archived]
@@ -3675,6 +4017,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [channel.member_added]
@@ -3687,6 +4030,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [channel.member_removed]
@@ -3699,6 +4043,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [channel.read]
@@ -3711,6 +4056,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [typing.start]
@@ -3723,6 +4069,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [typing.stop]
@@ -3735,6 +4082,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [presence.changed]
@@ -3747,6 +4095,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [presence.initial]
@@ -3769,6 +4118,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [notification]
@@ -3781,6 +4131,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [emoji.created]
@@ -3793,6 +4144,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [emoji.deleted]
@@ -3805,6 +4157,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [scheduled_message.created]
@@ -3817,6 +4170,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [scheduled_message.updated]
@@ -3829,6 +4183,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [scheduled_message.deleted]
@@ -3841,6 +4196,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [scheduled_message.sent]
@@ -3853,6 +4209,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [message.pinned]
@@ -3865,6 +4222,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [message.unpinned]
@@ -3877,6 +4235,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [member.banned]
@@ -3889,6 +4248,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [member.unbanned]
@@ -3901,6 +4261,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [member.left]
@@ -3913,6 +4274,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [member.role_changed]
@@ -3925,6 +4287,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [workspace.updated]
@@ -3937,6 +4300,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [scheduled_message.failed]
@@ -3949,6 +4313,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         type:
           type: string
           enum: [channels.invalidate]
@@ -3976,8 +4341,10 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         thread_parent_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
 
     ReactionRemovedData:
       type: object
@@ -3985,10 +4352,13 @@ components:
       properties:
         message_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         emoji:
           type: string
+          example: '👍'
 
     ChannelMemberData:
       type: object
@@ -3996,8 +4366,10 @@ components:
       properties:
         channel_id:
           type: string
+          example: '01JQ3KMQ8YNBC3DFHM6RWVS7AG'
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
 
     WorkspaceMemberData:
       type: object
@@ -4005,8 +4377,10 @@ components:
       properties:
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         workspace_id:
           type: string
+          example: '01JQ3KMP2RQHYJ5ZV8NMWCX4ET'
 
     MemberRoleChangedData:
       type: object
@@ -4014,6 +4388,7 @@ components:
       properties:
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         old_role:
           type: string
         new_role:
@@ -4025,8 +4400,10 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         name:
           type: string
+          example: 'general'
 
     ScheduledMessageDeletedData:
       type: object
@@ -4034,6 +4411,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
 
     ScheduledMessageSentData:
       type: object
@@ -4041,10 +4419,13 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         channel_id:
           type: string
+          example: '01JQ3KMQ8YNBC3DFHM6RWVS7AG'
         message_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
 
     ScheduledMessageFailedData:
       type: object
@@ -4052,8 +4433,10 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         channel_id:
           type: string
+          example: '01JQ3KMQ8YNBC3DFHM6RWVS7AG'
         error:
           type: string
 
@@ -4066,16 +4449,20 @@ components:
           enum: [mention, dm, channel, here, everyone, thread_reply]
         channel_id:
           type: string
+          example: '01JQ3KMQ8YNBC3DFHM6RWVS7AG'
         message_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
         channel_name:
           type: string
+          example: 'general'
         sender_name:
           type: string
         preview:
           type: string
         thread_parent_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
 
     ThreadSubscriptionStatus:
       type: string
@@ -4100,10 +4487,13 @@ components:
       properties:
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         channel_id:
           type: string
+          example: '01JQ3KMQ8YNBC3DFHM6RWVS7AG'
         user_display_name:
           type: string
+          example: 'Alice Chen'
 
     PresenceStatus:
       type: string
@@ -4115,6 +4505,7 @@ components:
       properties:
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         status:
           $ref: '#/components/schemas/PresenceStatus'
 
@@ -4126,10 +4517,13 @@ components:
         email:
           type: string
           format: email
+          example: 'alice@example.com'
         password:
           type: string
+          example: 'securepassword123'
         display_name:
           type: string
+          example: 'Alice Chen'
 
     LoginInput:
       type: object
@@ -4138,8 +4532,10 @@ components:
         email:
           type: string
           format: email
+          example: 'alice@example.com'
         password:
           type: string
+          example: 'securepassword123'
 
     AuthResponse:
       type: object
@@ -4149,6 +4545,7 @@ components:
           $ref: '#/components/schemas/User'
         token:
           type: string
+          example: 'enz_v1_01JQ3KMWX8FVN4CPRD6BHTYGSZ'
 
     MeResponse:
       type: object
@@ -4167,6 +4564,7 @@ components:
       properties:
         token:
           type: string
+          example: 'enz_v1_01JQ3KMWX8FVN4CPRD6BHTYGSZ'
           maxLength: 4096
           description: The push notification token (FCM or APNs)
         platform:
@@ -4184,6 +4582,7 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
           description: The device token record ID
 
     CreateWorkspaceInput:
@@ -4192,12 +4591,14 @@ components:
       properties:
         name:
           type: string
+          example: 'general'
 
     UpdateWorkspaceInput:
       type: object
       properties:
         name:
           type: string
+          example: 'general'
         settings:
           type: object
           description: Partial workspace settings to update. Only provided fields are changed.
@@ -4220,10 +4621,12 @@ components:
         invited_email:
           type: string
           format: email
+          example: 'newuser@example.com'
         role:
           $ref: '#/components/schemas/WorkspaceRole'
         max_uses:
           type: integer
+          example: 25
         expires_in_hours:
           type: integer
 
@@ -4242,6 +4645,7 @@ components:
       properties:
         name:
           type: string
+          example: 'general'
         description:
           type: string
         type:
@@ -4255,6 +4659,7 @@ components:
       properties:
         name:
           type: string
+          example: 'general'
         description:
           type: string
         type:
@@ -4265,6 +4670,7 @@ components:
       properties:
         name:
           type: string
+          example: 'general'
         description:
           type: string
         type:
@@ -4275,9 +4681,11 @@ components:
       properties:
         content:
           type: string
+          example: 'Hello, world!'
           maxLength: 40000
         thread_parent_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
         attachment_ids:
           type: array
           items:
@@ -4292,6 +4700,7 @@ components:
       properties:
         cursor:
           type: string
+          example: 'eyJpZCI6IjAxSkVYQU1QTEUifQ'
         limit:
           type: integer
         direction:
@@ -4314,18 +4723,25 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         channel_id:
           type: string
+          example: '01JQ3KMQ8YNBC3DFHM6RWVS7AG'
         channel_name:
           type: string
+          example: 'general'
         workspace_id:
           type: string
+          example: '01JQ3KMP2RQHYJ5ZV8NMWCX4ET'
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         content:
           type: string
+          example: 'Hello, world!'
         thread_parent_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
         also_send_to_channel:
           type: boolean
         attachment_ids:
@@ -4337,6 +4753,7 @@ components:
           format: date-time
         status:
           type: string
+          example: 'In a meeting'
           enum: [pending, sending, failed]
         last_error:
           type: string
@@ -4353,12 +4770,14 @@ components:
       properties:
         content:
           type: string
+          example: 'Hello, world!'
           maxLength: 40000
         scheduled_for:
           type: string
           format: date-time
         thread_parent_id:
           type: string
+          example: '01JQ3KMR5KVDW2TG9NHP0XEJBL'
         also_send_to_channel:
           type: boolean
         attachment_ids:
@@ -4371,6 +4790,7 @@ components:
       properties:
         content:
           type: string
+          example: 'Hello, world!'
           maxLength: 40000
         scheduled_for:
           type: string
@@ -4387,14 +4807,17 @@ components:
       properties:
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         reason:
           type: string
+          example: 'Repeated spam'
           maxLength: 500
         hide_messages:
           type: boolean
           default: false
         duration_hours:
           type: integer
+          example: 24
           description: Hours until ban expires. Omit for permanent.
           minimum: 1
           maximum: 8760
@@ -4405,14 +4828,18 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         workspace_id:
           type: string
+          example: '01JQ3KMP2RQHYJ5ZV8NMWCX4ET'
         user_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         banned_by:
           type: string
         reason:
           type: string
+          example: 'Repeated spam'
         hide_messages:
           type: boolean
         expires_at:
@@ -4429,12 +4856,16 @@ components:
           properties:
             user_display_name:
               type: string
+              example: 'Alice Chen'
             user_email:
               type: string
+              example: 'alice@example.com'
             user_avatar_url:
               type: string
+              example: '/files/01JQ3KMT6B/download?sig=abc'
             banned_by_name:
               type: string
+              example: 'Bob Martinez'
 
     BlockWithUser:
       type: object
@@ -4442,19 +4873,25 @@ components:
       properties:
         workspace_id:
           type: string
+          example: '01JQ3KMP2RQHYJ5ZV8NMWCX4ET'
         blocker_id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         blocked_id:
           type: string
+          example: '01JQ3KMS4WTVY6BN8FRCJD2HAQ'
         created_at:
           type: string
           format: date-time
         display_name:
           type: string
+          example: 'Alice Chen'
         email:
           type: string
+          example: 'alice@example.com'
         avatar_url:
           type: string
+          example: '/files/01JQ3KMT6B/download?sig=abc'
 
     ModerationLogEntryWithActor:
       type: object
@@ -4462,16 +4899,22 @@ components:
       properties:
         id:
           type: string
+          example: '01JQ3KMN7XFGY4P6WBR2SZTA9V'
         workspace_id:
           type: string
+          example: '01JQ3KMP2RQHYJ5ZV8NMWCX4ET'
         actor_id:
           type: string
+          example: '01JQ3KMS4WTVY6BN8FRCJD2HAQ'
         action:
           type: string
+          example: 'ban_user'
         target_type:
           type: string
+          example: 'user'
         target_id:
           type: string
+          example: '01JQ3KMS4WTVY6BN8FRCJD2HAQ'
         metadata:
           type: object
           additionalProperties: true
@@ -4480,7 +4923,9 @@ components:
           format: date-time
         actor_display_name:
           type: string
+          example: 'Bob Martinez'
         actor_avatar_url:
           type: string
         target_display_name:
           type: string
+          example: 'Carol Williams'

@@ -3,8 +3,9 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "tailwindcss -i src/css/main.css -o _site/css/main.css && concurrently \"eleventy --serve\" \"tailwindcss -i src/css/main.css -o _site/css/main.css --watch\"",
-    "build": "tailwindcss -i src/css/main.css -o _site/css/main.css --minify && eleventy"
+    "generate-api-docs": "node scripts/generate-api-docs.mjs",
+    "dev": "pnpm generate-api-docs && tailwindcss -i src/css/main.css -o _site/css/main.css && concurrently \"eleventy --serve\" \"tailwindcss -i src/css/main.css -o _site/css/main.css --watch\"",
+    "build": "pnpm generate-api-docs && tailwindcss -i src/css/main.css -o _site/css/main.css --minify && eleventy"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.0.0",
