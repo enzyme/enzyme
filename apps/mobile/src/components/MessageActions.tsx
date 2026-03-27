@@ -1,9 +1,11 @@
 import { useCallback } from 'react';
-import { View, Text, Pressable, Modal, Alert } from 'react-native';
+import { Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useDeleteMessage, setEditingMessageId } from '@enzyme/shared';
 import type { MessageWithUser } from '@enzyme/api-client';
 import { ReactionPicker } from './ReactionPicker';
+import { BottomSheet } from './ui/BottomSheet';
+import { ActionButton } from './ui/ActionButton';
 
 interface MessageActionsProps {
   message: MessageWithUser | null;
@@ -72,21 +74,13 @@ export function MessageActions({
   return (
     <>
       {/* Action Sheet */}
-      <Modal visible={showActions} animationType="fade" transparent onRequestClose={onDismiss}>
-        <Pressable className="flex-1 justify-end bg-black/40" onPress={onDismiss}>
-          <Pressable className="rounded-t-2xl bg-white pb-8 dark:bg-neutral-800">
-            <View className="items-center py-2">
-              <View className="h-1 w-10 rounded-full bg-neutral-300 dark:bg-neutral-600" />
-            </View>
-
-            {onReply && <ActionButton label="Reply in thread" onPress={handleReply} />}
-            <ActionButton label="Add reaction" onPress={handleAddReaction} />
-            <ActionButton label="Copy text" onPress={handleCopy} />
-            {isOwnMessage && <ActionButton label="Edit" onPress={handleEdit} />}
-            {isOwnMessage && <ActionButton label="Delete" onPress={handleDelete} destructive />}
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <BottomSheet visible={showActions} onDismiss={onDismiss}>
+        {onReply && <ActionButton label="Reply in thread" onPress={handleReply} />}
+        <ActionButton label="Add reaction" onPress={handleAddReaction} />
+        <ActionButton label="Copy text" onPress={handleCopy} />
+        {isOwnMessage && <ActionButton label="Edit" onPress={handleEdit} />}
+        {isOwnMessage && <ActionButton label="Delete" onPress={handleDelete} destructive />}
+      </BottomSheet>
 
       {/* Reaction Picker */}
       {activeMessage && (
@@ -98,30 +92,5 @@ export function MessageActions({
         />
       )}
     </>
-  );
-}
-
-function ActionButton({
-  label,
-  onPress,
-  destructive = false,
-}: {
-  label: string;
-  onPress: () => void;
-  destructive?: boolean;
-}) {
-  return (
-    <Pressable
-      className="px-6 py-3.5 active:bg-neutral-100 dark:active:bg-neutral-700"
-      onPress={onPress}
-    >
-      <Text
-        className={`text-base ${
-          destructive ? 'font-semibold text-red-500' : 'text-neutral-900 dark:text-white'
-        }`}
-      >
-        {label}
-      </Text>
-    </Pressable>
   );
 }

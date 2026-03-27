@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -22,11 +22,18 @@ export function SearchScreen({ route, navigation }: MainScreenProps<'Search'>) {
 
   const [queryText, setQueryText] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [offset, setOffset] = useState(0);
+  const [allMessages, setAllMessages] = useState<SearchMessage[]>([]);
   const [channelId, setChannelId] = useState<string | undefined>();
   const [userId, setUserId] = useState<string | undefined>();
   const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const { data, isLoading, isFetching } = useSearch({
     workspaceId,
@@ -37,18 +44,24 @@ export function SearchScreen({ route, navigation }: MainScreenProps<'Search'>) {
     limit: 20,
   });
 
-  const handleTextChange = useCallback(
-    (text: string) => {
-      setQueryText(text);
-      if (debounceTimer) clearTimeout(debounceTimer);
-      const timer = setTimeout(() => {
-        setDebouncedQuery(text.trim());
-        setOffset(0);
-      }, 300);
-      setDebounceTimer(timer);
-    },
-    [debounceTimer],
-  );
+  useEffect(() => {
+    if (data?.messages) {
+      if (offset === 0) {
+        setAllMessages(data.messages);
+      } else {
+        setAllMessages((prev) => [...prev, ...data.messages]);
+      }
+    }
+  }, [data?.messages, offset]);
+
+  const handleTextChange = useCallback((text: string) => {
+    setQueryText(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedQuery(text.trim());
+      setOffset(0);
+    }, 300);
+  }, []);
 
   const handleLoadMore = useCallback(() => {
     if (data?.has_more && !isFetching) {
@@ -111,8 +124,6 @@ export function SearchScreen({ route, navigation }: MainScreenProps<'Search'>) {
     [navigation, workspaceId],
   );
 
-  const messages = data?.messages ?? [];
-
   return (
     <View className="flex-1 bg-white dark:bg-neutral-900">
       {/* Search bar */}
@@ -146,7 +157,7 @@ export function SearchScreen({ route, navigation }: MainScreenProps<'Search'>) {
         <View className="items-center pt-20">
           <ActivityIndicator size="large" />
         </View>
-      ) : debouncedQuery && messages.length === 0 ? (
+      ) : debouncedQuery && allMessages.length === 0 && !isFetching ? (
         <View className="items-center px-8 pt-20">
           <Text className="text-center text-base text-neutral-500 dark:text-neutral-400">
             No results found
@@ -161,7 +172,7 @@ export function SearchScreen({ route, navigation }: MainScreenProps<'Search'>) {
         </View>
       ) : (
         <FlatList
-          data={messages}
+          data={allMessages}
           keyExtractor={(item) => item.id}
           renderItem={renderResult}
           onEndReached={handleLoadMore}

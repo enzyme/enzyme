@@ -1,1 +1,1 @@
-export { useSearch } from '@enzyme/shared';
+export { useSearch, type UseSearchOptions } from '@enzyme/shared';

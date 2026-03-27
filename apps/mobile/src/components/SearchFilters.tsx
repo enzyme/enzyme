@@ -1,8 +1,9 @@
-import { useCallback } from 'react';
-import { View, Text, Pressable, Modal, FlatList } from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { View, Text, Pressable, FlatList } from 'react-native';
 import { useChannels, useWorkspaceMembers } from '@enzyme/shared';
 import type { ChannelWithMembership, WorkspaceMemberWithUser } from '@enzyme/api-client';
 import { Avatar } from './ui/Avatar';
+import { BottomSheet } from './ui/BottomSheet';
 
 interface SearchFiltersProps {
   visible: boolean;
@@ -26,7 +27,13 @@ export function SearchFilters({
   const { data: channelsData } = useChannels(workspaceId);
   const { data: membersData } = useWorkspaceMembers(workspaceId);
 
-  const channels = channelsData?.channels?.filter((c) => !c.archived_at) ?? [];
+  const channels = useMemo(
+    () =>
+      (channelsData?.channels ?? []).filter(
+        (c) => !c.archived_at && c.type !== 'dm' && c.type !== 'group_dm',
+      ),
+    [channelsData],
+  );
   const members = membersData?.members ?? [];
 
   const handleClear = useCallback(() => {
@@ -83,58 +90,50 @@ export function SearchFilters({
   const hasFilters = !!selectedChannelId || !!selectedUserId;
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onDismiss}>
-      <Pressable className="flex-1 justify-end bg-black/40" onPress={onDismiss}>
-        <Pressable className="max-h-[70%] rounded-t-2xl bg-white pb-8 dark:bg-neutral-800">
-          <View className="items-center py-2">
-            <View className="h-1 w-10 rounded-full bg-neutral-300 dark:bg-neutral-600" />
-          </View>
+    <BottomSheet visible={visible} onDismiss={onDismiss} className="max-h-[70%]">
+      <View className="flex-row items-center justify-between px-4 pb-2">
+        <Text className="text-lg font-bold text-neutral-900 dark:text-white">Filters</Text>
+        {hasFilters && (
+          <Pressable onPress={handleClear}>
+            <Text className="text-sm text-blue-500">Clear all</Text>
+          </Pressable>
+        )}
+      </View>
 
-          <View className="flex-row items-center justify-between px-4 pb-2">
-            <Text className="text-lg font-bold text-neutral-900 dark:text-white">Filters</Text>
-            {hasFilters && (
-              <Pressable onPress={handleClear}>
-                <Text className="text-sm text-blue-500">Clear all</Text>
-              </Pressable>
-            )}
-          </View>
+      {/* Channel filter */}
+      <View className="px-4 pb-1 pt-2">
+        <Text className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          Channel
+        </Text>
+      </View>
+      <FlatList
+        data={channels}
+        keyExtractor={(item) => item.id}
+        renderItem={renderChannel}
+        style={{ maxHeight: 150 }}
+      />
 
-          {/* Channel filter */}
-          <View className="px-4 pb-1 pt-2">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-              Channel
-            </Text>
-          </View>
-          <FlatList
-            data={channels.filter((c) => c.type !== 'dm' && c.type !== 'group_dm')}
-            keyExtractor={(item) => item.id}
-            renderItem={renderChannel}
-            style={{ maxHeight: 150 }}
-          />
+      {/* User filter */}
+      <View className="px-4 pb-1 pt-3">
+        <Text className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          From
+        </Text>
+      </View>
+      <FlatList
+        data={members}
+        keyExtractor={(item) => item.user_id}
+        renderItem={renderMember}
+        style={{ maxHeight: 150 }}
+      />
 
-          {/* User filter */}
-          <View className="px-4 pb-1 pt-3">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-              From
-            </Text>
-          </View>
-          <FlatList
-            data={members}
-            keyExtractor={(item) => item.user_id}
-            renderItem={renderMember}
-            style={{ maxHeight: 150 }}
-          />
-
-          <View className="px-4 pt-4">
-            <Pressable
-              className="items-center rounded-lg bg-blue-500 py-3 active:bg-blue-600"
-              onPress={onDismiss}
-            >
-              <Text className="text-base font-semibold text-white">Apply</Text>
-            </Pressable>
-          </View>
+      <View className="px-4 pt-4">
+        <Pressable
+          className="items-center rounded-lg bg-blue-500 py-3 active:bg-blue-600"
+          onPress={onDismiss}
+        >
+          <Text className="text-base font-semibold text-white">Apply</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </View>
+    </BottomSheet>
   );
 }

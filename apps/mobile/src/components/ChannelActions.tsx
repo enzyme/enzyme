@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { View, Text, Pressable, Modal, Alert } from 'react-native';
+import { Alert } from 'react-native';
 import {
   useStarChannel,
   useUnstarChannel,
@@ -9,6 +9,8 @@ import {
   useUpdateChannelNotifications,
 } from '@enzyme/shared';
 import type { ChannelWithMembership } from '@enzyme/api-client';
+import { BottomSheet } from './ui/BottomSheet';
+import { ActionButton } from './ui/ActionButton';
 
 interface ChannelActionsProps {
   channel: ChannelWithMembership | null;
@@ -46,13 +48,13 @@ export function ChannelActions({ channel, workspaceId, onDismiss, onLeave }: Cha
       email_enabled: currentEmailEnabled,
     });
     onDismiss();
-  }, [channel, isMuted, updateNotifications, onDismiss]);
+  }, [channel, isMuted, notifData, updateNotifications, onDismiss]);
 
   const handleMarkAsRead = useCallback(() => {
     if (!channel) return;
     markAsRead.mutate({ channelId: channel.id });
     onDismiss();
-  }, [channel, workspaceId, markAsRead, onDismiss]);
+  }, [channel, markAsRead, onDismiss]);
 
   const handleLeave = useCallback(() => {
     if (!channel) return;
@@ -71,48 +73,15 @@ export function ChannelActions({ channel, workspaceId, onDismiss, onLeave }: Cha
   }, [channel, leaveChannel, onDismiss, onLeave]);
 
   return (
-    <Modal visible={!!channel} animationType="fade" transparent onRequestClose={onDismiss}>
-      <Pressable className="flex-1 justify-end bg-black/40" onPress={onDismiss}>
-        <Pressable className="rounded-t-2xl bg-white pb-8 dark:bg-neutral-800">
-          <View className="items-center py-2">
-            <View className="h-1 w-10 rounded-full bg-neutral-300 dark:bg-neutral-600" />
-          </View>
-
-          <ActionButton label={channel?.is_starred ? 'Unstar' : 'Star'} onPress={handleStar} />
-          {!isDM && <ActionButton label={isMuted ? 'Unmute' : 'Mute'} onPress={handleMute} />}
-          {channel && channel.unread_count > 0 && (
-            <ActionButton label="Mark as read" onPress={handleMarkAsRead} />
-          )}
-          {channel && !channel.is_default && !isDM && (
-            <ActionButton label="Leave channel" onPress={handleLeave} destructive />
-          )}
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-function ActionButton({
-  label,
-  onPress,
-  destructive = false,
-}: {
-  label: string;
-  onPress: () => void;
-  destructive?: boolean;
-}) {
-  return (
-    <Pressable
-      className="px-6 py-3.5 active:bg-neutral-100 dark:active:bg-neutral-700"
-      onPress={onPress}
-    >
-      <Text
-        className={`text-base ${
-          destructive ? 'font-semibold text-red-500' : 'text-neutral-900 dark:text-white'
-        }`}
-      >
-        {label}
-      </Text>
-    </Pressable>
+    <BottomSheet visible={!!channel} onDismiss={onDismiss}>
+      <ActionButton label={channel?.is_starred ? 'Unstar' : 'Star'} onPress={handleStar} />
+      <ActionButton label={isMuted ? 'Unmute' : 'Mute'} onPress={handleMute} />
+      {channel && channel.unread_count > 0 && (
+        <ActionButton label="Mark as read" onPress={handleMarkAsRead} />
+      )}
+      {channel && !channel.is_default && !isDM && (
+        <ActionButton label="Leave channel" onPress={handleLeave} destructive />
+      )}
+    </BottomSheet>
   );
 }

@@ -37,6 +37,9 @@ export function CreateChannelScreen({ route, navigation }: MainScreenProps<'Crea
             channelName: data.channel.name,
           });
         },
+        onError: (err) => {
+          setError(err instanceof Error ? err.message : 'Failed to create channel');
+        },
       },
     );
   };
@@ -82,6 +85,7 @@ export function CreateChannelScreen({ route, navigation }: MainScreenProps<'Crea
         onChangeText={handleNameChange}
         autoCapitalize="none"
         autoCorrect={false}
+        maxLength={80}
       />
       {error ? (
         <Text className="mb-4 text-sm text-red-500">{error}</Text>
@@ -104,6 +108,7 @@ export function CreateChannelScreen({ route, navigation }: MainScreenProps<'Crea
         multiline
         numberOfLines={3}
         textAlignVertical="top"
+        maxLength={1000}
       />
 
       {/* Submit */}

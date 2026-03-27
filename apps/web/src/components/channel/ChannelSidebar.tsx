@@ -64,7 +64,7 @@ import {
   useMarkAllChannelsAsRead,
 } from '../../hooks/useChannels';
 import { cn } from '../../lib/utils';
-import { getAvatarColor, hasPermission } from '@enzyme/shared';
+import { getAvatarColor, hasPermission, CHANNEL_NAME_REGEX } from '@enzyme/shared';
 import { useUserPresence } from '../../lib/presenceStore';
 import { AvatarStack } from '../ui';
 import type { ChannelWithMembership, ChannelType } from '@enzyme/api-client';
@@ -785,8 +785,6 @@ function ChannelItemContent({ channel }: ChannelItemContentProps) {
     </>
   );
 }
-
-const CHANNEL_NAME_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 function ChannelBrowserModal({
   isOpen,
