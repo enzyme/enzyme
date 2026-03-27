@@ -111,6 +111,7 @@ export {
   useChannelNotifications,
   useUpdateChannelNotifications,
   useSearch,
+  type UseSearchOptions,
   useMentions,
   useAllUnreads,
   useWorkspace,
