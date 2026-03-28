@@ -41,6 +41,10 @@ func New(host string, port int, handler http.Handler, tlsOpts TLSOptions, readTi
 			ReadTimeout:  readTimeout,
 			WriteTimeout: writeTimeout,
 			IdleTimeout:  idleTimeout,
+			// Disable HTTP/2: SSE fan-out over HTTP/2 causes write serialization
+			// because all streams share a single TCP connection's write buffer.
+			// HTTP/1.1 gives each SSE connection its own TCP socket for parallel writes.
+			TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler)),
 		},
 	}
 

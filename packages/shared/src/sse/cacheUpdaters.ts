@@ -180,8 +180,6 @@ export function handleNewMessage(
         },
       );
 
-      // Also invalidate workspace notifications so non-active workspace indicators update
-      queryClient.invalidateQueries({ queryKey: workspaceKeys.notifications() });
     }
   }
 }
@@ -636,7 +634,6 @@ export function handleNotification(
         };
       },
     );
-    queryClient.invalidateQueries({ queryKey: workspaceKeys.notifications() });
   }
 
   return data;

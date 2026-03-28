@@ -19,7 +19,7 @@ type Client struct {
 	ID          string
 	UserID      string
 	WorkspaceID string
-	Send        chan Event
+	Send        chan SerializedEvent
 	Done        chan struct{}
 }
 
@@ -177,6 +177,13 @@ func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {
 	// Queue event storage asynchronously (no DB I/O on this goroutine)
 	h.enqueueStoreEvent(workspaceID, "", event)
 
+	// Pre-serialize once for all subscribers
+	serialized, err := event.Serialize()
+	if err != nil {
+		slog.Error("failed to serialize SSE event", "event_id", event.ID, "error", err)
+		return
+	}
+
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -184,7 +191,7 @@ func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {
 		for _, clients := range workspace {
 			for _, client := range clients {
 				select {
-				case client.Send <- event:
+				case client.Send <- serialized:
 				default:
 					// Client buffer full, skip
 				}
@@ -203,6 +210,13 @@ func (h *Hub) BroadcastToChannel(workspaceID, channelID string, event Event) {
 	// Queue event storage asynchronously (no DB I/O on this goroutine)
 	h.enqueueStoreEvent(workspaceID, channelID, event)
 
+	// Pre-serialize once for all subscribers
+	serialized, err := event.Serialize()
+	if err != nil {
+		slog.Error("failed to serialize SSE event", "event_id", event.ID, "error", err)
+		return
+	}
+
 	// Resolve channel members before taking the broadcast lock.
 	// getChannelMembers manages its own locking internally.
 	members := h.getChannelMembers(channelID)
@@ -215,7 +229,7 @@ func (h *Hub) BroadcastToChannel(workspaceID, channelID string, event Event) {
 			if members[userID] {
 				for _, client := range clients {
 					select {
-					case client.Send <- event:
+					case client.Send <- serialized:
 					default:
 						// Client buffer full, skip
 					}
@@ -226,20 +240,27 @@ func (h *Hub) BroadcastToChannel(workspaceID, channelID string, event Event) {
 }
 
 func (h *Hub) BroadcastToUser(workspaceID, userID string, event Event) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
 	if event.ID == "" {
 		event.ID = ulid.Make().String()
 	}
 
 	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsUser)
 
+	// Pre-serialize once for all subscriber connections
+	serialized, err := event.Serialize()
+	if err != nil {
+		slog.Error("failed to serialize SSE event", "event_id", event.ID, "error", err)
+		return
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	if workspace, ok := h.workspaces[workspaceID]; ok {
 		if clients, ok := workspace[userID]; ok {
 			for _, client := range clients {
 				select {
-				case client.Send <- event:
+				case client.Send <- serialized:
 				default:
 				}
 			}
