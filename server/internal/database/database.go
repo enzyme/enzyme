@@ -33,7 +33,7 @@ func Open(path string, opts Options) (*DB, error) {
 
 	// Build DSN with pragmas applied per-connection, ensuring every connection
 	// in the pool gets all pragmas (fixes foreign_keys correctness with pool > 1).
-	dsn := fmt.Sprintf("%s?_pragma=journal_mode%%28WAL%%29&_pragma=busy_timeout%%28%d%%29&_pragma=foreign_keys%%28ON%%29&_pragma=synchronous%%28NORMAL%%29&_pragma=cache_size%%28%d%%29&_pragma=mmap_size%%28%d%%29",
+	dsn := fmt.Sprintf("%s?_pragma=journal_mode%%28WAL%%29&_pragma=busy_timeout%%28%d%%29&_pragma=foreign_keys%%28ON%%29&_pragma=synchronous%%28NORMAL%%29&_pragma=cache_size%%28%d%%29&_pragma=mmap_size%%28%d%%29&_pragma=temp_store%%282%%29",
 		path, opts.BusyTimeout, opts.CacheSize, opts.MmapSize)
 
 	db, err := sql.Open("sqlite", dsn)

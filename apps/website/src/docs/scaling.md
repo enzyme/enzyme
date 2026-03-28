@@ -26,7 +26,7 @@ SQLite handles all storage in Enzyme. These pragmas are set per-connection via D
 
 ### When to Adjust
 
-- **More concurrent users**: Increase `max_open_conns` (4-8 is reasonable for most workloads). Each read query can run on its own connection without blocking writes.
+- **More concurrent users**: Increase `max_open_conns` (4-8 is reasonable for most workloads). Each read query can run on its own connection without blocking writes. With the default of `2`, a single slow query (e.g., notification aggregation across many channels) can hold one connection while every other handler — auth validation, message sends, SSE event persistence — queues behind the remaining one.
 - **Write contention errors**: Increase `busy_timeout`. If you see `SQLITE_BUSY` in logs, the default 5 seconds isn't enough for your write volume.
 - **Slow queries on large databases**: Increase `cache_size` (e.g., `-64000` for ~64 MB) and enable `mmap_size` (e.g., `268435456` for 256 MB). This keeps hot pages in memory.
 - **Small VPS with limited RAM**: Keep defaults. The ~2 MB per-connection cache is intentionally conservative.
@@ -85,6 +85,33 @@ enzyme  soft  nofile  65536
 enzyme  hard  nofile  65536
 ```
 
+### TCP Memory
+
+Each SSE connection uses its own TCP socket (Enzyme disables HTTP/2 to avoid write serialization). Under heavy broadcast load, the kernel's TCP buffer memory can hit the pressure threshold and start dropping connections. This manifests as periodic waves of disconnections followed by reconnections.
+
+Check current TCP memory usage:
+
+```bash
+cat /proc/net/sockstat | grep TCP
+# TCP: inuse 5012 ... mem 18432
+```
+
+The `mem` value is in pages (4 KB each). Compare it to the kernel's pressure threshold:
+
+```bash
+sysctl net.ipv4.tcp_mem
+# net.ipv4.tcp_mem = 383139  510854  766278
+#                    min      pressure  max (in pages)
+```
+
+If `mem` approaches the pressure value during load, increase the limits:
+
+```bash
+sysctl -w net.ipv4.tcp_mem="50000 75000 100000"
+```
+
+Add to `/etc/sysctl.conf` to persist across reboots. On a 1 GB server with 5,000 SSE connections, TCP memory can peak at ~80 MB (20,000 pages) during broadcast bursts.
+
 ### TCP Backlog
 
 For servers handling many simultaneous connections:
@@ -92,9 +119,69 @@ For servers handling many simultaneous connections:
 ```bash
 sysctl -w net.core.somaxconn=4096
 sysctl -w net.ipv4.tcp_max_syn_backlog=4096
+sysctl -w net.core.netdev_max_backlog=5000
 ```
 
+The default `tcp_max_syn_backlog` of 128 is too low — if connections drop and thousands of clients reconnect simultaneously, the SYN queue overflows and reconnections fail.
+
 Add to `/etc/sysctl.conf` to persist across reboots.
+
+### Capabilities and SQLite
+
+If you use `setcap cap_net_bind_service=+ep` on the Enzyme binary to bind to port 443 without root, be aware that file capabilities interact badly with `modernc.org/sqlite` (the pure-Go SQLite driver). The capability flag changes how the kernel handles the process's memory mappings, causing disk I/O errors on all write operations.
+
+Instead, grant the capability through systemd:
+
+```ini
+[Service]
+User=enzyme
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+```
+
+This achieves the same result without modifying the binary.
+
+### Profiling
+
+To investigate performance issues, you can add Go's built-in pprof profiler. Import `net/http/pprof` and start a listener on a localhost-only port in a goroutine:
+
+```go
+import "net/http/pprof"
+
+mux := http.NewServeMux()
+mux.HandleFunc("/debug/pprof/", pprof.Index)
+mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+go http.ListenAndServe("localhost:6060", mux)
+```
+
+Then access it via SSH tunnel:
+
+```bash
+ssh -L 6060:localhost:6060 root@your-server
+go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30  # CPU
+go tool pprof http://localhost:6060/debug/pprof/heap                # memory
+```
+
+---
+
+## SSE Performance
+
+Enzyme broadcasts real-time events to all connected clients via Server-Sent Events. At high connection counts, three bottlenecks can appear:
+
+### Per-subscriber serialization
+
+Each SSE event is serialized to JSON once before broadcast and sent as pre-marshaled bytes to all subscribers. If you see high CPU in `json.Marshal` under load, this is already optimized in current versions.
+
+### HTTP/2 write serialization
+
+HTTP/2 multiplexes all streams over a single TCP connection, which means SSE writes to different clients serialize through one write buffer. Enzyme disables HTTP/2 automatically (`TLSNextProto` is set to an empty map) so each SSE client gets its own TCP socket for parallel writes. No configuration is needed.
+
+### Flush overhead
+
+SSE writes are batched — when an event arrives, all pending events in the client's buffer are drained and written before a single `Flush()` call. This reduces syscall overhead under burst traffic. The `client_buffer_size` setting controls how many events can queue before the client is considered too slow.
 
 ---
 
@@ -176,9 +263,10 @@ telemetry:
 
 Key metrics to watch when scaling:
 
-- **SQLite busy retries**: `SQLITE_BUSY` errors in logs indicate write contention. Increase `busy_timeout` or reduce `max_open_conns`.
+- **SQLite busy retries**: `SQLITE_BUSY` errors in logs indicate write contention. Increase `busy_timeout` or reduce `max_open_conns`. Occasional SQLITE_BUSY under peak load is normal — the important thing is that they don't cascade into persistent I/O errors (which would indicate an outdated `modernc.org/sqlite` version; v1.46.1+ is required).
 - **SSE connection count**: Monitor the number of active SSE clients. Each consumes memory proportional to `client_buffer_size`.
 - **Memory usage**: (`cache_size` x `max_open_conns`) + `mmap_size` + (SSE clients x buffer size x avg event size) gives a rough memory floor.
 - **File descriptors**: `ls /proc/$(pidof enzyme)/fd | wc -l` shows current usage. Compare to `LimitNOFILE`.
-- **Response latency**: If P99 response times degrade, the database may benefit from a larger cache or mmap.
+- **Response latency**: If P99 response times degrade, check `max_open_conns` first. Expensive read queries (like notification aggregation) can hold connections for hundreds of milliseconds, starving other handlers. Increasing the pool size (e.g., to 4-8) gives handlers their own connections. If latency persists after that, the database may benefit from a larger cache or mmap. Use `EXPLAIN QUERY PLAN` on slow queries to verify they're using indexes.
+- **TCP memory**: During SSE broadcast bursts, check `cat /proc/net/sockstat | grep TCP` — if the `mem` value approaches the kernel's `tcp_mem` pressure threshold, connections will be dropped. See [TCP Memory](#tcp-memory) above.
 - **Trace export backpressure**: If the OTLP exporter queue fills up, you'll see dropped spans in logs. Lower `sample_rate` or scale your collector.

@@ -1,6 +1,11 @@
 package sse
 
-import "github.com/enzyme/server/internal/openapi"
+import (
+	"encoding/json"
+
+	"github.com/enzyme/server/internal/openapi"
+	"github.com/oklog/ulid/v2"
+)
 
 // Event type constants derived from the generated OpenAPI enum.
 // Using string() on the generated constants ensures compile-time linkage:
@@ -48,4 +53,24 @@ type Event struct {
 	ID   string      `json:"id,omitempty"`
 	Type string      `json:"type"`
 	Data interface{} `json:"data,omitempty"`
+}
+
+// SerializedEvent is a pre-marshaled SSE event ready for writing to clients.
+// The JSON is marshaled once in the broadcast path rather than per-subscriber.
+type SerializedEvent struct {
+	ID   string
+	Data []byte // pre-marshaled JSON of the full Event
+}
+
+// Serialize marshals an Event into a SerializedEvent.
+// The event ID is assigned if empty.
+func (e Event) Serialize() (SerializedEvent, error) {
+	if e.ID == "" {
+		e.ID = ulid.Make().String()
+	}
+	data, err := json.Marshal(e)
+	if err != nil {
+		return SerializedEvent{}, err
+	}
+	return SerializedEvent{ID: e.ID, Data: data}, nil
 }
