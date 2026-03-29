@@ -28,16 +28,10 @@ const sseMsgSent = new Counter('sse_messages_sent');
 const sseMsgErrors = new Counter('sse_message_errors');
 
 // Configuration via env vars (with upper bounds to prevent accidental self-DoS)
-const CONNECTIONS = Math.min(parseInt(__ENV.SSE_CONNECTIONS || '100'), 5000);
+const CONNECTIONS = parseInt(__ENV.SSE_CONNECTIONS || '100', 10);
 const DURATION = __ENV.SSE_DURATION || '2m';
-const MSG_RATE = Math.min(parseInt(__ENV.SSE_MSG_RATE || '5'), 100);
+const MSG_RATE = parseInt(__ENV.SSE_MSG_RATE || '5', 10);
 const RAMP = __ENV.SSE_RAMP || '30s';
-
-if (CONNECTIONS > 1000) {
-  console.warn(
-    `SSE_CONNECTIONS=${CONNECTIONS} is very high. Ensure the target server can handle this.`,
-  );
-}
 
 export const options = {
   scenarios: {
@@ -91,10 +85,10 @@ export function holdConnection(data: UserContext[]) {
         // Measure end-to-end latency for messages with embedded timestamps.
         // Senders embed "t=<millis>" in message content. This measures
         // send RTT + server broadcast + SSE delivery, not just fan-out.
-        if (event.data?.includes('t=')) {
+        if (event.name === 'message_created' && event.data?.includes('t=')) {
           const match = event.data.match(/t=(\d+)/);
           if (match) {
-            const sentMs = parseInt(match[1]);
+            const sentMs = parseInt(match[1], 10);
             const latencyMs = Date.now() - sentMs;
             if (latencyMs > 0 && latencyMs < 30000) {
               e2eLatency.add(latencyMs);
@@ -132,7 +126,7 @@ export function generateActivity(data: UserContext[]) {
           addReaction(user.token, msgId, pickRandom(REACTION_EMOJIS));
         }
       } catch {
-        /* ignore parse errors */
+        sseMsgErrors.add(1);
       }
     }
   } else {

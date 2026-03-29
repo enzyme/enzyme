@@ -85,10 +85,8 @@ export function sendMessages(data: UserContext[]) {
   const res = sendMessage(user.token, channelId, content);
   sendDuration.add(Date.now() - start);
 
-  const body = jsonAs<SendMessageResponse>(res.json());
   const ok = check(res, {
     'send message status 200': (r) => r.status === 200,
-    'send message has id': () => body.message?.id != null,
   });
 
   if (!ok) {
@@ -96,6 +94,11 @@ export function sendMessages(data: UserContext[]) {
     sleep(1);
     return;
   }
+
+  const body = jsonAs<SendMessageResponse>(res.json());
+  check(null, {
+    'send message has id': () => body.message?.id != null,
+  });
 
   if (Math.random() < 0.3) {
     const reactRes = addReaction(user.token, body.message.id, pickRandom(REACTION_EMOJIS));

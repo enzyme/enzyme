@@ -66,7 +66,11 @@ LOAD_TESTS = apps/load-tests/dist
 load-test-build:
 	pnpm --filter @enzyme/load-tests build
 
-load-test: load-test-build load-test-auth load-test-messaging load-test-sse load-test-full
+load-test: load-test-build
+	k6 run $(K6_FLAGS) --env K6_BASE_URL=$(K6_BASE_URL) $(LOAD_TESTS)/auth.js
+	k6 run $(K6_FLAGS) --env K6_BASE_URL=$(K6_BASE_URL) $(LOAD_TESTS)/messaging.js
+	K6_ENABLE_COMMUNITY_EXTENSIONS=true k6 run $(K6_FLAGS) --env K6_BASE_URL=$(K6_BASE_URL) $(LOAD_TESTS)/sse.js
+	k6 run $(K6_FLAGS) --env K6_BASE_URL=$(K6_BASE_URL) $(LOAD_TESTS)/full.js
 
 load-test-auth: load-test-build
 	k6 run $(K6_FLAGS) --env K6_BASE_URL=$(K6_BASE_URL) $(LOAD_TESTS)/auth.js

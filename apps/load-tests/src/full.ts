@@ -10,6 +10,7 @@ import { check, sleep, group } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import type { UserContext } from './helpers.js';
 import type { ChannelListResponse, MessageListResult } from './helpers.js';
+import type { ChannelWithMembership, MessageWithUser } from '@enzyme/api-client';
 import {
   loginAllUsers,
   pickUser,
@@ -78,7 +79,7 @@ export function userWorkflow(data: UserContext[]) {
   sleep(0.5);
 
   // 2. List channels
-  let channels: Array<{ id: string; type: string }> = [];
+  let channels: ChannelWithMembership[] = [];
   group('list channels', () => {
     const res = listChannels(user.token, user.workspaceId);
     check(res, {
@@ -97,8 +98,8 @@ export function userWorkflow(data: UserContext[]) {
 
   // 3. Read messages
   const publicChannels = channels.filter((c) => c.type === 'public');
-  const channel = publicChannels.length > 0 ? publicChannels[0] : channels[0];
-  let messages: Array<{ id: string }> = [];
+  const channel = publicChannels.length > 0 ? pickRandom(publicChannels) : pickRandom(channels);
+  let messages: MessageWithUser[] = [];
   group('read messages', () => {
     const res = listMessages(user.token, channel.id, 50);
     check(res, {

@@ -9,10 +9,21 @@ import type {
 } from '@enzyme/api-client';
 
 // Re-export types used by test files
-export type { AuthResponse, MeResponse, MessageListResult };
+export type { MeResponse, MessageListResult };
 
 // Base URL — override with K6_BASE_URL env var
 export const BASE_URL = __ENV.K6_BASE_URL || 'http://localhost:8080';
+
+// Safety guard: refuse to run against non-localhost targets without explicit opt-in
+const isLocalhost =
+  BASE_URL.startsWith('http://localhost') || BASE_URL.startsWith('http://127.0.0.1');
+if (!isLocalhost && !__ENV.K6_CONFIRM_REMOTE) {
+  throw new Error(
+    `Refusing to run load tests against non-localhost target: ${BASE_URL}. ` +
+      `Set --env K6_CONFIRM_REMOTE=1 to override.`,
+  );
+}
+
 const API = `${BASE_URL}/api`;
 
 // Response shapes not directly in the OpenAPI schema (endpoint-specific wrappers)
@@ -30,6 +41,7 @@ export const REACTION_EMOJIS = ['+1', 'heart', 'rocket', 'eyes', 'fire', 'tada',
 export const SEARCH_QUERIES = ['hello', 'test', 'meeting', 'update', 'help', 'thanks'];
 
 export function pickRandom<T>(arr: readonly T[]): T {
+  if (arr.length === 0) throw new Error('pickRandom called with empty array');
   return arr[Math.floor(Math.random() * arr.length)];
 }
 

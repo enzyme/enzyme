@@ -62,17 +62,17 @@ export function loginScenario() {
   const token = login(user.email);
   loginDuration.add(Date.now() - start);
 
-  const loginOk = check(token, {
-    'login returned token': (t) => t !== null && t.length > 0,
-  });
-
-  if (!loginOk) {
+  if (!token) {
     loginFailures.add(1);
     sleep(1);
     return;
   }
 
-  const meRes = getMe(token!);
+  check(token, {
+    'login returned token': (t) => t.length > 0,
+  });
+
+  const meRes = getMe(token);
   check(meRes, {
     'GET /auth/me status 200': (r) => r.status === 200,
     'GET /auth/me returns email': (r) => jsonAs<MeResponse>(r.json()).user?.email === user.email,
@@ -86,17 +86,17 @@ export function registerScenario() {
   const { token, email } = registerUser(`vu${__VU}-${__ITER}`);
   registerDuration.add(Date.now() - start);
 
-  const regOk = check(token, {
-    'register returned token': (t) => t !== null && t.length > 0,
-  });
-
-  if (!regOk) {
+  if (!token) {
     registerFailures.add(1);
     sleep(1);
     return;
   }
 
-  const meRes = getMe(token!);
+  check(token, {
+    'register returned token': (t) => t.length > 0,
+  });
+
+  const meRes = getMe(token);
   check(meRes, {
     'new user GET /auth/me status 200': (r) => r.status === 200,
     'new user email matches': (r) => jsonAs<MeResponse>(r.json()).user?.email === email,

@@ -81,9 +81,16 @@ SSE support uses the [xk6-sse](https://github.com/phymbert/xk6-sse) extension, w
 
 ## Cleanup
 
-The `auth` test creates `loadtest-*` user accounts on each run. To clean up:
+The `auth` test creates `loadtest-*` user accounts and the `messaging`/`full` tests write messages into real channels on each run. These persist across runs. Re-seed between test sessions to reset:
 
 ```bash
-# Re-seed the database (deletes db file and re-creates)
 rm server/enzyme.db && make seed
+```
+
+## Remote Targets
+
+By default, load tests refuse to run against non-localhost servers. To run against a remote target, set `K6_CONFIRM_REMOTE=1`:
+
+```bash
+make load-test K6_BASE_URL=https://chat.enzyme.im K6_FLAGS="--env K6_CONFIRM_REMOTE=1"
 ```
