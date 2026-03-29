@@ -1,4 +1,4 @@
-.PHONY: dev build test clean generate-types install format format-check seed
+.PHONY: dev build test clean generate-types install format format-check seed load-test load-test-auth load-test-messaging load-test-sse load-test-full load-test-sse-stress
 
 # Development - runs API and web (add DESKTOP=1 for Electron, MOBILE=1 for Expo)
 dev:
@@ -57,3 +57,25 @@ seed:
 format-check:
 	cd server && test -z "$$(gofmt -l .)" || (echo "Go files not formatted"; exit 1)
 	pnpm format:check
+
+# Load testing with K6 (set BASE_URL for remote, defaults to localhost:8080)
+K6_BASE_URL ?= http://localhost:8080
+K6_FLAGS ?=
+
+load-test: load-test-auth load-test-messaging load-test-sse load-test-full
+
+load-test-auth:
+	k6 run $(K6_FLAGS) --env K6_BASE_URL=$(K6_BASE_URL) tests/load/auth.js
+
+load-test-messaging:
+	k6 run $(K6_FLAGS) --env K6_BASE_URL=$(K6_BASE_URL) tests/load/messaging.js
+
+load-test-sse:
+	k6 run $(K6_FLAGS) --env K6_BASE_URL=$(K6_BASE_URL) tests/load/sse.js
+
+load-test-full:
+	k6 run $(K6_FLAGS) --env K6_BASE_URL=$(K6_BASE_URL) tests/load/full.js
+
+SSE_CONNECTIONS ?= 10000
+load-test-sse-stress:
+	go run ./tests/load/sse-stress -base-url $(K6_BASE_URL) -connections $(SSE_CONNECTIONS)
