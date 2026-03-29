@@ -9,7 +9,7 @@
 import { check, sleep, group } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import type { UserContext } from './helpers.js';
-import type { ChannelListResponse, MessageListResponse } from './helpers.js';
+import type { ChannelListResponse, MessageListResult } from './helpers.js';
 import {
   loginAllUsers,
   pickUser,
@@ -104,7 +104,7 @@ export function userWorkflow(data: UserContext[]) {
     check(res, {
       'messages loaded': (r) => r.status === 200,
     });
-    const body = jsonAs<MessageListResponse>(res.json());
+    const body = jsonAs<MessageListResult>(res.json());
     messages = body.messages || [];
     check(null, {
       'has messages': () => messages.length > 0,

@@ -43,6 +43,10 @@ importers:
         version: 5.9.3
 
   apps/load-tests:
+    dependencies:
+      '@enzyme/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
     devDependencies:
       '@types/k6':
         specifier: ^1.0.0

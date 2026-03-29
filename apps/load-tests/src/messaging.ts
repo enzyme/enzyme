@@ -8,7 +8,7 @@
 import { check, sleep } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import type { UserContext } from './helpers.js';
-import type { SendMessageResponse, MessageListResponse } from './helpers.js';
+import type { SendMessageResponse, MessageListResult } from './helpers.js';
 import {
   loginAllUsers,
   pickUser,
@@ -122,7 +122,7 @@ export function readMessages(data: UserContext[]) {
   check(res, {
     'list messages status 200': (r) => r.status === 200,
     'list messages returns array': (r) =>
-      Array.isArray(jsonAs<MessageListResponse>(r.json()).messages),
+      Array.isArray(jsonAs<MessageListResult>(r.json()).messages),
   });
 
   sleep(1 + Math.random());

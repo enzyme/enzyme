@@ -1,30 +1,27 @@
 // Shared helpers for K6 load tests
 import http from 'k6/http';
+import type {
+  AuthResponse,
+  MeResponse,
+  ChannelWithMembership,
+  MessageWithUser,
+  MessageListResult,
+} from '@enzyme/api-client';
+
+// Re-export types used by test files
+export type { AuthResponse, MeResponse, MessageListResult };
 
 // Base URL — override with K6_BASE_URL env var
 export const BASE_URL = __ENV.K6_BASE_URL || 'http://localhost:8080';
 const API = `${BASE_URL}/api`;
 
-// Response shapes used across load tests
-export interface AuthResponse {
-  token: string;
-}
-
-export interface MeResponse {
-  user: { email: string };
-  workspaces: Array<{ id: string }>;
-}
-
+// Response shapes not directly in the OpenAPI schema (endpoint-specific wrappers)
 export interface ChannelListResponse {
-  channels: Array<{ id: string; type: string }>;
-}
-
-export interface MessageListResponse {
-  messages: Array<{ id: string }>;
+  channels: ChannelWithMembership[];
 }
 
 export interface SendMessageResponse {
-  message: { id: string };
+  message: MessageWithUser;
 }
 
 // Shared constants
@@ -123,7 +120,7 @@ export function loginAllUsers(): UserContext[] {
     if (meRes.status !== 200) continue;
 
     const me = jsonAs<MeResponse>(meRes.json());
-    if (me.workspaces.length === 0) continue;
+    if (!me.workspaces?.length) continue;
 
     const workspaceId = me.workspaces[0].id;
 

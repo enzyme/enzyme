@@ -6,7 +6,9 @@ import type { components } from '../generated/schema';
 export type User = components['schemas']['User'];
 export type UpdateProfileInput = components['schemas']['UpdateProfileInput'];
 
-// Auth input types
+// Auth types
+export type AuthResponse = components['schemas']['AuthResponse'];
+export type MeResponse = components['schemas']['MeResponse'];
 export type LoginInput = components['schemas']['LoginInput'];
 export type RegisterInput = components['schemas']['RegisterInput'];
 export type RegisterDeviceTokenInput = components['schemas']['RegisterDeviceTokenRequest'];
