@@ -1,0 +1,17 @@
+{
+  "name": "@enzyme/load-tests",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@enzyme/api-client": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/k6": "^1.0.0",
+    "typescript": "~5.9.3"
+  }
+}

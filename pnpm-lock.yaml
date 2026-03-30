@@ -42,6 +42,19 @@ importers:
         specifier: ~5.9.3
         version: 5.9.3
 
+  apps/load-tests:
+    dependencies:
+      '@enzyme/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+    devDependencies:
+      '@types/k6':
+        specifier: ^1.0.0
+        version: 1.7.0
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+
   apps/mobile:
     dependencies:
       '@enzyme/api-client':
@@ -3244,6 +3257,9 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+  '@types/k6@1.7.0':
+    resolution: {integrity: sha512-oL4mckVcOPIA2HUrCVj3aQXCJgCqsQe35Uc4fRTffmrQuR24v92GJImnagqUaRnC1TQVJFx85o3aHQPP+0bxpg==}
 
   '@types/keyv@3.1.4':
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
@@ -11932,6 +11948,8 @@ snapshots:
       '@types/istanbul-lib-report': 3.0.3
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/k6@1.7.0': {}
 
   '@types/keyv@3.1.4':
     dependencies:
