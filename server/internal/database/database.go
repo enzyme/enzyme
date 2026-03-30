@@ -37,6 +37,8 @@ func Open(path string, opts Options) (*DB, error) {
 	// than deferring it. Without this, the busy_timeout handler is never
 	// invoked when upgrading from a read to write lock mid-transaction —
 	// SQLite returns SQLITE_BUSY instantly to avoid deadlocks.
+	// temp_store=2 uses memory-backed temp tables instead of disk, avoiding
+	// temp file I/O for ORDER BY, GROUP BY, and window functions.
 	dsn := fmt.Sprintf("%s?_txlock=immediate&_pragma=journal_mode%%28WAL%%29&_pragma=busy_timeout%%28%d%%29&_pragma=foreign_keys%%28ON%%29&_pragma=synchronous%%28NORMAL%%29&_pragma=cache_size%%28%d%%29&_pragma=mmap_size%%28%d%%29&_pragma=temp_store%%282%%29",
 		path, opts.BusyTimeout, opts.CacheSize, opts.MmapSize)
 

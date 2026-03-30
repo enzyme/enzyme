@@ -179,6 +179,9 @@ export function handleNewMessage(
           };
         },
       );
+    // Note: We intentionally do NOT invalidate workspaceKeys.notifications() here.
+    // Under high message volume, per-message invalidation causes a thundering herd
+    // of queries. Workspace-level badge counts update via 30s polling instead.
     }
   }
 }
@@ -633,6 +636,7 @@ export function handleNotification(
         };
       },
     );
+    queryClient.invalidateQueries({ queryKey: workspaceKeys.notifications() });
   }
 
   return data;

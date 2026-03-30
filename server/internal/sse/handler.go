@@ -123,9 +123,11 @@ func (h *Handler) writeSerializedEvent(w http.ResponseWriter, event SerializedEv
 	_, _ = w.Write(event.Frame)
 }
 
-// drainAndFlush drains any pending events from the client channel and flushes once.
+// drainAndFlush drains pending events from the client channel and flushes once.
+// Capped to avoid unbounded draining if events arrive faster than writes.
 func (h *Handler) drainAndFlush(w http.ResponseWriter, flusher http.Flusher, client *Client) {
-	for {
+	const maxDrain = 64
+	for range maxDrain {
 		select {
 		case event := <-client.Send:
 			h.writeSerializedEvent(w, event)
@@ -134,6 +136,7 @@ func (h *Handler) drainAndFlush(w http.ResponseWriter, flusher http.Flusher, cli
 			return
 		}
 	}
+	flusher.Flush()
 }
 
 // writeLocalEvent serializes and writes an event generated locally (not from broadcast).

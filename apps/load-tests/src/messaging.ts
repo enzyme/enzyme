@@ -61,7 +61,7 @@ export const options = {
     ...STANDARD_THRESHOLDS,
     msg_send_duration: ['p(95)<800', 'p(99)<1500'],
     msg_list_duration: ['p(95)<300', 'p(99)<500'],
-    msg_search_duration: ['p(95)<5000'],
+    msg_search_duration: ['p(95)<2000'],
     msg_send_failures: ['count<20'],
   },
 };

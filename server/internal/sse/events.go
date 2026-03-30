@@ -3,6 +3,7 @@ package sse
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/enzyme/server/internal/openapi"
 	"github.com/oklog/ulid/v2"
@@ -68,6 +69,9 @@ type SerializedEvent struct {
 func (e Event) Serialize() (SerializedEvent, error) {
 	if e.ID == "" {
 		e.ID = ulid.Make().String()
+	}
+	if strings.ContainsAny(e.ID, "\r\n") {
+		return SerializedEvent{}, fmt.Errorf("event ID contains invalid characters")
 	}
 	data, err := json.Marshal(e)
 	if err != nil {

@@ -953,63 +953,85 @@ func (r *Repository) ListAllUnreads(ctx context.Context, workspaceID, userID str
 	}, nil
 }
 
-func (r *Repository) scanUnreadMessage(row rowScanner) (*UnreadMessage, string, string, error) {
-	var msg UnreadMessage
-	var userID, threadParentID, lastReplyAt, editedAt, deletedAt, pinnedAt, pinnedBy, avatarURL, userEmail, systemEventJSON sql.NullString
-	var createdAt, updatedAt, channelName, channelType string
+// scanMessageColumns holds the raw scanned values from the standard 21-column
+// message+user+channel SELECT. Call scanDest to get scan targets, then
+// hydrate to populate a MessageWithUser.
+type scanMessageColumns struct {
+	userID, threadParentID, lastReplyAt, editedAt, deletedAt sql.NullString
+	pinnedAt, pinnedBy, avatarURL, userEmail, systemEventJSON sql.NullString
+	createdAt, updatedAt, channelName, channelType            string
+}
 
-	err := row.Scan(&msg.ID, &msg.ChannelID, &userID, &msg.Content, &msg.Type, &systemEventJSON, &threadParentID, &msg.AlsoSendToChannel, &msg.ReplyCount, &lastReplyAt, &editedAt, &deletedAt, &pinnedAt, &pinnedBy, &createdAt, &updatedAt,
-		&msg.UserDisplayName, &avatarURL, &userEmail, &channelName, &channelType)
-	if err != nil {
-		return nil, "", "", err
+// scanDest returns the scan destinations for the standard 21-column SELECT,
+// writing directly into msg fields and the scanMessageColumns temporaries.
+// Append extra destinations (e.g. &totalCount) to the returned slice before
+// calling row.Scan.
+func (s *scanMessageColumns) scanDest(msg *MessageWithUser) []interface{} {
+	return []interface{}{
+		&msg.ID, &msg.ChannelID, &s.userID, &msg.Content, &msg.Type, &s.systemEventJSON,
+		&s.threadParentID, &msg.AlsoSendToChannel, &msg.ReplyCount,
+		&s.lastReplyAt, &s.editedAt, &s.deletedAt, &s.pinnedAt, &s.pinnedBy,
+		&s.createdAt, &s.updatedAt,
+		&msg.UserDisplayName, &s.avatarURL, &s.userEmail,
+		&s.channelName, &s.channelType,
 	}
+}
 
-	// Default type if empty
+// hydrate populates the nullable fields of msg from the scanned temporaries.
+func (s *scanMessageColumns) hydrate(msg *MessageWithUser) {
 	if msg.Type == "" {
 		msg.Type = MessageTypeUser
 	}
-
-	if userID.Valid {
-		msg.UserID = &userID.String
+	if s.userID.Valid {
+		msg.UserID = &s.userID.String
 	}
-	if systemEventJSON.Valid {
+	if s.systemEventJSON.Valid {
 		var eventData SystemEventData
-		if err := json.Unmarshal([]byte(systemEventJSON.String), &eventData); err == nil {
+		if err := json.Unmarshal([]byte(s.systemEventJSON.String), &eventData); err == nil {
 			msg.SystemEvent = &eventData
 		}
 	}
-	if threadParentID.Valid {
-		msg.ThreadParentID = &threadParentID.String
+	if s.threadParentID.Valid {
+		msg.ThreadParentID = &s.threadParentID.String
 	}
-	if lastReplyAt.Valid {
-		t, _ := time.Parse(time.RFC3339, lastReplyAt.String)
+	if s.lastReplyAt.Valid {
+		t, _ := time.Parse(time.RFC3339, s.lastReplyAt.String)
 		msg.LastReplyAt = &t
 	}
-	if editedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, editedAt.String)
+	if s.editedAt.Valid {
+		t, _ := time.Parse(time.RFC3339, s.editedAt.String)
 		msg.EditedAt = &t
 	}
-	if deletedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, deletedAt.String)
+	if s.deletedAt.Valid {
+		t, _ := time.Parse(time.RFC3339, s.deletedAt.String)
 		msg.DeletedAt = &t
 	}
-	if pinnedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, pinnedAt.String)
+	if s.pinnedAt.Valid {
+		t, _ := time.Parse(time.RFC3339, s.pinnedAt.String)
 		msg.PinnedAt = &t
 	}
-	if pinnedBy.Valid {
-		msg.PinnedBy = &pinnedBy.String
+	if s.pinnedBy.Valid {
+		msg.PinnedBy = &s.pinnedBy.String
 	}
-	if avatarURL.Valid {
-		msg.UserAvatarURL = &avatarURL.String
+	if s.avatarURL.Valid {
+		msg.UserAvatarURL = &s.avatarURL.String
 	}
-	if userEmail.Valid {
-		msg.UserEmail = userEmail.String
+	if s.userEmail.Valid {
+		msg.UserEmail = s.userEmail.String
 	}
-	msg.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-	msg.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	msg.CreatedAt, _ = time.Parse(time.RFC3339, s.createdAt)
+	msg.UpdatedAt, _ = time.Parse(time.RFC3339, s.updatedAt)
+}
 
-	return &msg, channelName, channelType, nil
+func (r *Repository) scanUnreadMessage(row rowScanner) (*UnreadMessage, string, string, error) {
+	var msg UnreadMessage
+	var cols scanMessageColumns
+	dest := cols.scanDest(&msg.MessageWithUser)
+	if err := row.Scan(dest...); err != nil {
+		return nil, "", "", err
+	}
+	cols.hydrate(&msg.MessageWithUser)
+	return &msg, cols.channelName, cols.channelType, nil
 }
 
 // sanitizeFTSQuery quotes each word in the query to prevent FTS5 syntax injection
@@ -1114,63 +1136,18 @@ func (r *Repository) Search(ctx context.Context, workspaceID, currentUserID stri
 	var messages []SearchMessage
 	var totalCount int
 	for rows.Next() {
-		var msg UnreadMessage
-		var userID, threadParentID, lastReplyAt, editedAt, deletedAt, pinnedAt, pinnedBy, avatarURL, userEmail, systemEventJSON sql.NullString
-		var createdAt, updatedAt, channelName, channelType string
-
-		err := rows.Scan(&msg.ID, &msg.ChannelID, &userID, &msg.Content, &msg.Type, &systemEventJSON, &threadParentID, &msg.AlsoSendToChannel, &msg.ReplyCount, &lastReplyAt, &editedAt, &deletedAt, &pinnedAt, &pinnedBy, &createdAt, &updatedAt,
-			&msg.UserDisplayName, &avatarURL, &userEmail, &channelName, &channelType, &totalCount)
-		if err != nil {
+		var msg MessageWithUser
+		var cols scanMessageColumns
+		dest := append(cols.scanDest(&msg), &totalCount)
+		if err := rows.Scan(dest...); err != nil {
 			return nil, err
 		}
-
-		if msg.Type == "" {
-			msg.Type = MessageTypeUser
-		}
-		if userID.Valid {
-			msg.UserID = &userID.String
-		}
-		if systemEventJSON.Valid {
-			var eventData SystemEventData
-			if err := json.Unmarshal([]byte(systemEventJSON.String), &eventData); err == nil {
-				msg.SystemEvent = &eventData
-			}
-		}
-		if threadParentID.Valid {
-			msg.ThreadParentID = &threadParentID.String
-		}
-		if lastReplyAt.Valid {
-			t, _ := time.Parse(time.RFC3339, lastReplyAt.String)
-			msg.LastReplyAt = &t
-		}
-		if editedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, editedAt.String)
-			msg.EditedAt = &t
-		}
-		if deletedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, deletedAt.String)
-			msg.DeletedAt = &t
-		}
-		if pinnedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, pinnedAt.String)
-			msg.PinnedAt = &t
-		}
-		if pinnedBy.Valid {
-			msg.PinnedBy = &pinnedBy.String
-		}
-		if avatarURL.Valid {
-			msg.UserAvatarURL = &avatarURL.String
-		}
-		if userEmail.Valid {
-			msg.UserEmail = userEmail.String
-		}
-		msg.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		msg.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		cols.hydrate(&msg)
 
 		messages = append(messages, SearchMessage{
-			MessageWithUser: msg.MessageWithUser,
-			ChannelName:     channelName,
-			ChannelType:     channelType,
+			MessageWithUser: msg,
+			ChannelName:     cols.channelName,
+			ChannelType:     cols.channelType,
 		})
 	}
 
@@ -1259,60 +1236,15 @@ func (r *Repository) ListUserThreads(ctx context.Context, workspaceID, userID st
 	var threads []ThreadMessage
 	for rows.Next() {
 		var msg ThreadMessage
-		var msgUserID, threadParentID, lastReplyAt, editedAt, deletedAt, pinnedAt, pinnedBy, avatarURL, userEmail, systemEventJSON sql.NullString
-		var createdAt, updatedAt, channelName, channelType string
+		var cols scanMessageColumns
 		var hasNewReplies int
-
-		err := rows.Scan(&msg.ID, &msg.ChannelID, &msgUserID, &msg.Content, &msg.Type, &systemEventJSON, &threadParentID, &msg.AlsoSendToChannel, &msg.ReplyCount, &lastReplyAt, &editedAt, &deletedAt, &pinnedAt, &pinnedBy, &createdAt, &updatedAt,
-			&msg.UserDisplayName, &avatarURL, &userEmail, &channelName, &channelType, &hasNewReplies)
-		if err != nil {
+		dest := append(cols.scanDest(&msg.MessageWithUser), &hasNewReplies)
+		if err := rows.Scan(dest...); err != nil {
 			return nil, err
 		}
-
-		if msg.Type == "" {
-			msg.Type = MessageTypeUser
-		}
-		if msgUserID.Valid {
-			msg.UserID = &msgUserID.String
-		}
-		if systemEventJSON.Valid {
-			var eventData SystemEventData
-			if err := json.Unmarshal([]byte(systemEventJSON.String), &eventData); err == nil {
-				msg.SystemEvent = &eventData
-			}
-		}
-		if threadParentID.Valid {
-			msg.ThreadParentID = &threadParentID.String
-		}
-		if lastReplyAt.Valid {
-			t, _ := time.Parse(time.RFC3339, lastReplyAt.String)
-			msg.LastReplyAt = &t
-		}
-		if editedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, editedAt.String)
-			msg.EditedAt = &t
-		}
-		if deletedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, deletedAt.String)
-			msg.DeletedAt = &t
-		}
-		if pinnedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, pinnedAt.String)
-			msg.PinnedAt = &t
-		}
-		if pinnedBy.Valid {
-			msg.PinnedBy = &pinnedBy.String
-		}
-		if avatarURL.Valid {
-			msg.UserAvatarURL = &avatarURL.String
-		}
-		if userEmail.Valid {
-			msg.UserEmail = userEmail.String
-		}
-		msg.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		msg.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
-		msg.ChannelName = channelName
-		msg.ChannelType = channelType
+		cols.hydrate(&msg.MessageWithUser)
+		msg.ChannelName = cols.channelName
+		msg.ChannelType = cols.channelType
 		msg.HasNewReplies = hasNewReplies == 1
 
 		threads = append(threads, msg)
