@@ -108,7 +108,9 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 		case <-client.Done:
 			return
 		case event := <-client.Send:
-			h.writeSerializedEvent(w, event)
+			if err := h.writeSerializedEvent(w, event); err != nil {
+				return
+			}
 			// Drain any pending events before flushing (batch flush)
 			h.drainAndFlush(w, flusher, client)
 		case <-heartbeat.C:
@@ -119,8 +121,9 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 
 // writeSerializedEvent writes a pre-formatted SSE frame to the response without flushing.
 // The caller is responsible for flushing (enables batch flush).
-func (h *Handler) writeSerializedEvent(w http.ResponseWriter, event SerializedEvent) {
-	_, _ = w.Write(event.Frame)
+func (h *Handler) writeSerializedEvent(w http.ResponseWriter, event SerializedEvent) error {
+	_, err := w.Write(event.Frame)
+	return err
 }
 
 // drainAndFlush drains pending events from the client channel and flushes once.
@@ -130,7 +133,9 @@ func (h *Handler) drainAndFlush(w http.ResponseWriter, flusher http.Flusher, cli
 	for range maxDrain {
 		select {
 		case event := <-client.Send:
-			h.writeSerializedEvent(w, event)
+			if err := h.writeSerializedEvent(w, event); err != nil {
+				return
+			}
 		default:
 			flusher.Flush()
 			return
@@ -147,7 +152,7 @@ func (h *Handler) writeLocalEvent(w http.ResponseWriter, flusher http.Flusher, e
 		slog.Error("failed to serialize local SSE event", "type", event.Type, "error", err)
 		return
 	}
-	h.writeSerializedEvent(w, serialized)
+	_ = h.writeSerializedEvent(w, serialized)
 	flusher.Flush()
 }
 

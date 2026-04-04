@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/enzyme/server/internal/openapi"
-	"github.com/oklog/ulid/v2"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -168,21 +167,17 @@ func (h *Hub) removeClient(client *Client) bool {
 }
 
 func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {
-	if event.ID == "" {
-		event.ID = ulid.Make().String()
-	}
-
 	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsWorkspace)
 
-	// Queue event storage asynchronously (no DB I/O on this goroutine)
-	h.enqueueStoreEvent(workspaceID, "", event)
-
-	// Pre-serialize once for all subscribers
+	// Pre-serialize once for all subscribers (also assigns event ID if empty)
 	serialized, err := event.Serialize()
 	if err != nil {
 		slog.Error("failed to serialize SSE event", "event_id", event.ID, "error", err)
 		return
 	}
+
+	// Queue event storage asynchronously (no DB I/O on this goroutine)
+	h.enqueueStoreEvent(workspaceID, "", event)
 
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -201,21 +196,17 @@ func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {
 }
 
 func (h *Hub) BroadcastToChannel(workspaceID, channelID string, event Event) {
-	if event.ID == "" {
-		event.ID = ulid.Make().String()
-	}
-
 	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsChannel)
 
-	// Queue event storage asynchronously (no DB I/O on this goroutine)
-	h.enqueueStoreEvent(workspaceID, channelID, event)
-
-	// Pre-serialize once for all subscribers
+	// Pre-serialize once for all subscribers (also assigns event ID if empty)
 	serialized, err := event.Serialize()
 	if err != nil {
 		slog.Error("failed to serialize SSE event", "event_id", event.ID, "error", err)
 		return
 	}
+
+	// Queue event storage asynchronously (no DB I/O on this goroutine)
+	h.enqueueStoreEvent(workspaceID, channelID, event)
 
 	// Resolve channel members before taking the broadcast lock.
 	// getChannelMembers manages its own locking internally.
@@ -240,13 +231,9 @@ func (h *Hub) BroadcastToChannel(workspaceID, channelID string, event Event) {
 }
 
 func (h *Hub) BroadcastToUser(workspaceID, userID string, event Event) {
-	if event.ID == "" {
-		event.ID = ulid.Make().String()
-	}
-
 	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsUser)
 
-	// Pre-serialize once for all subscriber connections
+	// Pre-serialize once for all subscriber connections (also assigns event ID if empty)
 	serialized, err := event.Serialize()
 	if err != nil {
 		slog.Error("failed to serialize SSE event", "event_id", event.ID, "error", err)

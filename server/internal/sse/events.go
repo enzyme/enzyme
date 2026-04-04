@@ -65,17 +65,17 @@ type SerializedEvent struct {
 }
 
 // Serialize marshals an Event into a SerializedEvent with pre-formatted SSE frame.
-// The event ID is assigned if empty.
-func (e Event) Serialize() (SerializedEvent, error) {
+// The event ID is assigned if empty (visible to the caller via the pointer receiver).
+func (e *Event) Serialize() (SerializedEvent, error) {
 	if e.ID == "" {
 		e.ID = ulid.Make().String()
 	}
-	if strings.ContainsAny(e.ID, "\r\n") {
-		return SerializedEvent{}, fmt.Errorf("event ID contains invalid characters")
+	if strings.ContainsAny(e.ID, "\r\n\x00") {
+		return SerializedEvent{}, fmt.Errorf("event ID contains invalid characters: type=%s", e.Type)
 	}
 	data, err := json.Marshal(e)
 	if err != nil {
-		return SerializedEvent{}, err
+		return SerializedEvent{}, fmt.Errorf("marshaling SSE event: %w", err)
 	}
 	frame := fmt.Appendf(nil, "id: %s\ndata: %s\n\n", e.ID, data)
 	return SerializedEvent{Frame: frame}, nil

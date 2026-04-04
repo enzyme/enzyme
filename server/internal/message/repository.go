@@ -957,15 +957,15 @@ func (r *Repository) ListAllUnreads(ctx context.Context, workspaceID, userID str
 // message+user+channel SELECT. Call scanDest to get scan targets, then
 // hydrate to populate a MessageWithUser.
 type scanMessageColumns struct {
-	userID, threadParentID, lastReplyAt, editedAt, deletedAt sql.NullString
+	userID, threadParentID, lastReplyAt, editedAt, deletedAt  sql.NullString
 	pinnedAt, pinnedBy, avatarURL, userEmail, systemEventJSON sql.NullString
 	createdAt, updatedAt, channelName, channelType            string
 }
 
 // scanDest returns the scan destinations for the standard 21-column SELECT,
 // writing directly into msg fields and the scanMessageColumns temporaries.
-// Append extra destinations (e.g. &totalCount) to the returned slice before
-// calling row.Scan.
+// The returned slice is always at full capacity (len == cap) so callers can
+// safely append extra destinations (e.g. &totalCount) without aliasing.
 func (s *scanMessageColumns) scanDest(msg *MessageWithUser) []interface{} {
 	return []interface{}{
 		&msg.ID, &msg.ChannelID, &s.userID, &msg.Content, &msg.Type, &s.systemEventJSON,
