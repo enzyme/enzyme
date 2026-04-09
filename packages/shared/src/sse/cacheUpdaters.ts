@@ -179,10 +179,12 @@ export function handleNewMessage(
           };
         },
       );
-
-      // Also invalidate workspace notifications so non-active workspace indicators update
-      queryClient.invalidateQueries({ queryKey: workspaceKeys.notifications() });
     }
+
+    // Note: We intentionally do NOT invalidate workspaceKeys.notifications() here.
+    // Per-channel unread counts above are still real-time, but the cross-workspace
+    // aggregate badge updates via 30s polling instead. Under high message volume,
+    // per-message invalidation causes a thundering herd of queries.
   }
 }
 

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/enzyme/server/internal/openapi"
-	"github.com/oklog/ulid/v2"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -19,7 +18,7 @@ type Client struct {
 	ID          string
 	UserID      string
 	WorkspaceID string
-	Send        chan Event
+	Send        chan SerializedEvent
 	Done        chan struct{}
 }
 
@@ -168,11 +167,14 @@ func (h *Hub) removeClient(client *Client) bool {
 }
 
 func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {
-	if event.ID == "" {
-		event.ID = ulid.Make().String()
-	}
-
 	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsWorkspace)
+
+	// Pre-serialize once for all subscribers (also assigns event ID if empty)
+	serialized, err := event.Serialize()
+	if err != nil {
+		slog.Error("failed to serialize SSE event", "event_id", event.ID, "error", err)
+		return
+	}
 
 	// Queue event storage asynchronously (no DB I/O on this goroutine)
 	h.enqueueStoreEvent(workspaceID, "", event)
@@ -184,7 +186,7 @@ func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {
 		for _, clients := range workspace {
 			for _, client := range clients {
 				select {
-				case client.Send <- event:
+				case client.Send <- serialized:
 				default:
 					// Client buffer full, skip
 				}
@@ -194,11 +196,14 @@ func (h *Hub) BroadcastToWorkspace(workspaceID string, event Event) {
 }
 
 func (h *Hub) BroadcastToChannel(workspaceID, channelID string, event Event) {
-	if event.ID == "" {
-		event.ID = ulid.Make().String()
-	}
-
 	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsChannel)
+
+	// Pre-serialize once for all subscribers (also assigns event ID if empty)
+	serialized, err := event.Serialize()
+	if err != nil {
+		slog.Error("failed to serialize SSE event", "event_id", event.ID, "error", err)
+		return
+	}
 
 	// Queue event storage asynchronously (no DB I/O on this goroutine)
 	h.enqueueStoreEvent(workspaceID, channelID, event)
@@ -215,7 +220,7 @@ func (h *Hub) BroadcastToChannel(workspaceID, channelID string, event Event) {
 			if members[userID] {
 				for _, client := range clients {
 					select {
-					case client.Send <- event:
+					case client.Send <- serialized:
 					default:
 						// Client buffer full, skip
 					}
@@ -226,20 +231,23 @@ func (h *Hub) BroadcastToChannel(workspaceID, channelID string, event Event) {
 }
 
 func (h *Hub) BroadcastToUser(workspaceID, userID string, event Event) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsUser)
 
-	if event.ID == "" {
-		event.ID = ulid.Make().String()
+	// Pre-serialize once for all subscriber connections (also assigns event ID if empty)
+	serialized, err := event.Serialize()
+	if err != nil {
+		slog.Error("failed to serialize SSE event", "event_id", event.ID, "error", err)
+		return
 	}
 
-	h.eventsBroadcast.Add(context.Background(), 1, broadcastAttrsUser)
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	if workspace, ok := h.workspaces[workspaceID]; ok {
 		if clients, ok := workspace[userID]; ok {
 			for _, client := range clients {
 				select {
-				case client.Send <- event:
+				case client.Send <- serialized:
 				default:
 				}
 			}

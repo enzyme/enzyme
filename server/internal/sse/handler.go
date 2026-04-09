@@ -3,7 +3,7 @@ package sse
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -69,7 +69,7 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 		ID:          ulid.Make().String(),
 		UserID:      userID,
 		WorkspaceID: workspaceID,
-		Send:        make(chan Event, h.clientBufferSize),
+		Send:        make(chan SerializedEvent, h.clientBufferSize),
 		Done:        make(chan struct{}),
 	}
 
@@ -77,11 +77,11 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 	defer h.hub.Unregister(client)
 
 	// Send connected event
-	h.writeEvent(w, flusher, NewConnectedEvent(openapi.ConnectedData{ClientId: client.ID}))
+	h.writeLocalEvent(w, flusher, NewConnectedEvent(openapi.ConnectedData{ClientId: client.ID}))
 
 	// Send initial presence - list of currently online users
 	onlineUserIDs := h.hub.GetConnectedUserIDs(workspaceID)
-	h.writeEvent(w, flusher, NewPresenceInitialEvent(openapi.PresenceInitialData{
+	h.writeLocalEvent(w, flusher, NewPresenceInitialEvent(openapi.PresenceInitialData{
 		OnlineUserIds: onlineUserIDs,
 	}))
 
@@ -92,7 +92,7 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 		events, err := h.hub.GetEventsSince(workspaceID, lastEventID, channelIDs)
 		if err == nil {
 			for _, event := range events {
-				h.writeEvent(w, flusher, event)
+				h.writeLocalEvent(w, flusher, event)
 			}
 		}
 	}
@@ -108,26 +108,51 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 		case <-client.Done:
 			return
 		case event := <-client.Send:
-			h.writeEvent(w, flusher, event)
+			if err := h.writeSerializedEvent(w, event); err != nil {
+				return
+			}
+			// Drain any pending events before flushing (batch flush)
+			h.drainAndFlush(w, flusher, client)
 		case <-heartbeat.C:
-			h.writeEvent(w, flusher, NewHeartbeatEvent(openapi.HeartbeatData{Timestamp: time.Now().Unix()}))
+			h.writeLocalEvent(w, flusher, NewHeartbeatEvent(openapi.HeartbeatData{Timestamp: time.Now().Unix()}))
 		}
 	}
 }
 
-func (h *Handler) writeEvent(w http.ResponseWriter, flusher http.Flusher, event Event) {
-	if event.ID == "" {
-		event.ID = ulid.Make().String()
-	}
-	_, _ = fmt.Fprintf(w, "id: %s\n", event.ID)
+// writeSerializedEvent writes a pre-formatted SSE frame to the response without flushing.
+// The caller is responsible for flushing (enables batch flush).
+func (h *Handler) writeSerializedEvent(w http.ResponseWriter, event SerializedEvent) error {
+	_, err := w.Write(event.Frame)
+	return err
+}
 
-	// Marshal the full event (including type) so the client can dispatch by type
-	data, err := json.Marshal(event)
-	if err == nil {
-		_, _ = fmt.Fprintf(w, "data: %s\n", data)
+// drainAndFlush drains pending events from the client channel and flushes once.
+// Capped to avoid unbounded draining if events arrive faster than writes.
+func (h *Handler) drainAndFlush(w http.ResponseWriter, flusher http.Flusher, client *Client) {
+	const maxDrain = 64
+	for range maxDrain {
+		select {
+		case event := <-client.Send:
+			if err := h.writeSerializedEvent(w, event); err != nil {
+				return
+			}
+		default:
+			flusher.Flush()
+			return
+		}
 	}
+	flusher.Flush()
+}
 
-	_, _ = fmt.Fprintf(w, "\n")
+// writeLocalEvent serializes and writes an event generated locally (not from broadcast).
+// Used for connected, heartbeat, presence_initial, and reconnection replay events.
+func (h *Handler) writeLocalEvent(w http.ResponseWriter, flusher http.Flusher, event Event) {
+	serialized, err := event.Serialize()
+	if err != nil {
+		slog.Error("failed to serialize local SSE event", "type", event.Type, "error", err)
+		return
+	}
+	_ = h.writeSerializedEvent(w, serialized)
 	flusher.Flush()
 }
 

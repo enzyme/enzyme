@@ -154,7 +154,7 @@ func Defaults() *Config {
 		},
 		Database: DatabaseConfig{
 			Path:         "./data/enzyme.db",
-			MaxOpenConns: 2,
+			MaxOpenConns: 10,
 			BusyTimeout:  5000,
 			CacheSize:    -2000,
 		},

@@ -41,6 +41,9 @@ func New(host string, port int, handler http.Handler, tlsOpts TLSOptions, readTi
 			ReadTimeout:  readTimeout,
 			WriteTimeout: writeTimeout,
 			IdleTimeout:  idleTimeout,
+			// HTTP/2 is enabled (Go's default). Pre-formatted SSE frames make
+			// write serialization over the shared TCP buffer acceptable — one
+			// TCP write per physical connection beats 2000 syscalls.
 		},
 	}
 
