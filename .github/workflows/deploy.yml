@@ -1,0 +1,214 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Build
+        run: |
+          make install
+          make generate-types
+          pnpm --filter @enzyme/web build
+          cp -r apps/web/dist/ server/internal/web/dist/
+          cd server
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ../enzyme ./cmd/enzyme
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Write config
+        run: |
+          cat <<'EOF' > /tmp/enzyme-config.yaml
+          log:
+            level: info
+            format: json
+
+          server:
+            host: 0.0.0.0
+            port: 8080
+            public_url: https://app.enzyme.im
+            allowed_origins: []
+            tls:
+              mode: "off"
+
+          database:
+            path: /var/lib/enzyme/data/enzyme.db
+            max_open_conns: 10
+
+          storage:
+            type: local
+            local:
+              path: /var/lib/enzyme/data/uploads
+
+          email:
+            enabled: true
+            host: ${{ secrets.SMTP_HOST }}
+            port: 587
+            username: ${{ secrets.SMTP_USERNAME }}
+            password: ${{ secrets.SMTP_PASSWORD }}
+            from: ${{ secrets.SMTP_FROM }}
+
+          push_notifications:
+            enabled: true
+            relay_url: https://push.enzyme.im
+            include_preview: true
+          EOF
+
+      - name: Deploy
+        run: |
+          ssh root@${{ secrets.SERVER_HOST }} "systemctl stop enzyme || true"
+          scp enzyme root@${{ secrets.SERVER_HOST }}:/opt/enzyme/enzyme
+          scp /tmp/enzyme-config.yaml root@${{ secrets.SERVER_HOST }}:/opt/enzyme/config.yaml
+          ssh root@${{ secrets.SERVER_HOST }} bash <<'SCRIPT'
+          chmod 755 /opt/enzyme/enzyme
+          chown root:root /opt/enzyme/enzyme
+          chmod 640 /opt/enzyme/config.yaml
+          chown root:enzyme /opt/enzyme/config.yaml
+          systemctl start enzyme
+          SCRIPT
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 10); do
+            if ssh root@${{ secrets.SERVER_HOST }} "curl -sf http://localhost:8080/api/health" > /dev/null 2>&1; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i/10 — waiting..."
+            sleep 2
+          done
+          echo "Health check failed"
+          ssh root@${{ secrets.SERVER_HOST }} "journalctl -u enzyme --no-pager -n 20"
+          exit 1
+
+  deploy-website:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Build
+        run: |
+          pnpm install --filter @enzyme/website...
+          pnpm --filter @enzyme/website build
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: |
+          scp -r apps/website/_site/* root@${{ secrets.SERVER_HOST }}:/var/www/enzyme-website/
+
+  deploy-push:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - name: Build
+        run: |
+          cd server
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../push-relay ./cmd/push-relay/
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Write env config
+        run: |
+          cat <<'EOF' > /tmp/push-relay.env
+          RELAY_PORT=8090
+          RELAY_TRUST_PROXY=true
+          RELAY_LOG_LEVEL=info
+          RELAY_FCM_CREDENTIALS_FILE=/opt/enzyme/fcm-credentials.json
+          RELAY_APNS_KEY_FILE=/opt/enzyme/apns-key.p8
+          RELAY_APNS_KEY_ID=${{ secrets.APNS_KEY_ID }}
+          RELAY_APNS_TEAM_ID=${{ secrets.APNS_TEAM_ID }}
+          RELAY_APNS_BUNDLE_ID=im.enzyme.mobile
+          RELAY_APNS_PRODUCTION=true
+          EOF
+
+      - name: Deploy
+        run: |
+          ssh root@${{ secrets.SERVER_HOST }} "systemctl stop push-relay || true"
+          scp push-relay root@${{ secrets.SERVER_HOST }}:/opt/enzyme/push-relay
+          scp /tmp/push-relay.env root@${{ secrets.SERVER_HOST }}:/opt/enzyme/push-relay.env
+          ssh root@${{ secrets.SERVER_HOST }} bash <<SCRIPT
+          chmod 755 /opt/enzyme/push-relay
+          chown root:root /opt/enzyme/push-relay
+          chmod 640 /opt/enzyme/push-relay.env
+          chown root:enzyme /opt/enzyme/push-relay.env
+
+          if [ -n "${{ secrets.FCM_CREDENTIALS_JSON }}" ]; then
+            echo "${{ secrets.FCM_CREDENTIALS_JSON }}" | base64 -d > /opt/enzyme/fcm-credentials.json
+            chmod 640 /opt/enzyme/fcm-credentials.json
+            chown root:enzyme /opt/enzyme/fcm-credentials.json
+          fi
+
+          if [ -n "${{ secrets.APNS_KEY }}" ]; then
+            echo "${{ secrets.APNS_KEY }}" | base64 -d > /opt/enzyme/apns-key.p8
+            chmod 640 /opt/enzyme/apns-key.p8
+            chown root:enzyme /opt/enzyme/apns-key.p8
+          fi
+
+          systemctl start push-relay
+          SCRIPT
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 10); do
+            if ssh root@${{ secrets.SERVER_HOST }} "curl -sf http://localhost:8090/health" > /dev/null 2>&1; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i/10 — waiting..."
+            sleep 2
+          done
+          echo "Health check failed"
+          ssh root@${{ secrets.SERVER_HOST }} "journalctl -u push-relay --no-pager -n 20"
+          exit 1

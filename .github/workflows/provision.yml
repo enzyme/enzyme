@@ -1,0 +1,135 @@
+name: Provision Server
+
+on:
+  workflow_dispatch:
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: System setup
+        run: |
+          ssh root@${{ secrets.SERVER_HOST }} bash <<'SCRIPT'
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+
+          echo "==> System update"
+          apt-get update -qq
+          apt-get upgrade -y -qq
+
+          echo "==> Creating enzyme user"
+          id enzyme &>/dev/null || useradd --system --shell /usr/sbin/nologin enzyme
+
+          echo "==> Creating directories"
+          install -d -m 755 /opt/enzyme
+          install -d -m 750 -o enzyme -g enzyme /var/lib/enzyme/data
+          install -d -m 755 /var/www/enzyme-website
+
+          echo "==> Installing Caddy"
+          if ! command -v caddy &>/dev/null; then
+            apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https curl
+            curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+            curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+            apt-get update -qq
+            apt-get install -y -qq caddy
+          fi
+
+          echo "==> Configuring UFW"
+          ufw allow 22/tcp
+          ufw allow 80/tcp
+          ufw allow 443/tcp
+          ufw --force enable
+          SCRIPT
+
+      - name: Write Caddyfile
+        run: |
+          cat <<'EOF' | ssh root@${{ secrets.SERVER_HOST }} "cat > /etc/caddy/Caddyfile"
+          www.enzyme.im {
+            redir https://enzyme.im{uri} permanent
+          }
+
+          enzyme.im {
+            root * /var/www/enzyme-website
+            file_server
+            encode gzip
+            try_files {path} {path}/
+            handle_errors {
+              rewrite * /404.html
+              file_server
+            }
+          }
+
+          app.enzyme.im {
+            @sse path /api/sse*
+            reverse_proxy @sse localhost:8080 {
+              flush_interval -1
+            }
+            reverse_proxy localhost:8080
+          }
+
+          push.enzyme.im {
+            reverse_proxy localhost:8090
+          }
+          EOF
+
+      - name: Write enzyme.service
+        run: |
+          cat <<'EOF' | ssh root@${{ secrets.SERVER_HOST }} "cat > /etc/systemd/system/enzyme.service"
+          [Unit]
+          Description=Enzyme Chat Server
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=enzyme
+          Group=enzyme
+          ExecStart=/opt/enzyme/enzyme --config /opt/enzyme/config.yaml
+          WorkingDirectory=/opt/enzyme
+          Restart=on-failure
+          RestartSec=5
+          LimitNOFILE=65535
+
+          NoNewPrivileges=true
+          ProtectSystem=strict
+          ProtectHome=true
+          ReadWritePaths=/var/lib/enzyme
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+      - name: Write push-relay.service
+        run: |
+          cat <<'EOF' | ssh root@${{ secrets.SERVER_HOST }} "cat > /etc/systemd/system/push-relay.service"
+          [Unit]
+          Description=Enzyme Push Relay
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=enzyme
+          Group=enzyme
+          ExecStart=/opt/enzyme/push-relay
+          WorkingDirectory=/opt/enzyme
+          EnvironmentFile=/opt/enzyme/push-relay.env
+          Restart=on-failure
+          RestartSec=5
+
+          NoNewPrivileges=true
+          ProtectSystem=strict
+          ProtectHome=true
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+      - name: Enable services
+        run: |
+          ssh root@${{ secrets.SERVER_HOST }} "systemctl daemon-reload && systemctl reload caddy && systemctl enable enzyme push-relay caddy"
