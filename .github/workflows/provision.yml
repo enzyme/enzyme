@@ -41,6 +41,14 @@ jobs:
             apt-get install -y -qq caddy
           fi
 
+          echo "==> Installing OpenTelemetry Collector"
+          if ! command -v otelcol-contrib &>/dev/null; then
+            curl -1sLf 'https://packages.opentelemetry.io/public/apt/gpg.key' | gpg --dearmor -o /usr/share/keyrings/otel-contrib-archive-keyring.gpg
+            echo "deb [signed-by=/usr/share/keyrings/otel-contrib-archive-keyring.gpg] https://packages.opentelemetry.io/public/apt/ stable main" | tee /etc/apt/sources.list.d/otelcol-contrib.list
+            apt-get update -qq
+            apt-get install -y -qq otelcol-contrib
+          fi
+
           echo "==> Configuring UFW"
           ufw allow 22/tcp
           ufw allow 80/tcp
@@ -130,6 +138,55 @@ jobs:
           WantedBy=multi-user.target
           EOF
 
+      - name: Write otelcol-contrib config
+        run: |
+          cat <<EOF | ssh root@${{ secrets.SERVER_HOST }} "cat > /etc/otelcol-contrib/config.yaml"
+          receivers:
+            otlp:
+              protocols:
+                grpc:
+                  endpoint: localhost:4317
+                http:
+                  endpoint: localhost:4318
+            hostmetrics:
+              collection_interval: 60s
+              scrapers:
+                cpu:
+                memory:
+                disk:
+                filesystem:
+                network:
+                load:
+
+          processors:
+            batch:
+            resourcedetection:
+              detectors: ["env", "system"]
+              override: false
+
+          exporters:
+            otlphttp:
+              endpoint: https://api.honeycomb.io
+              headers:
+                x-honeycomb-team: ${{ secrets.HONEYCOMB_API_KEY }}
+              compression: gzip
+
+          service:
+            pipelines:
+              traces:
+                receivers: [otlp]
+                processors: [resourcedetection, batch]
+                exporters: [otlphttp]
+              metrics:
+                receivers: [otlp, hostmetrics]
+                processors: [resourcedetection, batch]
+                exporters: [otlphttp]
+              logs:
+                receivers: [otlp]
+                processors: [resourcedetection, batch]
+                exporters: [otlphttp]
+          EOF
+
       - name: Enable services
         run: |
-          ssh root@${{ secrets.SERVER_HOST }} "systemctl daemon-reload && systemctl reload caddy && systemctl enable enzyme push-relay caddy"
+          ssh root@${{ secrets.SERVER_HOST }} "systemctl daemon-reload && systemctl reload caddy && systemctl restart otelcol-contrib && systemctl enable enzyme push-relay caddy otelcol-contrib"

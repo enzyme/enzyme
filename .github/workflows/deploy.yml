@@ -77,6 +77,13 @@ jobs:
             enabled: true
             relay_url: https://push.enzyme.im
             include_preview: true
+
+          telemetry:
+            enabled: true
+            endpoint: localhost:4318
+            protocol: http
+            insecure: true
+            service_name: enzyme
           EOF
 
       - name: Deploy
