@@ -163,6 +163,11 @@ jobs:
             resourcedetection:
               detectors: ["env", "system"]
               override: false
+            resource:
+              attributes:
+                - key: service.name
+                  value: enzyme
+                  action: insert
 
           exporters:
             otlphttp:
@@ -175,15 +180,15 @@ jobs:
             pipelines:
               traces:
                 receivers: [otlp]
-                processors: [resourcedetection, batch]
+                processors: [resourcedetection, resource, batch]
                 exporters: [otlphttp]
               metrics:
                 receivers: [otlp, hostmetrics]
-                processors: [resourcedetection, batch]
+                processors: [resourcedetection, resource, batch]
                 exporters: [otlphttp]
               logs:
                 receivers: [otlp]
-                processors: [resourcedetection, batch]
+                processors: [resourcedetection, resource, batch]
                 exporters: [otlphttp]
           EOF
 
