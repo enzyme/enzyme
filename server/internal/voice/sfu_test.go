@@ -25,7 +25,7 @@ func newTestSFU(t *testing.T) *voice.SFU {
 func TestSFU_JoinCreatesRoom(t *testing.T) {
 	sfu := newTestSFU(t)
 
-	offer, err := sfu.JoinRoom("channel-1", "user-a")
+	offer, err := sfu.JoinRoom("channel-1", "ws-1", "user-a")
 	if err != nil {
 		t.Fatalf("JoinRoom: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestSFU_JoinCreatesRoom(t *testing.T) {
 func TestSFU_LeaveRoom(t *testing.T) {
 	sfu := newTestSFU(t)
 
-	if _, err := sfu.JoinRoom("channel-1", "user-a"); err != nil {
+	if _, err := sfu.JoinRoom("channel-1", "ws-1", "user-a"); err != nil {
 		t.Fatalf("JoinRoom: %v", err)
 	}
 
@@ -57,10 +57,10 @@ func TestSFU_LeaveRoom(t *testing.T) {
 func TestSFU_RoomCleanupWhenLastLeaves(t *testing.T) {
 	sfu := newTestSFU(t)
 
-	if _, err := sfu.JoinRoom("channel-1", "user-a"); err != nil {
+	if _, err := sfu.JoinRoom("channel-1", "ws-1", "user-a"); err != nil {
 		t.Fatalf("JoinRoom user-a: %v", err)
 	}
-	if _, err := sfu.JoinRoom("channel-1", "user-b"); err != nil {
+	if _, err := sfu.JoinRoom("channel-1", "ws-1", "user-b"); err != nil {
 		t.Fatalf("JoinRoom user-b: %v", err)
 	}
 
@@ -75,7 +75,7 @@ func TestSFU_RoomCleanupWhenLastLeaves(t *testing.T) {
 	}
 
 	// Joining again should work (room is recreated)
-	offer, err := sfu.JoinRoom("channel-1", "user-c")
+	offer, err := sfu.JoinRoom("channel-1", "ws-1", "user-c")
 	if err != nil {
 		t.Fatalf("JoinRoom after cleanup: %v", err)
 	}
@@ -87,11 +87,11 @@ func TestSFU_RoomCleanupWhenLastLeaves(t *testing.T) {
 func TestSFU_MultipleRooms(t *testing.T) {
 	sfu := newTestSFU(t)
 
-	offer1, err := sfu.JoinRoom("channel-1", "user-a")
+	offer1, err := sfu.JoinRoom("channel-1", "ws-1", "user-a")
 	if err != nil {
 		t.Fatalf("JoinRoom channel-1: %v", err)
 	}
-	offer2, err := sfu.JoinRoom("channel-2", "user-b")
+	offer2, err := sfu.JoinRoom("channel-2", "ws-1", "user-b")
 	if err != nil {
 		t.Fatalf("JoinRoom channel-2: %v", err)
 	}
@@ -115,18 +115,18 @@ func TestSFU_RenegotiateCallback(t *testing.T) {
 	sfu := newTestSFU(t)
 
 	renegotiateCalled := make(chan struct{}, 10)
-	sfu.OnRenegotiate = func(channelID, userID string, offer webrtc.SessionDescription) {
+	sfu.OnRenegotiate = func(channelID, workspaceID, userID string, offer webrtc.SessionDescription) {
 		renegotiateCalled <- struct{}{}
 	}
 
 	// First user joins — no renegotiation needed
-	if _, err := sfu.JoinRoom("channel-1", "user-a"); err != nil {
+	if _, err := sfu.JoinRoom("channel-1", "ws-1", "user-a"); err != nil {
 		t.Fatalf("JoinRoom user-a: %v", err)
 	}
 
 	// Second user joins — renegotiation may fire when tracks are exchanged,
 	// but that happens asynchronously via OnTrack, so we just verify no error
-	if _, err := sfu.JoinRoom("channel-1", "user-b"); err != nil {
+	if _, err := sfu.JoinRoom("channel-1", "ws-1", "user-b"); err != nil {
 		t.Fatalf("JoinRoom user-b: %v", err)
 	}
 }
@@ -141,10 +141,10 @@ func TestSFU_Close(t *testing.T) {
 	}
 
 	// Join some rooms
-	if _, err := sfu.JoinRoom("channel-1", "user-a"); err != nil {
+	if _, err := sfu.JoinRoom("channel-1", "ws-1", "user-a"); err != nil {
 		t.Fatalf("JoinRoom: %v", err)
 	}
-	if _, err := sfu.JoinRoom("channel-2", "user-b"); err != nil {
+	if _, err := sfu.JoinRoom("channel-2", "ws-1", "user-b"); err != nil {
 		t.Fatalf("JoinRoom: %v", err)
 	}
 

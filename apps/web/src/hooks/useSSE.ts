@@ -8,10 +8,11 @@ import {
   unlockAudio,
   requestNotificationPermission,
 } from '../lib/notificationSound';
-import { dispatchVoiceOffer, dispatchVoiceICECandidate } from '../lib/voiceSignaling';
 import { toast } from '../components/ui';
 import type { NotificationData } from '@enzyme/api-client';
 import {
+  dispatchVoiceOffer,
+  dispatchVoiceICECandidate,
   handleNewMessage,
   handleMessageUpdated,
   handleMessageDeleted,

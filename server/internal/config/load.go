@@ -215,6 +215,8 @@ func (d *defaultsProviderStruct) Read() (map[string]interface{}, error) {
 			"turn_relay_min":   d.defaults.Voice.TURNRelayMin,
 			"turn_relay_max":   d.defaults.Voice.TURNRelayMax,
 			"turn_external_ip": d.defaults.Voice.TURNExternalIP,
+			"turn_username":    d.defaults.Voice.TURNUsername,
+			"turn_password":    d.defaults.Voice.TURNPassword,
 			"max_per_channel":  d.defaults.Voice.MaxPerChannel,
 		},
 		"telemetry": map[string]interface{}{
@@ -259,6 +261,8 @@ func SetupFlags() *pflag.FlagSet {
 	flags.Int("voice.turn_relay_min", 0, "TURN relay port range minimum")
 	flags.Int("voice.turn_relay_max", 0, "TURN relay port range maximum")
 	flags.String("voice.turn_external_ip", "", "External IP for TURN server (required if behind NAT)")
+	flags.String("voice.turn_username", "", "TURN server username")
+	flags.String("voice.turn_password", "", "TURN server password")
 	flags.Int("voice.max_per_channel", 0, "Maximum participants per voice channel")
 	flags.Bool("telemetry.enabled", false, "Enable OpenTelemetry instrumentation")
 	flags.String("telemetry.endpoint", "", "OTLP exporter endpoint")

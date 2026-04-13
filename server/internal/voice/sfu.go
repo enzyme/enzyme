@@ -6,20 +6,19 @@ import (
 	"sync"
 
 	"github.com/pion/interceptor"
-	"github.com/pion/interceptor/pkg/stats"
 	"github.com/pion/webrtc/v4"
 
 	"github.com/enzyme/server/internal/config"
 )
 
-// OnSpeakingFunc is called when a user's speaking state changes.
-type OnSpeakingFunc func(channelID, userID string, speaking bool)
-
 // OnICECandidateFunc is called when the server generates an ICE candidate for a peer.
-type OnICECandidateFunc func(channelID, userID string, candidate *webrtc.ICECandidate)
+type OnICECandidateFunc func(channelID, workspaceID, userID string, candidate *webrtc.ICECandidate)
 
 // OnRenegotiateFunc is called when SDP renegotiation is needed (participant join/leave).
-type OnRenegotiateFunc func(channelID, userID string, offer webrtc.SessionDescription)
+type OnRenegotiateFunc func(channelID, workspaceID, userID string, offer webrtc.SessionDescription)
+
+// OnPeerDisconnectedFunc is called when a peer connection fails or disconnects unexpectedly.
+type OnPeerDisconnectedFunc func(channelID, workspaceID, userID string)
 
 // SFU manages WebRTC rooms for voice channels.
 type SFU struct {
@@ -28,9 +27,9 @@ type SFU struct {
 	config config.VoiceConfig
 	api    *webrtc.API
 
-	OnSpeaking     OnSpeakingFunc
-	OnICECandidate OnICECandidateFunc
-	OnRenegotiate  OnRenegotiateFunc
+	OnICECandidate     OnICECandidateFunc
+	OnRenegotiate      OnRenegotiateFunc
+	OnPeerDisconnected OnPeerDisconnectedFunc
 }
 
 func NewSFU(cfg config.VoiceConfig) (*SFU, error) {
@@ -40,12 +39,6 @@ func NewSFU(cfg config.VoiceConfig) (*SFU, error) {
 	}
 
 	i := &interceptor.Registry{}
-	statsFactory, err := stats.NewInterceptor()
-	if err != nil {
-		return nil, fmt.Errorf("creating stats interceptor: %w", err)
-	}
-	i.Add(statsFactory)
-
 	if err := webrtc.RegisterDefaultInterceptors(m, i); err != nil {
 		return nil, fmt.Errorf("registering interceptors: %w", err)
 	}
@@ -73,8 +66,8 @@ func (s *SFU) ICEServers() []webrtc.ICEServer {
 			URLs: []string{
 				fmt.Sprintf("turn:%s:%d?transport=udp", s.config.TURNExternalIP, s.config.TURNPort),
 			},
-			Username:   "enzyme",
-			Credential: "enzyme-turn",
+			Username:   s.config.TURNUsername,
+			Credential: s.config.TURNPassword,
 		})
 	}
 	return servers
@@ -82,11 +75,11 @@ func (s *SFU) ICEServers() []webrtc.ICEServer {
 
 // JoinRoom creates a PeerConnection for the user in the specified channel room
 // and returns an SDP offer for the client to answer.
-func (s *SFU) JoinRoom(channelID, userID string) (*webrtc.SessionDescription, error) {
+func (s *SFU) JoinRoom(channelID, workspaceID, userID string) (*webrtc.SessionDescription, error) {
 	s.mu.Lock()
 	room, ok := s.rooms[channelID]
 	if !ok {
-		room = NewRoom(channelID)
+		room = NewRoom(channelID, workspaceID)
 		s.rooms[channelID] = room
 	}
 	s.mu.Unlock()
@@ -94,11 +87,18 @@ func (s *SFU) JoinRoom(channelID, userID string) (*webrtc.SessionDescription, er
 	room.mu.Lock()
 	defer room.mu.Unlock()
 
+	// Reject duplicate joins — close any existing peer first
+	if existing, ok := room.Peers[userID]; ok {
+		_ = existing.PeerConnection.Close()
+		delete(room.Peers, userID)
+	}
+
 	// Create peer connection
 	pc, err := s.api.NewPeerConnection(webrtc.Configuration{
 		ICEServers: s.ICEServers(),
 	})
 	if err != nil {
+		s.cleanupEmptyRoom(channelID, room)
 		return nil, fmt.Errorf("creating peer connection: %w", err)
 	}
 
@@ -114,14 +114,19 @@ func (s *SFU) JoinRoom(channelID, userID string) (*webrtc.SessionDescription, er
 	})
 	if err != nil {
 		_ = pc.Close()
+		s.cleanupEmptyRoom(channelID, room)
 		return nil, fmt.Errorf("adding audio transceiver: %w", err)
 	}
 
 	// For each existing peer, add a send-only track to forward their audio to the new peer
 	for existingUserID, existingPeer := range room.Peers {
-		if existingPeer.AudioTrack != nil {
+		existingPeer.mu.Lock()
+		audioTrack := existingPeer.AudioTrack
+		existingPeer.mu.Unlock()
+
+		if audioTrack != nil {
 			track, err := webrtc.NewTrackLocalStaticRTP(
-				existingPeer.AudioTrack.Codec().RTPCodecCapability,
+				audioTrack.Codec().RTPCodecCapability,
 				fmt.Sprintf("audio-%s", existingUserID),
 				fmt.Sprintf("stream-%s", existingUserID),
 			)
@@ -141,7 +146,9 @@ func (s *SFU) JoinRoom(channelID, userID string) (*webrtc.SessionDescription, er
 
 	// Handle incoming audio track from this peer
 	pc.OnTrack(func(remoteTrack *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
+		peer.mu.Lock()
 		peer.AudioTrack = remoteTrack
+		peer.mu.Unlock()
 
 		// Create output tracks for all other peers in the room
 		room.mu.RLock()
@@ -173,7 +180,7 @@ func (s *SFU) JoinRoom(channelID, userID string) (*webrtc.SessionDescription, er
 
 			// Trigger renegotiation for the other peer
 			if s.OnRenegotiate != nil {
-				go s.renegotiate(channelID, otherUID, otherPeer)
+				go s.renegotiate(channelID, room.WorkspaceID, otherUID, otherPeer)
 			}
 		}
 
@@ -197,12 +204,20 @@ func (s *SFU) JoinRoom(channelID, userID string) (*webrtc.SessionDescription, er
 	// Handle ICE candidates
 	pc.OnICECandidate(func(candidate *webrtc.ICECandidate) {
 		if candidate != nil && s.OnICECandidate != nil {
-			s.OnICECandidate(channelID, userID, candidate)
+			s.OnICECandidate(channelID, room.WorkspaceID, userID, candidate)
 		}
 	})
 
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
 		slog.Debug("peer connection state changed", "channel", channelID, "user", userID, "state", state)
+		if state == webrtc.PeerConnectionStateFailed {
+			go func() {
+				_ = s.LeaveRoom(channelID, userID)
+				if s.OnPeerDisconnected != nil {
+					s.OnPeerDisconnected(channelID, room.WorkspaceID, userID)
+				}
+			}()
+		}
 	})
 
 	room.Peers[userID] = peer
@@ -210,9 +225,15 @@ func (s *SFU) JoinRoom(channelID, userID string) (*webrtc.SessionDescription, er
 	// Create offer
 	offer, err := pc.CreateOffer(nil)
 	if err != nil {
+		delete(room.Peers, userID)
+		_ = pc.Close()
+		s.cleanupEmptyRoom(channelID, room)
 		return nil, fmt.Errorf("creating offer: %w", err)
 	}
 	if err := pc.SetLocalDescription(offer); err != nil {
+		delete(room.Peers, userID)
+		_ = pc.Close()
+		s.cleanupEmptyRoom(channelID, room)
 		return nil, fmt.Errorf("setting local description: %w", err)
 	}
 
@@ -256,24 +277,39 @@ func (s *SFU) LeaveRoom(channelID, userID string) error {
 	delete(room.Peers, userID)
 
 	// Remove output tracks from other peers that were forwarding to this peer
-	for _, otherPeer := range room.Peers {
+	// and trigger renegotiation so they drop the stale transceivers.
+	peersToRenegotiate := make(map[string]*Peer)
+	for otherUID, otherPeer := range room.Peers {
 		otherPeer.mu.Lock()
 		delete(otherPeer.outputTracks, userID)
 		otherPeer.mu.Unlock()
+		peersToRenegotiate[otherUID] = otherPeer
 	}
+
+	isEmpty := len(room.Peers) == 0
 	room.mu.Unlock()
 
-	// Close the peer connection
+	// Close the peer connection (unblocks RTP read goroutines)
 	if err := peer.PeerConnection.Close(); err != nil {
 		slog.Error("closing peer connection", "error", err)
 	}
 
-	// Clean up empty room
-	s.mu.Lock()
-	if room.PeerCount() == 0 {
-		delete(s.rooms, channelID)
+	// Trigger renegotiation for remaining peers outside the room lock
+	if s.OnRenegotiate != nil {
+		for otherUID, otherPeer := range peersToRenegotiate {
+			go s.renegotiate(channelID, room.WorkspaceID, otherUID, otherPeer)
+		}
 	}
-	s.mu.Unlock()
+
+	// Clean up empty room
+	if isEmpty {
+		s.mu.Lock()
+		// Re-check under lock in case someone joined between releasing room.mu and acquiring s.mu
+		if room.PeerCount() == 0 {
+			delete(s.rooms, channelID)
+		}
+		s.mu.Unlock()
+	}
 
 	return nil
 }
@@ -306,7 +342,10 @@ func (s *SFU) getPeer(channelID, userID string) *Peer {
 	return room.Peers[userID]
 }
 
-func (s *SFU) renegotiate(channelID, userID string, peer *Peer) {
+func (s *SFU) renegotiate(channelID, workspaceID, userID string, peer *Peer) {
+	peer.mu.Lock()
+	defer peer.mu.Unlock()
+
 	offer, err := peer.PeerConnection.CreateOffer(nil)
 	if err != nil {
 		slog.Error("creating renegotiation offer", "error", err)
@@ -317,6 +356,18 @@ func (s *SFU) renegotiate(channelID, userID string, peer *Peer) {
 		return
 	}
 	if s.OnRenegotiate != nil {
-		s.OnRenegotiate(channelID, userID, *peer.PeerConnection.LocalDescription())
+		s.OnRenegotiate(channelID, workspaceID, userID, *peer.PeerConnection.LocalDescription())
+	}
+}
+
+// cleanupEmptyRoom removes a room from the map if it has no peers.
+// Must NOT be called while holding room.mu (PeerCount takes its own lock).
+func (s *SFU) cleanupEmptyRoom(channelID string, room *Room) {
+	if room.PeerCount() == 0 {
+		s.mu.Lock()
+		if room.PeerCount() == 0 {
+			delete(s.rooms, channelID)
+		}
+		s.mu.Unlock()
 	}
 }

@@ -199,7 +199,7 @@ export interface RichTextEditorProps {
   workspaceChannels?: Array<{
     id: string;
     name: string;
-    type: 'public' | 'private' | 'dm' | 'group_dm';
+    type: 'public' | 'private' | 'dm' | 'group_dm' | 'voice';
   }>;
   showToolbar?: boolean;
   showActionRow?: boolean;

@@ -205,6 +205,11 @@ func New(cfg *config.Config) (*App, error) {
 	var voiceSFU *voice.SFU
 	var voiceTURN *voice.TURNServer
 	if cfg.Voice.Enabled {
+		// Flush stale voice participants from a previous server process
+		if err := voiceRepo.FlushAll(context.Background()); err != nil {
+			slog.Error("flushing stale voice participants", "error", err)
+		}
+
 		voiceSFU, err = voice.NewSFU(cfg.Voice)
 		if err != nil {
 			_ = db.Close()
@@ -212,30 +217,31 @@ func New(cfg *config.Config) (*App, error) {
 		}
 
 		// Set up ICE candidate callback to forward to clients via SSE.
-		// Uses channelRepo to resolve workspace ID for the hub.
-		voiceSFU.OnICECandidate = func(channelID, userID string, candidate *webrtc.ICECandidate) {
-			ch, err := channelRepo.GetByID(context.Background(), channelID)
-			if err != nil {
-				slog.Error("voice ICE callback: channel lookup failed", "error", err)
-				return
-			}
+		// WorkspaceID is cached in the Room, so no DB lookup needed.
+		voiceSFU.OnICECandidate = func(channelID, workspaceID, userID string, candidate *webrtc.ICECandidate) {
 			init := candidate.ToJSON()
-			hub.BroadcastToUser(ch.WorkspaceID, userID, sse.NewVoiceICECandidateEvent(openapi.VoiceICECandidateEvent{
+			hub.BroadcastToUser(workspaceID, userID, sse.NewVoiceICECandidateEvent(openapi.VoiceICECandidateEvent{
 				Candidate: init.Candidate,
 				SdpMid:    init.SDPMid,
 			}))
 		}
 
 		// Set up renegotiation callback
-		voiceSFU.OnRenegotiate = func(channelID, userID string, offer webrtc.SessionDescription) {
-			ch, err := channelRepo.GetByID(context.Background(), channelID)
-			if err != nil {
-				slog.Error("voice renegotiate callback: channel lookup failed", "error", err)
-				return
-			}
-			hub.BroadcastToUser(ch.WorkspaceID, userID, sse.NewVoiceOfferEvent(openapi.VoiceSDPEvent{
+		voiceSFU.OnRenegotiate = func(channelID, workspaceID, userID string, offer webrtc.SessionDescription) {
+			hub.BroadcastToUser(workspaceID, userID, sse.NewVoiceOfferEvent(openapi.VoiceSDPEvent{
 				Sdp:  offer.SDP,
 				Type: openapi.VoiceSDPEventType(offer.Type.String()),
+			}))
+		}
+
+		// Set up disconnect callback for auto-cleanup when peers drop unexpectedly
+		voiceSFU.OnPeerDisconnected = func(channelID, workspaceID, userID string) {
+			if err := voiceRepo.RemoveParticipant(context.Background(), channelID, userID); err != nil {
+				slog.Error("removing disconnected voice participant", "error", err)
+			}
+			hub.BroadcastToChannel(workspaceID, channelID, sse.NewVoiceLeftEvent(openapi.VoiceParticipantEvent{
+				UserId:    userID,
+				ChannelId: channelID,
 			}))
 		}
 

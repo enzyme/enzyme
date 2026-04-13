@@ -2,8 +2,6 @@ import { apiClient, throwIfError } from '@enzyme/api-client';
 import type { SDPDescription, ICEServer } from '@enzyme/api-client';
 
 export interface VoiceClientCallbacks {
-  onTrackAdded?: (userId: string, stream: MediaStream) => void;
-  onTrackRemoved?: (userId: string) => void;
   onConnectionStateChange?: (state: RTCPeerConnectionState) => void;
   onLocalSpeakingChange?: (speaking: boolean) => void;
 }
@@ -61,7 +59,6 @@ export class VoiceClient {
         audio.srcObject = stream;
         audio.autoplay = true;
         this.audioElements.set(stream.id, audio);
-        this.callbacks.onTrackAdded?.(stream.id, stream);
       }
     };
 
@@ -80,7 +77,9 @@ export class VoiceClient {
     };
 
     this.pc.onconnectionstatechange = () => {
-      this.callbacks.onConnectionStateChange?.(this.pc!.connectionState);
+      if (this.pc) {
+        this.callbacks.onConnectionStateChange?.(this.pc.connectionState);
+      }
     };
 
     // Set remote description (server's offer)
@@ -127,9 +126,13 @@ export class VoiceClient {
           sdp: offer.sdp,
         }),
       )
-      .then(() => this.pc!.createAnswer())
+      .then(() => {
+        if (!this.pc) return;
+        return this.pc.createAnswer();
+      })
       .then((answer) => {
-        this.pc!.setLocalDescription(answer);
+        if (!this.pc || !answer) return;
+        this.pc.setLocalDescription(answer);
         return apiClient.POST('/channels/{id}/voice/answer', {
           params: { path: { id: this.channelId } },
           body: {
@@ -199,9 +202,26 @@ export class VoiceClient {
 
     const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
     const SPEAKING_THRESHOLD = 15;
+    const ACTIVATE_FRAMES = 3; // 150ms above threshold to activate
+    const DEACTIVATE_FRAMES = 6; // 300ms below threshold to deactivate
+    let consecutiveAbove = 0;
+    let consecutiveBelow = 0;
 
     this.speakingInterval = setInterval(() => {
       if (!this.analyser) return;
+
+      // Skip analysis when muted
+      const track = stream.getAudioTracks()[0];
+      if (track && !track.enabled) {
+        if (this.isSpeaking) {
+          this.isSpeaking = false;
+          this.callbacks.onLocalSpeakingChange?.(false);
+        }
+        consecutiveAbove = 0;
+        consecutiveBelow = 0;
+        return;
+      }
+
       this.analyser.getByteFrequencyData(dataArray);
 
       // Average the frequency data
@@ -210,11 +230,22 @@ export class VoiceClient {
         sum += dataArray[i];
       }
       const average = sum / dataArray.length;
-      const speaking = average > SPEAKING_THRESHOLD;
+      const aboveThreshold = average > SPEAKING_THRESHOLD;
 
-      if (speaking !== this.isSpeaking) {
-        this.isSpeaking = speaking;
-        this.callbacks.onLocalSpeakingChange?.(speaking);
+      if (aboveThreshold) {
+        consecutiveAbove++;
+        consecutiveBelow = 0;
+      } else {
+        consecutiveBelow++;
+        consecutiveAbove = 0;
+      }
+
+      if (!this.isSpeaking && consecutiveAbove >= ACTIVATE_FRAMES) {
+        this.isSpeaking = true;
+        this.callbacks.onLocalSpeakingChange?.(true);
+      } else if (this.isSpeaking && consecutiveBelow >= DEACTIVATE_FRAMES) {
+        this.isSpeaking = false;
+        this.callbacks.onLocalSpeakingChange?.(false);
       }
     }, 50);
   }

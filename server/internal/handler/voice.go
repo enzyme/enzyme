@@ -2,8 +2,10 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
+	"github.com/enzyme/server/internal/channel"
 	"github.com/enzyme/server/internal/openapi"
 	"github.com/enzyme/server/internal/sse"
 	"github.com/enzyme/server/internal/voice"
@@ -11,7 +13,16 @@ import (
 	"github.com/pion/webrtc/v4"
 )
 
+// voiceDisabledResponse returns a 400 response indicating voice is not enabled.
+func voiceDisabledResponse() openapi.BadRequestJSONResponse {
+	return badRequestResponse(ErrCodeValidationError, "Voice channels are not enabled")
+}
+
 func (h *Handler) JoinVoiceChannel(ctx context.Context, request openapi.JoinVoiceChannelRequestObject) (openapi.JoinVoiceChannelResponseObject, error) {
+	if h.voiceSFU == nil {
+		return openapi.JoinVoiceChannel400JSONResponse{BadRequestJSONResponse: voiceDisabledResponse()}, nil
+	}
+
 	userID := h.getUserID(ctx)
 	if userID == "" {
 		return openapi.JoinVoiceChannel401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
@@ -22,7 +33,7 @@ func (h *Handler) JoinVoiceChannel(ctx context.Context, request openapi.JoinVoic
 		return openapi.JoinVoiceChannel404JSONResponse{NotFoundJSONResponse: notFoundResponse("Channel not found")}, nil
 	}
 
-	if ch.Type != voice.TypeVoice {
+	if ch.Type != channel.TypeVoice {
 		return openapi.JoinVoiceChannel400JSONResponse{BadRequestJSONResponse: badRequestResponse(ErrCodeValidationError, "Not a voice channel")}, nil
 	}
 
@@ -41,27 +52,24 @@ func (h *Handler) JoinVoiceChannel(ctx context.Context, request openapi.JoinVoic
 		return openapi.JoinVoiceChannel409JSONResponse{ConflictJSONResponse: conflictResponse("Already in this voice channel")}, nil
 	}
 
-	// Check max participants
-	count, err := h.voiceRepo.GetParticipantCount(ctx, ch.ID)
+	// Atomically check max participants and insert (prevents TOCTOU race)
+	participant, err := h.voiceRepo.AddParticipantIfUnderLimit(ctx, ch.ID, userID, h.voiceMaxPerChannel)
 	if err != nil {
+		if errors.Is(err, voice.ErrChannelFull) {
+			return openapi.JoinVoiceChannel409JSONResponse{ConflictJSONResponse: conflictResponse("Voice channel is full")}, nil
+		}
 		return nil, err
-	}
-	if h.voiceMaxPerChannel > 0 && count >= h.voiceMaxPerChannel {
-		return openapi.JoinVoiceChannel409JSONResponse{ConflictJSONResponse: conflictResponse("Voice channel is full")}, nil
 	}
 
 	// Join the SFU room
-	offer, err := h.voiceSFU.JoinRoom(ch.ID, userID)
+	offer, err := h.voiceSFU.JoinRoom(ch.ID, ch.WorkspaceID, userID)
 	if err != nil {
 		slog.Error("joining voice room", "error", err, "channel", ch.ID, "user", userID)
+		// Roll back DB participant on SFU failure
+		_ = h.voiceRepo.RemoveParticipant(ctx, ch.ID, userID)
 		return nil, err
 	}
-
-	// Insert DB participant
-	if _, err := h.voiceRepo.AddParticipant(ctx, ch.ID, userID); err != nil {
-		_ = h.voiceSFU.LeaveRoom(ch.ID, userID)
-		return nil, err
-	}
+	_ = participant // used for the insert
 
 	// Broadcast voice.joined to channel members
 	if h.hub != nil {
@@ -72,8 +80,9 @@ func (h *Handler) JoinVoiceChannel(ctx context.Context, request openapi.JoinVoic
 	}
 
 	// Build ICE server list for the client
-	iceServers := make([]openapi.ICEServer, len(h.voiceSFU.ICEServers()))
-	for i, s := range h.voiceSFU.ICEServers() {
+	servers := h.voiceSFU.ICEServers()
+	iceServers := make([]openapi.ICEServer, len(servers))
+	for i, s := range servers {
 		iceServers[i] = openapi.ICEServer{
 			Urls: s.URLs,
 		}
@@ -96,6 +105,10 @@ func (h *Handler) JoinVoiceChannel(ctx context.Context, request openapi.JoinVoic
 }
 
 func (h *Handler) LeaveVoiceChannel(ctx context.Context, request openapi.LeaveVoiceChannelRequestObject) (openapi.LeaveVoiceChannelResponseObject, error) {
+	if h.voiceSFU == nil {
+		return openapi.LeaveVoiceChannel404JSONResponse{NotFoundJSONResponse: notFoundResponse("Voice channels are not enabled")}, nil
+	}
+
 	userID := h.getUserID(ctx)
 	if userID == "" {
 		return openapi.LeaveVoiceChannel401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
@@ -104,6 +117,12 @@ func (h *Handler) LeaveVoiceChannel(ctx context.Context, request openapi.LeaveVo
 	ch, err := h.channelRepo.GetByID(ctx, string(request.Id))
 	if err != nil {
 		return openapi.LeaveVoiceChannel404JSONResponse{NotFoundJSONResponse: notFoundResponse("Channel not found")}, nil
+	}
+
+	// Check workspace membership
+	_, err = h.workspaceRepo.GetMembership(ctx, userID, ch.WorkspaceID)
+	if err != nil {
+		return openapi.LeaveVoiceChannel404JSONResponse{NotFoundJSONResponse: notFoundResponse("Not a workspace member")}, nil
 	}
 
 	// Leave SFU room
@@ -128,6 +147,10 @@ func (h *Handler) LeaveVoiceChannel(ctx context.Context, request openapi.LeaveVo
 }
 
 func (h *Handler) VoiceAnswer(ctx context.Context, request openapi.VoiceAnswerRequestObject) (openapi.VoiceAnswerResponseObject, error) {
+	if h.voiceSFU == nil {
+		return openapi.VoiceAnswer400JSONResponse{BadRequestJSONResponse: voiceDisabledResponse()}, nil
+	}
+
 	userID := h.getUserID(ctx)
 	if userID == "" {
 		return openapi.VoiceAnswer401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
@@ -136,6 +159,12 @@ func (h *Handler) VoiceAnswer(ctx context.Context, request openapi.VoiceAnswerRe
 	ch, err := h.channelRepo.GetByID(ctx, string(request.Id))
 	if err != nil {
 		return openapi.VoiceAnswer404JSONResponse{NotFoundJSONResponse: notFoundResponse("Channel not found")}, nil
+	}
+
+	// Check workspace membership
+	_, err = h.workspaceRepo.GetMembership(ctx, userID, ch.WorkspaceID)
+	if err != nil {
+		return openapi.VoiceAnswer404JSONResponse{NotFoundJSONResponse: notFoundResponse("Not a workspace member")}, nil
 	}
 
 	sdpType := webrtc.SDPTypeAnswer
@@ -150,6 +179,10 @@ func (h *Handler) VoiceAnswer(ctx context.Context, request openapi.VoiceAnswerRe
 }
 
 func (h *Handler) VoiceICECandidate(ctx context.Context, request openapi.VoiceICECandidateRequestObject) (openapi.VoiceICECandidateResponseObject, error) {
+	if h.voiceSFU == nil {
+		return openapi.VoiceICECandidate400JSONResponse{BadRequestJSONResponse: voiceDisabledResponse()}, nil
+	}
+
 	userID := h.getUserID(ctx)
 	if userID == "" {
 		return openapi.VoiceICECandidate401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
@@ -158,6 +191,12 @@ func (h *Handler) VoiceICECandidate(ctx context.Context, request openapi.VoiceIC
 	ch, err := h.channelRepo.GetByID(ctx, string(request.Id))
 	if err != nil {
 		return openapi.VoiceICECandidate404JSONResponse{NotFoundJSONResponse: notFoundResponse("Channel not found")}, nil
+	}
+
+	// Check workspace membership
+	_, err = h.workspaceRepo.GetMembership(ctx, userID, ch.WorkspaceID)
+	if err != nil {
+		return openapi.VoiceICECandidate404JSONResponse{NotFoundJSONResponse: notFoundResponse("Not a workspace member")}, nil
 	}
 
 	candidate := webrtc.ICECandidateInit{
@@ -179,6 +218,10 @@ func (h *Handler) VoiceICECandidate(ctx context.Context, request openapi.VoiceIC
 }
 
 func (h *Handler) MuteVoice(ctx context.Context, request openapi.MuteVoiceRequestObject) (openapi.MuteVoiceResponseObject, error) {
+	if h.voiceSFU == nil {
+		return openapi.MuteVoice404JSONResponse{NotFoundJSONResponse: notFoundResponse("Voice channels are not enabled")}, nil
+	}
+
 	userID := h.getUserID(ctx)
 	if userID == "" {
 		return openapi.MuteVoice401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
@@ -187,6 +230,12 @@ func (h *Handler) MuteVoice(ctx context.Context, request openapi.MuteVoiceReques
 	ch, err := h.channelRepo.GetByID(ctx, string(request.Id))
 	if err != nil {
 		return openapi.MuteVoice404JSONResponse{NotFoundJSONResponse: notFoundResponse("Channel not found")}, nil
+	}
+
+	// Check workspace membership
+	_, err = h.workspaceRepo.GetMembership(ctx, userID, ch.WorkspaceID)
+	if err != nil {
+		return openapi.MuteVoice404JSONResponse{NotFoundJSONResponse: notFoundResponse("Not a workspace member")}, nil
 	}
 
 	participant, err := h.voiceRepo.GetParticipant(ctx, ch.ID, userID)
@@ -213,6 +262,10 @@ func (h *Handler) MuteVoice(ctx context.Context, request openapi.MuteVoiceReques
 }
 
 func (h *Handler) DeafenVoice(ctx context.Context, request openapi.DeafenVoiceRequestObject) (openapi.DeafenVoiceResponseObject, error) {
+	if h.voiceSFU == nil {
+		return openapi.DeafenVoice404JSONResponse{NotFoundJSONResponse: notFoundResponse("Voice channels are not enabled")}, nil
+	}
+
 	userID := h.getUserID(ctx)
 	if userID == "" {
 		return openapi.DeafenVoice401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
@@ -221,6 +274,12 @@ func (h *Handler) DeafenVoice(ctx context.Context, request openapi.DeafenVoiceRe
 	ch, err := h.channelRepo.GetByID(ctx, string(request.Id))
 	if err != nil {
 		return openapi.DeafenVoice404JSONResponse{NotFoundJSONResponse: notFoundResponse("Channel not found")}, nil
+	}
+
+	// Check workspace membership
+	_, err = h.workspaceRepo.GetMembership(ctx, userID, ch.WorkspaceID)
+	if err != nil {
+		return openapi.DeafenVoice404JSONResponse{NotFoundJSONResponse: notFoundResponse("Not a workspace member")}, nil
 	}
 
 	participant, err := h.voiceRepo.GetParticipant(ctx, ch.ID, userID)
@@ -253,6 +312,10 @@ func (h *Handler) DeafenVoice(ctx context.Context, request openapi.DeafenVoiceRe
 }
 
 func (h *Handler) ServerMuteVoice(ctx context.Context, request openapi.ServerMuteVoiceRequestObject) (openapi.ServerMuteVoiceResponseObject, error) {
+	if h.voiceSFU == nil {
+		return openapi.ServerMuteVoice404JSONResponse{NotFoundJSONResponse: notFoundResponse("Voice channels are not enabled")}, nil
+	}
+
 	userID := h.getUserID(ctx)
 	if userID == "" {
 		return openapi.ServerMuteVoice401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil
@@ -273,6 +336,16 @@ func (h *Handler) ServerMuteVoice(ctx context.Context, request openapi.ServerMut
 	}
 
 	targetUserID := request.Body.UserId
+
+	// Prevent server-muting users with equal or higher role
+	targetMembership, err := h.workspaceRepo.GetMembership(ctx, targetUserID, ch.WorkspaceID)
+	if err != nil {
+		return openapi.ServerMuteVoice404JSONResponse{NotFoundJSONResponse: notFoundResponse("Target user not a workspace member")}, nil
+	}
+	if workspace.RoleRank(membership.Role) <= workspace.RoleRank(targetMembership.Role) {
+		return openapi.ServerMuteVoice403JSONResponse{ForbiddenJSONResponse: forbiddenResponse("Cannot server-mute a user with equal or higher role")}, nil
+	}
+
 	participant, err := h.voiceRepo.GetParticipant(ctx, ch.ID, targetUserID)
 	if err != nil {
 		return openapi.ServerMuteVoice404JSONResponse{NotFoundJSONResponse: notFoundResponse("User not in voice channel")}, nil
@@ -297,6 +370,10 @@ func (h *Handler) ServerMuteVoice(ctx context.Context, request openapi.ServerMut
 }
 
 func (h *Handler) ListVoiceParticipants(ctx context.Context, request openapi.ListVoiceParticipantsRequestObject) (openapi.ListVoiceParticipantsResponseObject, error) {
+	if h.voiceSFU == nil {
+		return openapi.ListVoiceParticipants404JSONResponse{NotFoundJSONResponse: notFoundResponse("Voice channels are not enabled")}, nil
+	}
+
 	userID := h.getUserID(ctx)
 	if userID == "" {
 		return openapi.ListVoiceParticipants401JSONResponse{UnauthorizedJSONResponse: unauthorizedResponse()}, nil

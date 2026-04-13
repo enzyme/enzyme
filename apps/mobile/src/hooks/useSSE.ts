@@ -36,8 +36,9 @@ import {
   handleVoiceMuted,
   clearPresence,
   authKeys,
+  dispatchVoiceOffer,
+  dispatchVoiceICECandidate,
 } from '@enzyme/shared';
-import { dispatchVoiceOffer, dispatchVoiceICECandidate } from '../lib/voiceSignaling';
 
 export function useSSE(workspaceId: string | undefined) {
   const [isConnected, setIsConnected] = useState(false);

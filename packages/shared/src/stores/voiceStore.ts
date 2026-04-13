@@ -150,7 +150,3 @@ export function useLocalDeafened(): boolean {
     () => false,
   );
 }
-
-export function getVoiceChannelParticipantCount(channelId: string): number {
-  return (participants.get(channelId) || []).length;
-}

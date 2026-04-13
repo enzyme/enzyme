@@ -84,8 +84,15 @@ export {
   useIsUserSpeaking,
   useLocalMuted,
   useLocalDeafened,
-  getVoiceChannelParticipantCount,
 } from './stores/voiceStore';
+
+// Voice signaling
+export {
+  setVoiceSignalingCallbacks,
+  clearVoiceSignalingCallbacks,
+  dispatchVoiceOffer,
+  dispatchVoiceICECandidate,
+} from './voiceSignaling';
 
 // Cache
 export { getCachedIfFresh, getUrl, getUrls, invalidate } from './cache/signedUrlCache';
@@ -161,12 +168,6 @@ export {
   useUnblockUser,
   useModerationLog,
   useVoiceParticipants,
-  useJoinVoice,
-  useLeaveVoice,
-  useVoiceAnswer,
-  useVoiceICECandidate,
-  useMuteVoice,
-  useDeafenVoice,
   useServerMuteVoice,
 } from './hooks';
 

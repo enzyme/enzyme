@@ -70,13 +70,4 @@ export {
   useUnblockUser,
   useModerationLog,
 } from './useModeration';
-export {
-  useVoiceParticipants,
-  useJoinVoice,
-  useLeaveVoice,
-  useVoiceAnswer,
-  useVoiceICECandidate,
-  useMuteVoice,
-  useDeafenVoice,
-  useServerMuteVoice,
-} from './useVoice';
+export { useVoiceParticipants, useServerMuteVoice } from './useVoice';

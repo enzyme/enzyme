@@ -7,8 +7,6 @@ import (
 	"github.com/pion/webrtc/v4"
 )
 
-const TypeVoice = "voice"
-
 // Participant represents a user connected to a voice channel (persisted in DB).
 type Participant struct {
 	ID            string    `json:"id"`
@@ -34,15 +32,17 @@ type Peer struct {
 
 // Room holds the set of peers in a single voice channel.
 type Room struct {
-	ChannelID string
-	Peers     map[string]*Peer // keyed by userID
-	mu        sync.RWMutex
+	ChannelID   string
+	WorkspaceID string
+	Peers       map[string]*Peer // keyed by userID
+	mu          sync.RWMutex
 }
 
-func NewRoom(channelID string) *Room {
+func NewRoom(channelID, workspaceID string) *Room {
 	return &Room{
-		ChannelID: channelID,
-		Peers:     make(map[string]*Peer),
+		ChannelID:   channelID,
+		WorkspaceID: workspaceID,
+		Peers:       make(map[string]*Peer),
 	}
 }
 

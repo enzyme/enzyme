@@ -124,6 +124,8 @@ type VoiceConfig struct {
 	TURNRelayMin   int    `koanf:"turn_relay_min"`
 	TURNRelayMax   int    `koanf:"turn_relay_max"`
 	TURNExternalIP string `koanf:"turn_external_ip"`
+	TURNUsername   string `koanf:"turn_username"`
+	TURNPassword   string `koanf:"turn_password"`
 	MaxPerChannel  int    `koanf:"max_per_channel"`
 }
 
@@ -208,10 +210,12 @@ func Defaults() *Config {
 			IncludePreview: true,
 		},
 		Voice: VoiceConfig{
-			Enabled:       true,
+			Enabled:       false,
 			TURNPort:      3478,
 			TURNRelayMin:  49152,
 			TURNRelayMax:  65535,
+			TURNUsername:  "enzyme",
+			TURNPassword:  "enzyme-turn",
 			MaxPerChannel: 15,
 		},
 		Telemetry: TelemetryConfig{

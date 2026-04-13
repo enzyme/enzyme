@@ -556,7 +556,7 @@ export function ChannelPage() {
             <p className="text-gray-500 dark:text-gray-400">
               You're viewing <strong>{channel.name}</strong>
             </p>
-            <Button onClick={handleJoin} isLoading={joinChannel.isPending} size="sm">
+            <Button onPress={handleJoin} isLoading={joinChannel.isPending} size="sm">
               Join Channel
             </Button>
           </div>

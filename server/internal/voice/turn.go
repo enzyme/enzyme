@@ -29,10 +29,8 @@ func NewTURNServer(cfg config.VoiceConfig) (*TURNServer, error) {
 	server, err := turn.NewServer(turn.ServerConfig{
 		Realm: "enzyme",
 		AuthHandler: func(username, realm string, srcAddr net.Addr) ([]byte, bool) {
-			// Simple static credentials for the embedded TURN server.
-			// The server and clients share these known credentials.
-			if username == "enzyme" {
-				return turn.GenerateAuthKey(username, realm, "enzyme-turn"), true
+			if username == cfg.TURNUsername {
+				return turn.GenerateAuthKey(username, realm, cfg.TURNPassword), true
 			}
 			return nil, false
 		},

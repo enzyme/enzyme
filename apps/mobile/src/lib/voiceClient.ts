@@ -114,9 +114,13 @@ export class VoiceClient {
           sdp: offer.sdp,
         }),
       )
-      .then(() => this.pc!.createAnswer())
+      .then(() => {
+        if (!this.pc) return;
+        return this.pc.createAnswer();
+      })
       .then((answer) => {
-        this.pc!.setLocalDescription(answer);
+        if (!this.pc || !answer) return;
+        this.pc.setLocalDescription(answer);
         return apiClient.POST('/channels/{id}/voice/answer', {
           params: { path: { id: this.channelId } },
           body: {
@@ -163,7 +167,15 @@ export class VoiceClient {
   }
 
   setDeafened(deafened: boolean): void {
-    // On mobile, deafen is handled server-side (no remote audio elements to mute)
+    // Mute/unmute all remote audio tracks
+    if (this.pc) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (this.pc as any).getReceivers().forEach((receiver: any) => {
+        if (receiver.track) {
+          receiver.track.enabled = !deafened;
+        }
+      });
+    }
     apiClient
       .POST('/channels/{id}/voice/deafen', {
         params: { path: { id: this.channelId } },

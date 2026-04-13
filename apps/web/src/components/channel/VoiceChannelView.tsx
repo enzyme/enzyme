@@ -20,11 +20,12 @@ import {
   setLocalDeafened,
   setVoiceSpeaking,
   clearVoiceState,
+  setVoiceSignalingCallbacks,
+  clearVoiceSignalingCallbacks,
 } from '@enzyme/shared';
 import { useAuth } from '../../hooks';
 import { Avatar, Button, UnstyledButton, Spinner, toast, Menu, MenuItem } from '../ui';
 import { VoiceClient } from '../../lib/voiceClient';
-import { setVoiceSignalingCallbacks, clearVoiceSignalingCallbacks } from '../../lib/voiceSignaling';
 
 interface VoiceChannelViewProps {
   channelId: string;
@@ -148,6 +149,7 @@ export function VoiceChannelView({ channelId, workspaceRole }: VoiceChannelViewP
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to join voice channel');
       setIsJoining(false);
+      client.leave().catch(() => {}); // cleanup media & peer connection
       voiceClientRef.current = null;
       clearVoiceSignalingCallbacks();
     }
@@ -186,9 +188,9 @@ export function VoiceChannelView({ channelId, workspaceRole }: VoiceChannelViewP
   }, [localDeafened]);
 
   const handleServerMute = useCallback(
-    (userId: string, muted: boolean) => {
+    (targetUserId: string, muted: boolean) => {
       serverMute.mutate(
-        { channelId, userId, muted },
+        { channelId, userId: targetUserId, muted },
         {
           onError: () => toast('Failed to server mute user', 'error'),
         },
@@ -264,7 +266,7 @@ export function VoiceChannelView({ channelId, workspaceRole }: VoiceChannelViewP
             <>
               <Button
                 onPress={handleToggleMute}
-                variant={localMuted ? 'destructive' : 'secondary'}
+                variant={localMuted ? 'danger' : 'secondary'}
                 aria-label={localMuted ? 'Unmute' : 'Mute'}
                 className="gap-2"
               >
@@ -286,7 +288,7 @@ export function VoiceChannelView({ channelId, workspaceRole }: VoiceChannelViewP
 
               <Button
                 onPress={handleToggleDeafen}
-                variant={localDeafened ? 'destructive' : 'secondary'}
+                variant={localDeafened ? 'danger' : 'secondary'}
                 aria-label={localDeafened ? 'Undeafen' : 'Deafen'}
                 className="gap-2"
               >

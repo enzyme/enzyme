@@ -23,11 +23,12 @@ import {
   setLocalMuted,
   setLocalDeafened,
   clearVoiceState,
+  setVoiceSignalingCallbacks,
+  clearVoiceSignalingCallbacks,
 } from '@enzyme/shared';
 import type { MainScreenProps } from '../navigation/types';
 import { Avatar } from '../components/ui/Avatar';
 import { VoiceClient } from '../lib/voiceClient';
-import { setVoiceSignalingCallbacks, clearVoiceSignalingCallbacks } from '../lib/voiceSignaling';
 
 function ParticipantTile({
   participant,
@@ -153,6 +154,7 @@ export function VoiceChannelScreen({ route, navigation }: MainScreenProps<'Voice
         err instanceof Error ? err.message : 'Failed to join voice channel',
       );
       setIsJoining(false);
+      client.leave().catch(() => {}); // cleanup media & peer connection
       voiceClientRef.current = null;
       clearVoiceSignalingCallbacks();
     }
