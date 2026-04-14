@@ -45,12 +45,12 @@ type AutoTLSConfig struct {
 }
 
 type DatabaseConfig struct {
-	Path              string `koanf:"path"`
-	MaxOpenConns      int    `koanf:"max_open_conns"`
-	BusyTimeout       int    `koanf:"busy_timeout"`
-	CacheSize         int    `koanf:"cache_size"`
-	MmapSize          int64  `koanf:"mmap_size"`
-	JournalSizeLimit  int64  `koanf:"journal_size_limit"`
+	Path             string `koanf:"path"`
+	MaxOpenConns     int    `koanf:"max_open_conns"`
+	BusyTimeout      int    `koanf:"busy_timeout"`
+	CacheSize        int    `koanf:"cache_size"`
+	MmapSize         int64  `koanf:"mmap_size"`
+	JournalSizeLimit int64  `koanf:"journal_size_limit"`
 }
 
 type AuthConfig struct {

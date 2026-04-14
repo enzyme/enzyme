@@ -17,13 +17,13 @@ For a full list of configurable options, see [Configuration Reference](/docs/con
 
 SQLite handles all storage in Enzyme. These pragmas are set per-connection via DSN parameters, so every connection in the pool gets them.
 
-| Setting              | Config Key                      | Default       | What It Does                                                                                           |
-| -------------------- | ------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------ |
-| `max_open_conns`     | `database.max_open_conns`       | `10`          | Number of connections in the pool. With WAL mode, readers don't block writers, so >1 is safe.          |
-| `busy_timeout`       | `database.busy_timeout`         | `5000`        | Milliseconds to retry when the database is locked, before returning `SQLITE_BUSY`.                     |
-| `cache_size`         | `database.cache_size`           | `-8000`       | Page cache size **per connection**. Negative = KB (`-8000` = ~8 MB). Larger cache = fewer disk reads.  |
-| `mmap_size`          | `database.mmap_size`            | `268435456`   | Memory-mapped I/O in bytes. `0` = disabled. Default is 256 MB. Enables the OS to page database data directly into memory. |
-| `journal_size_limit` | `database.journal_size_limit`   | `67108864`    | Max WAL file size in bytes. Default is 64 MB. Caps WAL growth during heavy writes.                     |
+| Setting              | Config Key                    | Default     | What It Does                                                                                                              |
+| -------------------- | ----------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `max_open_conns`     | `database.max_open_conns`     | `10`        | Number of connections in the pool. With WAL mode, readers don't block writers, so >1 is safe.                             |
+| `busy_timeout`       | `database.busy_timeout`       | `5000`      | Milliseconds to retry when the database is locked, before returning `SQLITE_BUSY`.                                        |
+| `cache_size`         | `database.cache_size`         | `-8000`     | Page cache size **per connection**. Negative = KB (`-8000` = ~8 MB). Larger cache = fewer disk reads.                     |
+| `mmap_size`          | `database.mmap_size`          | `268435456` | Memory-mapped I/O in bytes. `0` = disabled. Default is 256 MB. Enables the OS to page database data directly into memory. |
+| `journal_size_limit` | `database.journal_size_limit` | `67108864`  | Max WAL file size in bytes. Default is 64 MB. Caps WAL growth during heavy writes.                                        |
 
 ### When to Adjust
 
