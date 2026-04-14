@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get server information */
+        /**
+         * Get server information
+         * @description Returns server version, feature flags, and capability information. Useful for clients to detect which features are available (e.g. email, file uploads) before making further requests. Does not require authentication.
+         */
         get: operations["getServerInfo"];
         put?: never;
         post?: never;
@@ -30,7 +33,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Register a new user */
+        /**
+         * Register a new user
+         * @description Create a new user account with an email, password, and display name. Returns a session token that can be used for subsequent authenticated requests. If email verification is enabled on the server, a verification email will be sent.
+         */
         post: operations["register"];
         delete?: never;
         options?: never;
@@ -47,7 +53,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Log in a user */
+        /**
+         * Log in a user
+         * @description Authenticate with email and password. Returns a session token and user object. The token should be included as a Bearer token in the Authorization header for all authenticated requests.
+         */
         post: operations["login"];
         delete?: never;
         options?: never;
@@ -64,7 +73,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Log out the current user */
+        /**
+         * Log out the current user
+         * @description Invalidate the current session token. After logging out, the token can no longer be used for authenticated requests.
+         */
         post: operations["logout"];
         delete?: never;
         options?: never;
@@ -81,7 +93,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Request a password reset */
+        /**
+         * Request a password reset
+         * @description Send a password reset email to the specified address. Always returns success regardless of whether the email exists, to prevent email enumeration. Requires email to be enabled on the server.
+         */
         post: operations["forgotPassword"];
         delete?: never;
         options?: never;
@@ -98,7 +113,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reset password with token */
+        /**
+         * Reset password with token
+         * @description Set a new password using a reset token received via email. The token is single-use and expires after a configured duration.
+         */
         post: operations["resetPassword"];
         delete?: never;
         options?: never;
@@ -115,7 +133,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Verify email address with token */
+        /**
+         * Verify email address with token
+         * @description Confirm ownership of an email address using a verification token received via email. The token is single-use.
+         */
         post: operations["verifyEmail"];
         delete?: never;
         options?: never;
@@ -132,7 +153,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Resend verification email */
+        /**
+         * Resend verification email
+         * @description Request a new email verification link. Useful if the original verification email was lost or expired. Requires the user to be logged in but not yet verified.
+         */
         post: operations["resendVerification"];
         delete?: never;
         options?: never;
@@ -147,7 +171,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get current user info */
+        /**
+         * Get current user info
+         * @description Returns the currently authenticated user along with their workspace memberships. This is typically the first call a client makes after login to bootstrap the UI.
+         */
         get: operations["getMe"];
         put?: never;
         post?: never;
@@ -166,7 +193,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Register a device token for push notifications */
+        /**
+         * Register a device token for push notifications
+         * @description Register a device token for push notifications (FCM for Android, APNs for iOS). Each token is associated with the current user and session. Re-registering an existing token updates its association.
+         */
         post: operations["registerDeviceToken"];
         delete?: never;
         options?: never;
@@ -184,7 +214,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Unregister a device token */
+        /**
+         * Unregister a device token
+         * @description Remove a previously registered device token to stop receiving push notifications on that device.
+         */
         delete: operations["unregisterDeviceToken"];
         options?: never;
         head?: never;
@@ -200,7 +233,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a new workspace */
+        /**
+         * Create a new workspace
+         * @description Create a new workspace. The authenticated user becomes the owner. Workspace names must be unique and a URL-friendly slug is generated automatically.
+         */
         post: operations["createWorkspace"];
         delete?: never;
         options?: never;
@@ -215,7 +251,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get workspace details */
+        /**
+         * Get workspace details
+         * @description Retrieve details for a workspace including its name, icon, settings, and the current user's membership role.
+         */
         get: operations["getWorkspace"];
         put?: never;
         post?: never;
@@ -234,7 +273,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Update workspace */
+        /**
+         * Update workspace
+         * @description Update workspace properties such as name or settings. Requires admin or owner role in the workspace.
+         */
         post: operations["updateWorkspace"];
         delete?: never;
         options?: never;
@@ -251,7 +293,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** List workspace members */
+        /**
+         * List workspace members
+         * @description List all members of a workspace with their roles, display names, and ban status.
+         */
         post: operations["listWorkspaceMembers"];
         delete?: never;
         options?: never;
@@ -268,7 +313,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Remove a member from workspace */
+        /**
+         * Remove a member from workspace
+         * @description Remove a member from the workspace. Admins can remove members, owners can remove anyone except themselves. The removed user loses access to all workspace channels.
+         */
         post: operations["removeWorkspaceMember"];
         delete?: never;
         options?: never;
@@ -285,7 +333,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Leave a workspace */
+        /**
+         * Leave a workspace
+         * @description Voluntarily leave a workspace. The workspace owner cannot leave without first transferring ownership. Leaving removes access to all channels in the workspace.
+         */
         post: operations["leaveWorkspace"];
         delete?: never;
         options?: never;
@@ -302,7 +353,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Update member role */
+        /**
+         * Update member role
+         * @description Change a member's role within the workspace (e.g. member to admin). Only owners can promote to admin, and only admins/owners can change roles. Cannot change your own role.
+         */
         post: operations["updateWorkspaceMemberRole"];
         delete?: never;
         options?: never;
@@ -319,7 +373,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create an invite */
+        /**
+         * Create an invite
+         * @description Generate an invite link for the workspace. Invites can be configured with a maximum number of uses and an expiration date. Requires the appropriate permission level configured in workspace settings.
+         */
         post: operations["createWorkspaceInvite"];
         delete?: never;
         options?: never;
@@ -334,7 +391,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get notification summaries for all workspaces */
+        /**
+         * Get notification summaries for all workspaces
+         * @description Get unread message counts and mention counts for all workspaces the current user belongs to. Useful for showing notification badges in the workspace switcher.
+         */
         get: operations["getWorkspaceNotifications"];
         put?: never;
         post?: never;
@@ -353,7 +413,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reorder workspaces for current user */
+        /**
+         * Reorder workspaces for current user
+         * @description Set a custom display order for workspaces in the sidebar. Accepts a mapping of workspace IDs to sort positions. Only affects the current user's view.
+         */
         post: operations["reorderWorkspaces"];
         delete?: never;
         options?: never;
@@ -370,7 +433,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Accept an invite */
+        /**
+         * Accept an invite
+         * @description Join a workspace using an invite code. The invite must be valid (not expired, not at max uses). The user is added as a member and automatically joins the workspace's default channels.
+         */
         post: operations["acceptInvite"];
         delete?: never;
         options?: never;
@@ -387,7 +453,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a channel */
+        /**
+         * Create a channel
+         * @description Create a new channel in the workspace. Channel names must be unique within the workspace and contain only lowercase letters, numbers, and hyphens. The creator is automatically added as a member with admin role.
+         */
         post: operations["createChannel"];
         delete?: never;
         options?: never;
@@ -404,7 +473,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** List channels in workspace */
+        /**
+         * List channels in workspace
+         * @description List all channels in the workspace that the current user has access to. Includes the user's membership status and unread counts for each channel. Private channels are only listed if the user is a member.
+         */
         post: operations["listChannels"];
         delete?: never;
         options?: never;
@@ -421,7 +493,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create or get DM channel */
+        /**
+         * Create or get DM channel
+         * @description Create a direct message channel with one or more users. If a DM already exists between the same set of users, returns the existing channel. For two users, creates a 1:1 DM; for more, creates a group DM.
+         */
         post: operations["createDM"];
         delete?: never;
         options?: never;
@@ -438,7 +513,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Update channel */
+        /**
+         * Update channel
+         * @description Update channel properties such as name, description, or visibility (public/private). Requires channel admin role or workspace admin/owner role.
+         */
         post: operations["updateChannel"];
         delete?: never;
         options?: never;
@@ -455,7 +533,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Convert group DM to channel */
+        /**
+         * Convert group DM to channel
+         * @description Convert a group DM into a named public or private channel. Requires the caller to be a member of the group DM. All existing members and message history are preserved.
+         */
         post: operations["convertGroupDMToChannel"];
         delete?: never;
         options?: never;
@@ -472,7 +553,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Archive channel */
+        /**
+         * Archive channel
+         * @description Archive a channel, preventing new messages from being sent. Archived channels remain visible and searchable but are moved to an archived section. Requires channel admin or workspace admin/owner role.
+         */
         post: operations["archiveChannel"];
         delete?: never;
         options?: never;
@@ -489,7 +573,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Add member to channel */
+        /**
+         * Add member to channel
+         * @description Add a workspace member to a channel. For public channels, any member can add others. For private channels, only channel members can add others.
+         */
         post: operations["addChannelMember"];
         delete?: never;
         options?: never;
@@ -506,7 +593,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** List channel members */
+        /**
+         * List channel members
+         * @description List all members of a channel with their roles and join dates.
+         */
         post: operations["listChannelMembers"];
         delete?: never;
         options?: never;
@@ -523,7 +613,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Join a channel */
+        /**
+         * Join a channel
+         * @description Join a public channel. Private channels cannot be joined directly — a current member must add you using the add member endpoint.
+         */
         post: operations["joinChannel"];
         delete?: never;
         options?: never;
@@ -540,7 +633,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Leave a channel */
+        /**
+         * Leave a channel
+         * @description Leave a channel. You will no longer receive messages or notifications from this channel. The channel owner cannot leave without first transferring ownership.
+         */
         post: operations["leaveChannel"];
         delete?: never;
         options?: never;
@@ -557,9 +653,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Star a channel */
+        /**
+         * Star a channel
+         * @description Star a channel to pin it to the top of your sidebar. Starred channels appear in a separate section for quick access.
+         */
         post: operations["starChannel"];
-        /** Unstar a channel */
+        /**
+         * Unstar a channel
+         * @description Remove a channel from your starred list.
+         */
         delete: operations["unstarChannel"];
         options?: never;
         head?: never;
@@ -575,7 +677,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Mark channel as read */
+        /**
+         * Mark channel as read
+         * @description Mark a channel as read up to a specific message, or up to the latest message if no message ID is provided. Updates the unread count and clears notification badges for this channel.
+         */
         post: operations["markChannelRead"];
         delete?: never;
         options?: never;
@@ -590,10 +695,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get channel notification preferences */
+        /**
+         * Get channel notification preferences
+         * @description Get the current user's notification preferences for a specific channel, such as whether to receive notifications for all messages, mentions only, or nothing.
+         */
         get: operations["getChannelNotifications"];
         put?: never;
-        /** Update channel notification preferences */
+        /**
+         * Update channel notification preferences
+         * @description Set notification preferences for a specific channel. Overrides the workspace-level notification defaults for this channel only.
+         */
         post: operations["updateChannelNotifications"];
         delete?: never;
         options?: never;
@@ -610,7 +721,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Mark all channels as read */
+        /**
+         * Mark all channels as read
+         * @description Mark all channels in the workspace as read. Clears all unread counts and notification badges across every channel the user is a member of.
+         */
         post: operations["markAllChannelsRead"];
         delete?: never;
         options?: never;
@@ -627,7 +741,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** List all unread messages across channels */
+        /**
+         * List all unread messages across channels
+         * @description Fetch unread messages across all channels in the workspace. Returns messages grouped by channel with cursor-based pagination. Useful for building an "All Unreads" view.
+         */
         post: operations["listAllUnreads"];
         delete?: never;
         options?: never;
@@ -644,7 +761,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Search messages in workspace */
+        /**
+         * Search messages in workspace
+         * @description Full-text search across messages in the workspace. Supports filtering by channel, user, and date range. Results include surrounding context and are ranked by relevance.
+         */
         post: operations["searchMessages"];
         delete?: never;
         options?: never;
@@ -661,7 +781,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** List threads user is subscribed to */
+        /**
+         * List threads user is subscribed to
+         * @description List threads that the current user is subscribed to in the workspace. Includes the root message and latest replies with unread counts. Supports cursor-based pagination.
+         */
         post: operations["listUserThreads"];
         delete?: never;
         options?: never;
@@ -676,7 +799,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a single message */
+        /**
+         * Get a single message
+         * @description Retrieve a single message by ID, including its author, reactions, thread metadata, and file attachments.
+         */
         get: operations["getMessage"];
         put?: never;
         post?: never;
@@ -695,7 +821,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Send a message */
+        /**
+         * Send a message
+         * @description Send a new message to a channel. Supports plain text content, file attachments (by referencing previously uploaded file IDs), and threading (by setting a parent message ID). The sender must be a member of the channel.
+         */
         post: operations["sendMessage"];
         delete?: never;
         options?: never;
@@ -712,7 +841,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** List messages in channel */
+        /**
+         * List messages in channel
+         * @description List messages in a channel with cursor-based pagination. Returns messages in reverse chronological order by default. Supports fetching around a specific message for scroll-to-message functionality.
+         */
         post: operations["listMessages"];
         delete?: never;
         options?: never;
@@ -729,7 +861,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Update a message */
+        /**
+         * Update a message
+         * @description Edit the content of a previously sent message. Only the message author can edit their own messages. An edit indicator is shown on the message after updating.
+         */
         post: operations["updateMessage"];
         delete?: never;
         options?: never;
@@ -746,7 +881,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Delete a message */
+        /**
+         * Delete a message
+         * @description Delete a message. Authors can delete their own messages. Channel admins and workspace admins/owners can delete any message in channels they have access to.
+         */
         post: operations["deleteMessage"];
         delete?: never;
         options?: never;
@@ -763,7 +901,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Delete a message's link preview */
+        /**
+         * Delete a message's link preview
+         * @description Remove the link preview (unfurl) from a message. Only the message author can remove link previews from their own messages.
+         */
         post: operations["deleteLinkPreview"];
         delete?: never;
         options?: never;
@@ -780,7 +921,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Add reaction to message */
+        /**
+         * Add reaction to message
+         * @description Add an emoji reaction to a message. Each user can only add each unique emoji once per message. Supports both standard Unicode emoji and custom workspace emoji.
+         */
         post: operations["addReaction"];
         delete?: never;
         options?: never;
@@ -797,7 +941,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Remove reaction from message */
+        /**
+         * Remove reaction from message
+         * @description Remove your emoji reaction from a message. You can only remove reactions that you previously added.
+         */
         post: operations["removeReaction"];
         delete?: never;
         options?: never;
@@ -814,7 +961,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Mark message as unread */
+        /**
+         * Mark message as unread
+         * @description Mark a message as unread, setting the channel's read position to just before this message. The channel will appear as having unread messages starting from this point.
+         */
         post: operations["markMessageUnread"];
         delete?: never;
         options?: never;
@@ -831,7 +981,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Mark thread as read */
+        /**
+         * Mark thread as read
+         * @description Mark a thread as read up to a specific reply, or up to the latest reply if no reply ID is provided. Updates the thread's unread count.
+         */
         post: operations["markThreadRead"];
         delete?: never;
         options?: never;
@@ -848,7 +1001,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** List thread replies */
+        /**
+         * List thread replies
+         * @description List replies in a message thread with cursor-based pagination. Returns the thread replies in chronological order.
+         */
         post: operations["listThread"];
         delete?: never;
         options?: never;
@@ -863,7 +1019,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get thread subscription status */
+        /**
+         * Get thread subscription status
+         * @description Check whether the current user is subscribed to a thread. Subscribed users receive notifications for new replies.
+         */
         get: operations["getThreadSubscription"];
         put?: never;
         post?: never;
@@ -882,7 +1041,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Subscribe to thread */
+        /**
+         * Subscribe to thread
+         * @description Subscribe to a thread to receive notifications for new replies. Users are automatically subscribed when they reply to a thread.
+         */
         post: operations["subscribeToThread"];
         delete?: never;
         options?: never;
@@ -899,7 +1061,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Unsubscribe from thread */
+        /**
+         * Unsubscribe from thread
+         * @description Unsubscribe from a thread to stop receiving notifications for new replies.
+         */
         post: operations["unsubscribeFromThread"];
         delete?: never;
         options?: never;
@@ -992,7 +1157,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload a file */
+        /**
+         * Upload a file
+         * @description Upload a file to a channel. The file is stored on the server and a file object is returned with an ID that can be referenced when sending a message. Maximum file size and allowed types are configured server-side.
+         */
         post: operations["uploadFile"];
         delete?: never;
         options?: never;
@@ -1007,7 +1175,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Download a file */
+        /**
+         * Download a file
+         * @description Download a file by ID. Supports both authenticated requests (Bearer token) and signed URLs (with expires, uid, and sig query parameters) for sharing files externally.
+         */
         get: operations["downloadFile"];
         put?: never;
         post?: never;
@@ -1026,7 +1197,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Get a signed download URL for a file */
+        /**
+         * Get a signed download URL for a file
+         * @description Generate a time-limited signed URL for downloading a file without authentication. Useful for embedding file links in emails or sharing with external users.
+         */
         post: operations["signFileUrl"];
         delete?: never;
         options?: never;
@@ -1043,7 +1217,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Get signed download URLs for multiple files */
+        /**
+         * Get signed download URLs for multiple files
+         * @description Generate signed download URLs for multiple files in a single request. More efficient than calling the single-file endpoint repeatedly.
+         */
         post: operations["signFileUrls"];
         delete?: never;
         options?: never;
@@ -1060,7 +1237,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Delete a file */
+        /**
+         * Delete a file
+         * @description Delete a file from the server. Only the file uploader or a workspace admin/owner can delete files.
+         */
         post: operations["deleteFile"];
         delete?: never;
         options?: never;
@@ -1077,7 +1257,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload a custom emoji */
+        /**
+         * Upload a custom emoji
+         * @description Upload a custom emoji image for the workspace. Accepts PNG, GIF, or WebP. The emoji name must be unique within the workspace and use only lowercase letters, numbers, and underscores.
+         */
         post: operations["uploadCustomEmoji"];
         delete?: never;
         options?: never;
@@ -1094,7 +1277,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** List custom emojis for a workspace */
+        /**
+         * List custom emojis for a workspace
+         * @description List all custom emojis available in the workspace. Returns emoji names and their image URLs.
+         */
         post: operations["listCustomEmojis"];
         delete?: never;
         options?: never;
@@ -1111,7 +1297,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Delete a custom emoji */
+        /**
+         * Delete a custom emoji
+         * @description Delete a custom emoji from the workspace. Only the emoji uploader or a workspace admin/owner can delete custom emojis.
+         */
         post: operations["deleteCustomEmoji"];
         delete?: never;
         options?: never;
@@ -1128,7 +1317,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Schedule a message for future delivery */
+        /**
+         * Schedule a message for future delivery
+         * @description Schedule a message for future delivery to a channel. The message will be automatically sent at the specified time. Scheduled messages can be edited or cancelled before delivery.
+         */
         post: operations["scheduleMessage"];
         delete?: never;
         options?: never;
@@ -1145,7 +1337,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** List user's scheduled messages in a workspace */
+        /**
+         * List user's scheduled messages in a workspace
+         * @description List all pending scheduled messages created by the current user in a workspace.
+         */
         post: operations["listScheduledMessages"];
         delete?: never;
         options?: never;
@@ -1162,7 +1357,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Get a scheduled message */
+        /**
+         * Get a scheduled message
+         * @description Retrieve a single scheduled message by ID, including its content, target channel, and scheduled delivery time.
+         */
         post: operations["getScheduledMessage"];
         delete?: never;
         options?: never;
@@ -1179,7 +1377,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Update a scheduled message */
+        /**
+         * Update a scheduled message
+         * @description Update the content or delivery time of a pending scheduled message. Cannot update messages that have already been sent.
+         */
         post: operations["updateScheduledMessage"];
         delete?: never;
         options?: never;
@@ -1196,7 +1397,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Delete a scheduled message */
+        /**
+         * Delete a scheduled message
+         * @description Cancel and delete a pending scheduled message. Cannot delete messages that have already been sent.
+         */
         post: operations["deleteScheduledMessage"];
         delete?: never;
         options?: never;
@@ -1213,7 +1417,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Send a scheduled message immediately */
+        /**
+         * Send a scheduled message immediately
+         * @description Immediately send a scheduled message instead of waiting for its scheduled delivery time. The message is sent and the scheduled entry is removed.
+         */
         post: operations["sendScheduledMessageNow"];
         delete?: never;
         options?: never;
@@ -1228,7 +1435,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get user profile */
+        /**
+         * Get user profile
+         * @description Retrieve a user's public profile by ID, including display name, avatar, and status.
+         */
         get: operations["getUser"];
         put?: never;
         post?: never;
@@ -1247,7 +1457,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Update own profile */
+        /**
+         * Update own profile
+         * @description Update the current user's profile fields such as display name and status. Changes are reflected across all workspaces.
+         */
         post: operations["updateProfile"];
         delete?: never;
         options?: never;
@@ -1264,9 +1477,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload avatar image */
+        /**
+         * Upload avatar image
+         * @description Upload a profile avatar image. Accepts JPEG, PNG, GIF, or WebP. The image is resized and stored on the server, replacing any existing avatar.
+         */
         post: operations["uploadAvatar"];
-        /** Remove avatar */
+        /**
+         * Remove avatar
+         * @description Remove the current user's avatar, reverting to the default Gravatar-based avatar.
+         */
         delete: operations["deleteAvatar"];
         options?: never;
         head?: never;
@@ -1282,9 +1501,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload workspace icon */
+        /**
+         * Upload workspace icon
+         * @description Upload an image to use as the workspace icon. Accepts JPEG, PNG, GIF, or WebP. The image is resized to fit. Requires admin or owner role.
+         */
         post: operations["uploadWorkspaceIcon"];
-        /** Remove workspace icon */
+        /**
+         * Remove workspace icon
+         * @description Remove the workspace icon, reverting to the default. Requires admin or owner role.
+         */
         delete: operations["deleteWorkspaceIcon"];
         options?: never;
         head?: never;
@@ -1471,7 +1696,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** SSE event stream */
+        /**
+         * SSE event stream
+         * @description Open a Server-Sent Events stream for real-time updates in a workspace. Events include new messages, reactions, typing indicators, presence changes, and channel updates. Supports reconnection with Last-Event-ID header to catch up on missed events.
+         */
         get: operations["events"];
         put?: never;
         post?: never;
@@ -1490,7 +1718,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Start typing indicator */
+        /**
+         * Start typing indicator
+         * @description Broadcast a typing indicator to other members of a channel. The indicator automatically expires after a few seconds if not refreshed.
+         */
         post: operations["startTyping"];
         delete?: never;
         options?: never;
@@ -1507,7 +1738,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Stop typing indicator */
+        /**
+         * Stop typing indicator
+         * @description Clear the typing indicator for a channel. Called when the user stops typing or sends their message.
+         */
         post: operations["stopTyping"];
         delete?: never;
         options?: never;
@@ -1520,32 +1754,48 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         UserProfile: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example Alice Chen */
             display_name: string;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             avatar_url?: string;
+            /** @example https://www.gravatar.com/avatar/abc123?d=mp */
             gravatar_url?: string;
+            /** @example In a meeting */
             status: string;
             /** Format: date-time */
             created_at: string;
         };
         UpdateProfileInput: {
+            /** @example Alice Chen */
             display_name?: string;
         };
         AvatarUploadResponse: {
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             avatar_url: string;
         };
         WorkspaceIconUploadResponse: {
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             icon_url: string;
         };
         User: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
-            /** Format: email */
+            /**
+             * Format: email
+             * @example alice@example.com
+             */
             email: string;
             /** Format: date-time */
             email_verified_at?: string;
+            /** @example Alice Chen */
             display_name: string;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             avatar_url?: string;
+            /** @example https://www.gravatar.com/avatar/abc123?d=mp */
             gravatar_url?: string;
+            /** @example In a meeting */
             status: string;
             /** Format: date-time */
             created_at: string;
@@ -1573,8 +1823,11 @@ export interface components {
             who_can_manage_custom_emoji: components["schemas"]["PermissionLevel"];
         };
         Workspace: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example general */
             name: string;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             icon_url?: string;
             /** @description JSON string containing workspace settings (for backward compatibility) */
             settings: string;
@@ -1585,27 +1838,40 @@ export interface components {
             updated_at: string;
         };
         WorkspaceSummary: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example general */
             name: string;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             icon_url?: string;
             role: components["schemas"]["WorkspaceRole"];
-            /** @description User's custom sort order for this workspace */
+            /**
+             * @description User's custom sort order for this workspace
+             * @example 1
+             */
             sort_order?: number;
             /** @description Present when the user is banned from this workspace */
             ban?: {
+                /** @example Repeated spam */
                 reason?: string;
                 /** Format: date-time */
                 expires_at?: string;
             };
         };
         WorkspaceNotificationSummary: {
+            /** @example 01JQ3KMP2RQHYJ5ZV8NMWCX4ET */
             workspace_id: string;
+            /** @example 12 */
             unread_count: number;
+            /** @example 3 */
             notification_count: number;
         };
         WorkspaceMembership: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
+            /** @example 01JQ3KMP2RQHYJ5ZV8NMWCX4ET */
             workspace_id: string;
             role: components["schemas"]["WorkspaceRole"];
             display_name_override?: string;
@@ -1615,10 +1881,16 @@ export interface components {
             updated_at: string;
         };
         WorkspaceMemberWithUser: components["schemas"]["WorkspaceMembership"] & {
-            /** Format: email */
+            /**
+             * Format: email
+             * @example alice@example.com
+             */
             email: string;
+            /** @example Alice Chen */
             display_name: string;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             avatar_url?: string;
+            /** @example https://www.gravatar.com/avatar/abc123?d=mp */
             gravatar_url?: string;
             /** @description Whether the user is currently banned from the workspace */
             is_banned?: boolean;
@@ -1626,14 +1898,23 @@ export interface components {
         /** @enum {string} */
         WorkspaceRole: "owner" | "admin" | "member" | "guest";
         Invite: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example 01JQ3KMP2RQHYJ5ZV8NMWCX4ET */
             workspace_id: string;
+            /** @example abc123def */
             code: string;
-            /** Format: email */
+            /**
+             * Format: email
+             * @example newuser@example.com
+             */
             invited_email?: string;
             role: components["schemas"]["WorkspaceRole"];
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             created_by?: string;
+            /** @example 25 */
             max_uses?: number;
+            /** @example 5 */
             use_count: number;
             /** Format: date-time */
             expires_at?: string;
@@ -1641,16 +1922,21 @@ export interface components {
             created_at: string;
         };
         Channel: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example 01JQ3KMP2RQHYJ5ZV8NMWCX4ET */
             workspace_id: string;
+            /** @example general */
             name: string;
             description?: string;
             type: components["schemas"]["ChannelType"];
             /** @description Whether this is the default channel (like */
             is_default: boolean;
+            /** @example hash_abc123 */
             dm_participant_hash?: string;
             /** Format: date-time */
             archived_at?: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             created_by?: string;
             /** Format: date-time */
             created_at: string;
@@ -1659,8 +1945,11 @@ export interface components {
         };
         ChannelWithMembership: components["schemas"]["Channel"] & {
             channel_role?: components["schemas"]["ChannelRole"];
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             last_read_message_id?: string;
+            /** @example 12 */
             unread_count: number;
+            /** @example 3 */
             notification_count: number;
             is_starred: boolean;
             /** @description For DM channels, the other participants (excluding current user) */
@@ -1671,11 +1960,18 @@ export interface components {
         /** @enum {string} */
         ChannelRole: "admin" | "poster" | "viewer";
         ChannelMember: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
-            /** Format: email */
+            /**
+             * Format: email
+             * @example alice@example.com
+             */
             email: string;
+            /** @example Alice Chen */
             display_name: string;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             avatar_url?: string;
+            /** @example https://www.gravatar.com/avatar/abc123?d=mp */
             gravatar_url?: string;
             channel_role?: components["schemas"]["ChannelRole"];
         };
@@ -1685,31 +1981,61 @@ export interface components {
         SystemEventType: "user_joined" | "user_left" | "user_added" | "user_converted_channel" | "channel_renamed" | "channel_visibility_changed" | "channel_description_updated" | "message_pinned" | "message_unpinned";
         SystemEventData: {
             event_type: components["schemas"]["SystemEventType"];
-            /** @description The user who joined/left/was added */
+            /**
+             * @description The user who joined/left/was added
+             * @example 01JQ3KMN7XFGY4P6WBR2SZTA9V
+             */
             user_id: string;
-            /** @description Display name of the user at the time of the event */
+            /**
+             * @description Display name of the user at the time of the event
+             * @example Alice Chen
+             */
             user_display_name: string;
-            /** @description Name of the channel */
+            /**
+             * @description Name of the channel
+             * @example general
+             */
             channel_name: string;
-            /** @description The user who performed the action (for user_added) */
+            /**
+             * @description The user who performed the action (for user_added)
+             * @example 01JQ3KMS4WTVY6BN8FRCJD2HAQ
+             */
             actor_id?: string;
-            /** @description Display name of the actor */
+            /**
+             * @description Display name of the actor
+             * @example Bob Martinez
+             */
             actor_display_name?: string;
-            /** @description Previous channel name (for rename events) */
+            /**
+             * @description Previous channel name (for rename events)
+             * @example old-channel-name
+             */
             old_channel_name?: string;
-            /** @description New channel type (for visibility change events) */
+            /**
+             * @description New channel type (for visibility change events)
+             * @example public
+             */
             channel_type?: string;
-            /** @description Referenced message ID (for pin/unpin events) */
+            /**
+             * @description Referenced message ID (for pin/unpin events)
+             * @example 01JQ3KMR5KVDW2TG9NHP0XEJBL
+             */
             message_id?: string;
         };
         Message: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example 01JQ3KMQ8YNBC3DFHM6RWVS7AG */
             channel_id: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id?: string;
+            /** @example Hello, world! */
             content: string;
             type?: components["schemas"]["MessageType"];
             system_event?: components["schemas"]["SystemEventData"];
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             thread_parent_id?: string;
+            /** @example 3 */
             reply_count: number;
             /** Format: date-time */
             last_reply_at?: string;
@@ -1724,11 +2050,15 @@ export interface components {
             also_send_to_channel?: boolean;
             /** Format: date-time */
             pinned_at?: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             pinned_by?: string;
         };
         MessageWithUser: components["schemas"]["Message"] & {
+            /** @example Alice Chen */
             user_display_name?: string;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             user_avatar_url?: string;
+            /** @example https://www.gravatar.com/avatar/abc123?d=mp */
             user_gravatar_url?: string;
             reactions?: components["schemas"]["Reaction"][];
             thread_participants?: components["schemas"]["ThreadParticipant"][];
@@ -1736,55 +2066,87 @@ export interface components {
             link_preview?: components["schemas"]["LinkPreview"];
         };
         ThreadParticipant: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
+            /** @example Alice Chen */
             display_name?: string;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             avatar_url?: string;
+            /** @example https://www.gravatar.com/avatar/abc123?d=mp */
             gravatar_url?: string;
         };
         Attachment: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example report.pdf */
             filename: string;
+            /** @example application/pdf */
             content_type: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @example 1048576
+             */
             size_bytes: number;
-            /** @description Download URL for the attachment */
+            /**
+             * @description Download URL for the attachment
+             * @example /files/01JQ3KMT6B/download?sig=abc
+             */
             url: string;
             /** Format: date-time */
             created_at: string;
         };
         LinkPreview: {
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             url: string;
             /**
              * @default external
              * @enum {string}
              */
             type: "external" | "message";
+            /** @example Example Page */
             title?: string;
             description?: string;
+            /** @example https://example.com/image.png */
             image_url?: string;
+            /** @example example.com */
             site_name?: string;
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             linked_message_id?: string;
+            /** @example 01JQ3KMQ8YNBC3DFHM6RWVS7AG */
             linked_channel_id?: string;
+            /** @example random */
             linked_channel_name?: string;
+            /** @example public */
             linked_channel_type?: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             message_author_id?: string;
+            /** @example Alice Chen */
             message_author_name?: string;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             message_author_avatar_url?: string;
+            /** @example https://www.gravatar.com/avatar/abc123?d=mp */
             message_author_gravatar_url?: string;
+            /** @example Check out this link! */
             message_content?: string;
             /** Format: date-time */
             message_created_at?: string;
         };
         Reaction: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             message_id: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
+            /** @example 👍 */
             emoji: string;
             /** Format: date-time */
             created_at: string;
         };
         ReactionSummary: {
+            /** @example 👍 */
             emoji: string;
+            /** @example 5 */
             count: number;
             user_ids: string[];
         };
@@ -1792,20 +2154,26 @@ export interface components {
             messages: components["schemas"]["MessageWithUser"][];
             has_more: boolean;
             has_newer?: boolean;
+            /** @example eyJpZCI6IjAxSkVYQU1QTEUifQ */
             next_cursor?: string;
         };
         UnreadMessage: components["schemas"]["MessageWithUser"] & {
+            /** @example general */
             channel_name: string;
             channel_type: components["schemas"]["ChannelType"];
         };
         UnreadMessagesResult: {
             messages: components["schemas"]["UnreadMessage"][];
             has_more: boolean;
+            /** @example eyJpZCI6IjAxSkVYQU1QTEUifQ */
             next_cursor?: string;
         };
         SearchMessagesInput: {
+            /** @example search term */
             query: string;
+            /** @example 01JQ3KMQ8YNBC3DFHM6RWVS7AG */
             channel_id?: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id?: string;
             /** Format: date-time */
             before?: string;
@@ -1817,16 +2185,20 @@ export interface components {
             offset: number;
         };
         SearchMessage: components["schemas"]["MessageWithUser"] & {
+            /** @example general */
             channel_name: string;
             channel_type: components["schemas"]["ChannelType"];
         };
         SearchMessagesResult: {
             messages: components["schemas"]["SearchMessage"][];
+            /** @example 42 */
             total_count: number;
             has_more: boolean;
+            /** @example search term */
             query: string;
         };
         ThreadMessage: components["schemas"]["MessageWithUser"] & {
+            /** @example general */
             channel_name: string;
             channel_type: components["schemas"]["ChannelType"];
             has_new_replies: boolean;
@@ -1834,35 +2206,51 @@ export interface components {
         ThreadListResult: {
             threads: components["schemas"]["ThreadMessage"][];
             has_more: boolean;
+            /** @example eyJpZCI6IjAxSkVYQU1QTEUifQ */
             next_cursor?: string;
+            /** @example 2 */
             unread_thread_count: number;
         };
         ApiError: {
+            /** @example VALIDATION_ERROR */
             code: string;
+            /** @example Invalid request parameters */
             message: string;
         };
         ApiErrorResponse: {
             error: components["schemas"]["ApiError"];
         };
         CustomEmoji: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example 01JQ3KMP2RQHYJ5ZV8NMWCX4ET */
             workspace_id: string;
+            /** @example general */
             name: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             created_by: string;
+            /** @example application/pdf */
             content_type: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @example 1048576
+             */
             size_bytes: number;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             url: string;
             /** Format: date-time */
             created_at: string;
         };
         SignedUrl: {
+            /** @example 01JQ3KMT6BMRXP0WCDG9HQSYNF */
             file_id: string;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             url: string;
             /** Format: date-time */
             expires_at: string;
         };
         ServerInfo: {
+            /** @example 0.2.0 */
             version: string;
             email_enabled?: boolean;
             files_enabled?: boolean;
@@ -1871,16 +2259,20 @@ export interface components {
             success: boolean;
         };
         MarkReadResponse: {
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             last_read_message_id: string;
         };
         ChannelReadEventData: {
+            /** @example 01JQ3KMQ8YNBC3DFHM6RWVS7AG */
             channel_id: string;
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             last_read_message_id: string;
         };
         /** @enum {string} */
         SSEEventType: "connected" | "heartbeat" | "message.new" | "message.updated" | "message.deleted" | "reaction.added" | "reaction.removed" | "channel.created" | "channel.updated" | "channel.archived" | "channel.member_added" | "channel.member_removed" | "channel.read" | "typing.start" | "typing.stop" | "presence.changed" | "presence.initial" | "notification" | "emoji.created" | "emoji.deleted" | "message.pinned" | "message.unpinned" | "member.banned" | "member.unbanned" | "member.left" | "member.role_changed" | "workspace.updated" | "channels.invalidate" | "scheduled_message.created" | "scheduled_message.updated" | "scheduled_message.deleted" | "scheduled_message.sent" | "scheduled_message.failed";
         SSEEvent: components["schemas"]["SSEEventConnected"] | components["schemas"]["SSEEventHeartbeat"] | components["schemas"]["SSEEventMessageNew"] | components["schemas"]["SSEEventMessageUpdated"] | components["schemas"]["SSEEventMessageDeleted"] | components["schemas"]["SSEEventReactionAdded"] | components["schemas"]["SSEEventReactionRemoved"] | components["schemas"]["SSEEventChannelCreated"] | components["schemas"]["SSEEventChannelUpdated"] | components["schemas"]["SSEEventChannelArchived"] | components["schemas"]["SSEEventChannelMemberAdded"] | components["schemas"]["SSEEventChannelMemberRemoved"] | components["schemas"]["SSEEventChannelRead"] | components["schemas"]["SSEEventTypingStart"] | components["schemas"]["SSEEventTypingStop"] | components["schemas"]["SSEEventPresenceChanged"] | components["schemas"]["SSEEventPresenceInitial"] | components["schemas"]["SSEEventNotification"] | components["schemas"]["SSEEventEmojiCreated"] | components["schemas"]["SSEEventEmojiDeleted"] | components["schemas"]["SSEEventScheduledMessageCreated"] | components["schemas"]["SSEEventScheduledMessageUpdated"] | components["schemas"]["SSEEventScheduledMessageDeleted"] | components["schemas"]["SSEEventScheduledMessageSent"] | components["schemas"]["SSEEventMessagePinned"] | components["schemas"]["SSEEventMessageUnpinned"] | components["schemas"]["SSEEventMemberBanned"] | components["schemas"]["SSEEventMemberUnbanned"] | components["schemas"]["SSEEventMemberLeft"] | components["schemas"]["SSEEventMemberRoleChanged"] | components["schemas"]["SSEEventWorkspaceUpdated"] | components["schemas"]["SSEEventScheduledMessageFailed"] | components["schemas"]["SSEEventChannelsInvalidate"];
         SSEEventConnected: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1890,6 +2282,7 @@ export interface components {
             data: components["schemas"]["ConnectedData"];
         };
         SSEEventHeartbeat: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1899,6 +2292,7 @@ export interface components {
             data: components["schemas"]["HeartbeatData"];
         };
         SSEEventMessageNew: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1908,6 +2302,7 @@ export interface components {
             data: components["schemas"]["MessageWithUser"];
         };
         SSEEventMessageUpdated: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1917,6 +2312,7 @@ export interface components {
             data: components["schemas"]["MessageWithUser"];
         };
         SSEEventMessageDeleted: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1926,6 +2322,7 @@ export interface components {
             data: components["schemas"]["MessageDeletedData"];
         };
         SSEEventReactionAdded: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1935,6 +2332,7 @@ export interface components {
             data: components["schemas"]["Reaction"];
         };
         SSEEventReactionRemoved: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1944,6 +2342,7 @@ export interface components {
             data: components["schemas"]["ReactionRemovedData"];
         };
         SSEEventChannelCreated: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1953,6 +2352,7 @@ export interface components {
             data: components["schemas"]["Channel"];
         };
         SSEEventChannelUpdated: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1962,6 +2362,7 @@ export interface components {
             data: components["schemas"]["Channel"];
         };
         SSEEventChannelArchived: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1971,6 +2372,7 @@ export interface components {
             data: components["schemas"]["Channel"];
         };
         SSEEventChannelMemberAdded: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1980,6 +2382,7 @@ export interface components {
             data: components["schemas"]["ChannelMemberData"];
         };
         SSEEventChannelMemberRemoved: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1989,6 +2392,7 @@ export interface components {
             data: components["schemas"]["ChannelMemberData"];
         };
         SSEEventChannelRead: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1998,6 +2402,7 @@ export interface components {
             data: components["schemas"]["ChannelReadEventData"];
         };
         SSEEventTypingStart: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2007,6 +2412,7 @@ export interface components {
             data: components["schemas"]["TypingEventData"];
         };
         SSEEventTypingStop: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2016,6 +2422,7 @@ export interface components {
             data: components["schemas"]["TypingEventData"];
         };
         SSEEventPresenceChanged: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2025,6 +2432,7 @@ export interface components {
             data: components["schemas"]["PresenceData"];
         };
         SSEEventPresenceInitial: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2038,6 +2446,7 @@ export interface components {
             online_user_ids: string[];
         };
         SSEEventNotification: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2047,6 +2456,7 @@ export interface components {
             data: components["schemas"]["NotificationData"];
         };
         SSEEventEmojiCreated: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2056,6 +2466,7 @@ export interface components {
             data: components["schemas"]["CustomEmoji"];
         };
         SSEEventEmojiDeleted: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2065,6 +2476,7 @@ export interface components {
             data: components["schemas"]["EmojiDeletedData"];
         };
         SSEEventScheduledMessageCreated: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2074,6 +2486,7 @@ export interface components {
             data: components["schemas"]["ScheduledMessage"];
         };
         SSEEventScheduledMessageUpdated: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2083,6 +2496,7 @@ export interface components {
             data: components["schemas"]["ScheduledMessage"];
         };
         SSEEventScheduledMessageDeleted: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2092,6 +2506,7 @@ export interface components {
             data: components["schemas"]["ScheduledMessageDeletedData"];
         };
         SSEEventScheduledMessageSent: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2101,6 +2516,7 @@ export interface components {
             data: components["schemas"]["ScheduledMessageSentData"];
         };
         SSEEventMessagePinned: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2110,6 +2526,7 @@ export interface components {
             data: components["schemas"]["MessageWithUser"];
         };
         SSEEventMessageUnpinned: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2119,6 +2536,7 @@ export interface components {
             data: components["schemas"]["MessageWithUser"];
         };
         SSEEventMemberBanned: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2128,6 +2546,7 @@ export interface components {
             data: components["schemas"]["WorkspaceMemberData"];
         };
         SSEEventMemberUnbanned: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2137,6 +2556,7 @@ export interface components {
             data: components["schemas"]["WorkspaceMemberData"];
         };
         SSEEventMemberLeft: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2146,6 +2566,7 @@ export interface components {
             data: components["schemas"]["WorkspaceMemberData"];
         };
         SSEEventMemberRoleChanged: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2155,6 +2576,7 @@ export interface components {
             data: components["schemas"]["MemberRoleChangedData"];
         };
         SSEEventWorkspaceUpdated: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2164,6 +2586,7 @@ export interface components {
             data: components["schemas"]["Workspace"];
         };
         SSEEventScheduledMessageFailed: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2173,6 +2596,7 @@ export interface components {
             data: components["schemas"]["ScheduledMessageFailedData"];
         };
         SSEEventChannelsInvalidate: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id?: string;
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2189,52 +2613,74 @@ export interface components {
             timestamp: number;
         };
         MessageDeletedData: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             thread_parent_id?: string;
         };
         ReactionRemovedData: {
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             message_id: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
+            /** @example 👍 */
             emoji: string;
         };
         ChannelMemberData: {
+            /** @example 01JQ3KMQ8YNBC3DFHM6RWVS7AG */
             channel_id: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
         };
         WorkspaceMemberData: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
+            /** @example 01JQ3KMP2RQHYJ5ZV8NMWCX4ET */
             workspace_id: string;
         };
         MemberRoleChangedData: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
             old_role: string;
             new_role: string;
         };
         EmojiDeletedData: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example general */
             name: string;
         };
         ScheduledMessageDeletedData: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
         };
         ScheduledMessageSentData: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example 01JQ3KMQ8YNBC3DFHM6RWVS7AG */
             channel_id: string;
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             message_id: string;
         };
         ScheduledMessageFailedData: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example 01JQ3KMQ8YNBC3DFHM6RWVS7AG */
             channel_id: string;
             error: string;
         };
         NotificationData: {
             /** @enum {string} */
             type: "mention" | "dm" | "channel" | "here" | "everyone" | "thread_reply";
+            /** @example 01JQ3KMQ8YNBC3DFHM6RWVS7AG */
             channel_id: string;
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             message_id: string;
+            /** @example general */
             channel_name?: string;
             sender_name?: string;
             preview?: string;
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             thread_parent_id?: string;
         };
         /** @enum {string} */
@@ -2246,29 +2692,43 @@ export interface components {
             email_enabled: boolean;
         };
         TypingEventData: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
+            /** @example 01JQ3KMQ8YNBC3DFHM6RWVS7AG */
             channel_id: string;
+            /** @example Alice Chen */
             user_display_name?: string;
         };
         /** @enum {string} */
         PresenceStatus: "online" | "offline";
         PresenceData: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
             status: components["schemas"]["PresenceStatus"];
         };
         RegisterInput: {
-            /** Format: email */
+            /**
+             * Format: email
+             * @example alice@example.com
+             */
             email: string;
+            /** @example securepassword123 */
             password: string;
+            /** @example Alice Chen */
             display_name: string;
         };
         LoginInput: {
-            /** Format: email */
+            /**
+             * Format: email
+             * @example alice@example.com
+             */
             email: string;
+            /** @example securepassword123 */
             password: string;
         };
         AuthResponse: {
             user: components["schemas"]["User"];
+            /** @example enz_v1_01JQ3KMWX8FVN4CPRD6BHTYGSZ */
             token: string;
         };
         MeResponse: {
@@ -2276,7 +2736,10 @@ export interface components {
             workspaces?: components["schemas"]["WorkspaceSummary"][];
         };
         RegisterDeviceTokenRequest: {
-            /** @description The push notification token (FCM or APNs) */
+            /**
+             * @description The push notification token (FCM or APNs)
+             * @example enz_v1_01JQ3KMWX8FVN4CPRD6BHTYGSZ
+             */
             token: string;
             /**
              * @description The push platform
@@ -2287,13 +2750,18 @@ export interface components {
             device_id: string;
         };
         RegisterDeviceTokenResponse: {
-            /** @description The device token record ID */
+            /**
+             * @description The device token record ID
+             * @example 01JQ3KMN7XFGY4P6WBR2SZTA9V
+             */
             id: string;
         };
         CreateWorkspaceInput: {
+            /** @example general */
             name: string;
         };
         UpdateWorkspaceInput: {
+            /** @example general */
             name?: string;
             /** @description Partial workspace settings to update. Only provided fields are changed. */
             settings?: {
@@ -2305,9 +2773,13 @@ export interface components {
             };
         };
         CreateInviteInput: {
-            /** Format: email */
+            /**
+             * Format: email
+             * @example newuser@example.com
+             */
             invited_email?: string;
             role: components["schemas"]["WorkspaceRole"];
+            /** @example 25 */
             max_uses?: number;
             expires_in_hours?: number;
         };
@@ -2315,6 +2787,7 @@ export interface components {
             user_ids: string[];
         };
         ConvertGroupDMInput: {
+            /** @example general */
             name: string;
             description?: string;
             /**
@@ -2324,17 +2797,21 @@ export interface components {
             type: "public" | "private";
         };
         CreateChannelInput: {
+            /** @example general */
             name: string;
             description?: string;
             type: components["schemas"]["ChannelType"];
         };
         UpdateChannelInput: {
+            /** @example general */
             name?: string;
             description?: string;
             type?: components["schemas"]["ChannelType"];
         };
         SendMessageInput: {
+            /** @example Hello, world! */
             content?: string;
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             thread_parent_id?: string;
             /** @description IDs of uploaded attachments to include with this message */
             attachment_ids?: string[];
@@ -2342,6 +2819,7 @@ export interface components {
             also_send_to_channel?: boolean;
         };
         ListMessagesInput: {
+            /** @example eyJpZCI6IjAxSkVYQU1QTEUifQ */
             cursor?: string;
             limit?: number;
             /** @enum {string} */
@@ -2352,18 +2830,28 @@ export interface components {
             workspace_ids: string[];
         };
         ScheduledMessage: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example 01JQ3KMQ8YNBC3DFHM6RWVS7AG */
             channel_id: string;
+            /** @example general */
             channel_name?: string;
+            /** @example 01JQ3KMP2RQHYJ5ZV8NMWCX4ET */
             workspace_id?: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
+            /** @example Hello, world! */
             content: string;
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             thread_parent_id?: string;
             also_send_to_channel?: boolean;
             attachment_ids?: string[];
             /** Format: date-time */
             scheduled_for: string;
-            /** @enum {string} */
+            /**
+             * @example In a meeting
+             * @enum {string}
+             */
             status?: "pending" | "sending" | "failed";
             last_error?: string;
             /** Format: date-time */
@@ -2372,32 +2860,44 @@ export interface components {
             updated_at: string;
         };
         ScheduleMessageInput: {
+            /** @example Hello, world! */
             content: string;
             /** Format: date-time */
             scheduled_for: string;
+            /** @example 01JQ3KMR5KVDW2TG9NHP0XEJBL */
             thread_parent_id?: string;
             also_send_to_channel?: boolean;
             attachment_ids?: string[];
         };
         UpdateScheduledMessageInput: {
+            /** @example Hello, world! */
             content?: string;
             /** Format: date-time */
             scheduled_for?: string;
             attachment_ids?: string[];
         };
         BanUserInput: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
+            /** @example Repeated spam */
             reason?: string;
             /** @default false */
             hide_messages: boolean;
-            /** @description Hours until ban expires. Omit for permanent. */
+            /**
+             * @description Hours until ban expires. Omit for permanent.
+             * @example 24
+             */
             duration_hours?: number;
         };
         Ban: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example 01JQ3KMP2RQHYJ5ZV8NMWCX4ET */
             workspace_id: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             user_id: string;
             banned_by: string;
+            /** @example Repeated spam */
             reason?: string;
             hide_messages: boolean;
             /** Format: date-time */
@@ -2406,35 +2906,53 @@ export interface components {
             created_at: string;
         };
         BanWithUser: components["schemas"]["Ban"] & {
+            /** @example Alice Chen */
             user_display_name?: string;
+            /** @example alice@example.com */
             user_email?: string;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             user_avatar_url?: string;
+            /** @example Bob Martinez */
             banned_by_name?: string;
         };
         BlockWithUser: {
+            /** @example 01JQ3KMP2RQHYJ5ZV8NMWCX4ET */
             workspace_id: string;
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             blocker_id: string;
+            /** @example 01JQ3KMS4WTVY6BN8FRCJD2HAQ */
             blocked_id: string;
             /** Format: date-time */
             created_at: string;
+            /** @example Alice Chen */
             display_name?: string;
+            /** @example alice@example.com */
             email?: string;
+            /** @example /files/01JQ3KMT6B/download?sig=abc */
             avatar_url?: string;
         };
         ModerationLogEntryWithActor: {
+            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
             id: string;
+            /** @example 01JQ3KMP2RQHYJ5ZV8NMWCX4ET */
             workspace_id: string;
+            /** @example 01JQ3KMS4WTVY6BN8FRCJD2HAQ */
             actor_id: string;
+            /** @example ban_user */
             action: string;
+            /** @example user */
             target_type: string;
+            /** @example 01JQ3KMS4WTVY6BN8FRCJD2HAQ */
             target_id: string;
             metadata?: {
                 [key: string]: unknown;
             };
             /** Format: date-time */
             created_at: string;
+            /** @example Bob Martinez */
             actor_display_name?: string;
             actor_avatar_url?: string;
+            /** @example Carol Williams */
             target_display_name?: string;
         };
     };
@@ -2445,6 +2963,14 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "error": {
+                 *         "code": "VALIDATION_ERROR",
+                 *         "message": "Invalid request parameters"
+                 *       }
+                 *     }
+                 */
                 "application/json": components["schemas"]["ApiErrorResponse"];
             };
         };
@@ -2454,6 +2980,14 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "error": {
+                 *         "code": "NOT_AUTHENTICATED",
+                 *         "message": "Not authenticated"
+                 *       }
+                 *     }
+                 */
                 "application/json": components["schemas"]["ApiErrorResponse"];
             };
         };
@@ -2463,6 +2997,14 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "error": {
+                 *         "code": "NOT_FOUND",
+                 *         "message": "Resource not found"
+                 *       }
+                 *     }
+                 */
                 "application/json": components["schemas"]["ApiErrorResponse"];
             };
         };
@@ -2472,6 +3014,14 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "error": {
+                 *         "code": "PERMISSION_DENIED",
+                 *         "message": "You do not have permission to perform this action"
+                 *       }
+                 *     }
+                 */
                 "application/json": components["schemas"]["ApiErrorResponse"];
             };
         };
@@ -2481,6 +3031,14 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "error": {
+                 *         "code": "CONFLICT",
+                 *         "message": "Resource already exists"
+                 *       }
+                 *     }
+                 */
                 "application/json": components["schemas"]["ApiErrorResponse"];
             };
         };
@@ -2599,7 +3157,10 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** Format: email */
+                    /**
+                     * Format: email
+                     * @example alice@example.com
+                     */
                     email: string;
                 };
             };
@@ -2630,7 +3191,9 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example enz_v1_01JQ3KMWX8FVN4CPRD6BHTYGSZ */
                     token: string;
+                    /** @example newsecurepassword456 */
                     new_password: string;
                 };
             };
@@ -2658,6 +3221,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example enz_v1_01JQ3KMWX8FVN4CPRD6BHTYGSZ */
                     token: string;
                 };
             };
@@ -2895,6 +3459,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
                     user_id: string;
                 };
             };
@@ -2953,6 +3518,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
                     user_id: string;
                     role: components["schemas"]["WorkspaceRole"];
                 };
@@ -3275,6 +3841,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
                     user_id: string;
                     role?: components["schemas"]["ChannelRole"];
                 };
@@ -3438,7 +4005,10 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    /** @description Message ID to mark as last read (defaults to latest message) */
+                    /**
+                     * @description Message ID to mark as last read (defaults to latest message)
+                     * @example 01JQ3KMR5KVDW2TG9NHP0XEJBL
+                     */
                     message_id?: string;
                 };
             };
@@ -3555,6 +4125,7 @@ export interface operations {
                 "application/json": {
                     /** @default 50 */
                     limit?: number;
+                    /** @example eyJpZCI6IjAxSkVYQU1QTEUifQ */
                     cursor?: string;
                 };
             };
@@ -3617,6 +4188,7 @@ export interface operations {
                 "application/json": {
                     /** @default 20 */
                     limit?: number;
+                    /** @example eyJpZCI6IjAxSkVYQU1QTEUifQ */
                     cursor?: string;
                 };
             };
@@ -3737,6 +4309,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example Hello, world! */
                     content: string;
                 };
             };
@@ -3824,6 +4397,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example 👍 */
                     emoji: string;
                 };
             };
@@ -3859,6 +4433,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example 👍 */
                     emoji: string;
                 };
             };
@@ -3916,7 +4491,10 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    /** @description ID of the last read reply (defaults to latest reply) */
+                    /**
+                     * @description ID of the last read reply (defaults to latest reply)
+                     * @example 01JQ3KMR5KVDW2TG9NHP0XEJBL
+                     */
                     last_read_reply_id?: string;
                 };
             };
@@ -4116,6 +4694,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    /** @example eyJpZCI6IjAxSkVYQU1QTEUifQ */
                     cursor?: string;
                     /** @default 50 */
                     limit?: number;
@@ -4132,6 +4711,7 @@ export interface operations {
                     "application/json": {
                         messages: components["schemas"]["MessageWithUser"][];
                         has_more: boolean;
+                        /** @example eyJpZCI6IjAxSkVYQU1QTEUifQ */
                         next_cursor?: string;
                     };
                 };
@@ -4168,9 +4748,13 @@ export interface operations {
                 content: {
                     "application/json": {
                         file: {
+                            /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
                             id: string;
+                            /** @example report.pdf */
                             filename: string;
+                            /** @example 1048576 */
                             size: number;
+                            /** @example application/pdf */
                             content_type: string;
                         };
                     };
@@ -4308,6 +4892,7 @@ export interface operations {
                 "multipart/form-data": {
                     /** Format: binary */
                     file: string;
+                    /** @example general */
                     name: string;
                 };
             };
@@ -4432,6 +5017,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         scheduled_messages: components["schemas"]["ScheduledMessage"][];
+                        /** @example 5 */
                         count: number;
                     };
                 };
@@ -4772,6 +5358,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
                     user_id: string;
                 };
             };
@@ -4804,6 +5391,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    /** @example eyJpZCI6IjAxSkVYQU1QTEUifQ */
                     cursor?: string;
                     /** @default 50 */
                     limit?: number;
@@ -4820,6 +5408,7 @@ export interface operations {
                     "application/json": {
                         bans: components["schemas"]["BanWithUser"][];
                         has_more: boolean;
+                        /** @example eyJpZCI6IjAxSkVYQU1QTEUifQ */
                         next_cursor?: string;
                     };
                 };
@@ -4841,6 +5430,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
                     user_id: string;
                 };
             };
@@ -4874,6 +5464,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example 01JQ3KMN7XFGY4P6WBR2SZTA9V */
                     user_id: string;
                 };
             };
@@ -4932,6 +5523,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    /** @example eyJpZCI6IjAxSkVYQU1QTEUifQ */
                     cursor?: string;
                     /** @default 50 */
                     limit?: number;
@@ -4948,6 +5540,7 @@ export interface operations {
                     "application/json": {
                         entries: components["schemas"]["ModerationLogEntryWithActor"][];
                         has_more: boolean;
+                        /** @example eyJpZCI6IjAxSkVYQU1QTEUifQ */
                         next_cursor?: string;
                     };
                 };
@@ -4992,6 +5585,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example 01JQ3KMQ8YNBC3DFHM6RWVS7AG */
                     channel_id: string;
                 };
             };
@@ -5021,6 +5615,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @example 01JQ3KMQ8YNBC3DFHM6RWVS7AG */
                     channel_id: string;
                 };
             };

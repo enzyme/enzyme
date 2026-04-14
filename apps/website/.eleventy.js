@@ -78,6 +78,10 @@ module.exports = function (eleventyConfig) {
     return new Date().getFullYear();
   });
 
+  eleventyConfig.addFilter('isoDate', function (date) {
+    return new Date(date).toISOString();
+  });
+
   return {
     dir: {
       input: 'src',

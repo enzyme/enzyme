@@ -1,0 +1,24 @@
+---
+permalink: /sitemap.xml
+eleventyExcludeFromCollections: true
+---
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  {%- for page in collections.all %}
+  {%- if page.url and page.url !== "/404.html" and page.data.noindex !== true %}
+  <url>
+    <loc>{{ site.url }}{{ page.url }}</loc>
+    {%- if page.date %}
+    <lastmod>{{ page.date | isoDate }}</lastmod>
+    {%- endif %}
+  </url>
+  {%- endif %}
+  {%- endfor %}
+  {#- Pages excluded from collections but still needed in sitemap -#}
+  <url>
+    <loc>{{ site.url }}/blog/</loc>
+  </url>
+  <url>
+    <loc>{{ site.url }}/docs/</loc>
+  </url>
+</urlset>

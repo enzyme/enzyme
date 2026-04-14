@@ -5,18 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ title }}{% if title %} - {% endif %}Enzyme</title>
     <meta name="description" content="{{ description or 'Enzyme is a self-hostable team chat platform. Own your data, deploy anywhere.' }}" />
+    {% if noindex %}
+    <meta name="robots" content="noindex" />
+    {% endif %}
 
     <!-- Open Graph -->
     <meta property="og:title" content="{{ title }}{% if title %} - {% endif %}Enzyme" />
     <meta property="og:description" content="{{ description or 'Enzyme is a self-hostable team chat platform. Own your data, deploy anywhere.' }}" />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content="{% if tags and 'posts' in tags %}article{% else %}website{% endif %}" />
     <meta property="og:url" content="{{ site.url }}{{ page.url }}" />
+    <meta property="og:site_name" content="Enzyme" />
     <meta property="og:image" content="{{ site.url }}/assets/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    {% if tags and 'posts' in tags and date %}
+    <meta property="article:published_time" content="{{ date | isoDate }}" />
+    {% endif %}
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ title }}{% if title %} - {% endif %}Enzyme" />
+    <meta name="twitter:description" content="{{ description or 'Enzyme is a self-hostable team chat platform. Own your data, deploy anywhere.' }}" />
     <meta name="twitter:image" content="{{ site.url }}/assets/og-image.png" />
 
     <!-- Canonical -->
