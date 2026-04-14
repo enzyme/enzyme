@@ -16,10 +16,11 @@ type DB struct {
 
 // Options controls SQLite connection pool and pragma settings.
 type Options struct {
-	MaxOpenConns int   // max open connections (default: 10)
-	BusyTimeout  int   // milliseconds to wait on lock (default: 5000)
-	CacheSize    int   // negative = KB, positive = pages (default: -2000)
-	MmapSize     int64 // bytes, 0 = disabled (default: 0)
+	MaxOpenConns     int   // max open connections (default: 10)
+	BusyTimeout      int   // milliseconds to wait on lock (default: 5000)
+	CacheSize        int   // negative = KB, positive = pages (default: -2000)
+	MmapSize         int64 // bytes, 0 = disabled (default: 0)
+	JournalSizeLimit int64 // bytes, caps WAL file size (default: 67108864 = 64MB)
 }
 
 func Open(path string, opts Options) (*DB, error) {
@@ -39,10 +40,10 @@ func Open(path string, opts Options) (*DB, error) {
 	// SQLite returns SQLITE_BUSY instantly to avoid deadlocks.
 	// temp_store=2 uses memory-backed temp tables instead of disk, avoiding
 	// temp file I/O for ORDER BY, GROUP BY, and window functions.
-	// journal_size_limit caps the WAL file at 64MB, preventing unbounded
-	// growth during long-running operations or heavy write bursts.
-	dsn := fmt.Sprintf("%s?_txlock=immediate&_pragma=journal_mode%%28WAL%%29&_pragma=busy_timeout%%28%d%%29&_pragma=foreign_keys%%28ON%%29&_pragma=synchronous%%28NORMAL%%29&_pragma=cache_size%%28%d%%29&_pragma=mmap_size%%28%d%%29&_pragma=temp_store%%282%%29&_pragma=journal_size_limit%%2867108864%%29",
-		path, opts.BusyTimeout, opts.CacheSize, opts.MmapSize)
+	// journal_size_limit caps the WAL file, preventing unbounded growth
+	// during long-running operations or heavy write bursts.
+	dsn := fmt.Sprintf("%s?_txlock=immediate&_pragma=journal_mode%%28WAL%%29&_pragma=busy_timeout%%28%d%%29&_pragma=foreign_keys%%28ON%%29&_pragma=synchronous%%28NORMAL%%29&_pragma=cache_size%%28%d%%29&_pragma=mmap_size%%28%d%%29&_pragma=temp_store%%282%%29&_pragma=journal_size_limit%%28%d%%29",
+		path, opts.BusyTimeout, opts.CacheSize, opts.MmapSize, opts.JournalSizeLimit)
 
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {

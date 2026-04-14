@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -60,8 +61,12 @@ func (r *PreferencesRepository) Get(ctx context.Context, userID, channelID strin
 		return nil, err
 	}
 
-	pref.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-	pref.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	if pref.CreatedAt, err = time.Parse(time.RFC3339, createdAt); err != nil {
+		return nil, fmt.Errorf("parsing created_at: %w", err)
+	}
+	if pref.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt); err != nil {
+		return nil, fmt.Errorf("parsing updated_at: %w", err)
+	}
 
 	return &pref, nil
 }
@@ -112,8 +117,12 @@ func (r *PreferencesRepository) Upsert(ctx context.Context, pref *NotificationPr
 		return err
 	}
 
-	pref.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-	pref.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	if pref.CreatedAt, err = time.Parse(time.RFC3339, createdAt); err != nil {
+		return fmt.Errorf("parsing created_at: %w", err)
+	}
+	if pref.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt); err != nil {
+		return fmt.Errorf("parsing updated_at: %w", err)
+	}
 
 	return nil
 }
@@ -149,8 +158,12 @@ func (r *PreferencesRepository) ListForUser(ctx context.Context, userID string) 
 			return nil, err
 		}
 
-		pref.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		pref.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		if pref.CreatedAt, err = time.Parse(time.RFC3339, createdAt); err != nil {
+			return nil, fmt.Errorf("parsing created_at: %w", err)
+		}
+		if pref.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt); err != nil {
+			return nil, fmt.Errorf("parsing updated_at: %w", err)
+		}
 		prefs = append(prefs, pref)
 	}
 
