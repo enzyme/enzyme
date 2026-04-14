@@ -17,21 +17,22 @@ For a full list of configurable options, see [Configuration Reference](/docs/con
 
 SQLite handles all storage in Enzyme. These pragmas are set per-connection via DSN parameters, so every connection in the pool gets them.
 
-| Setting          | Config Key                | Default | What It Does                                                                                           |
-| ---------------- | ------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
-| `max_open_conns` | `database.max_open_conns` | `2`     | Number of connections in the pool. With WAL mode, readers don't block writers, so >1 is safe.          |
-| `busy_timeout`   | `database.busy_timeout`   | `5000`  | Milliseconds to retry when the database is locked, before returning `SQLITE_BUSY`.                     |
-| `cache_size`     | `database.cache_size`     | `-2000` | Page cache size **per connection**. Negative = KB (`-2000` = ~2 MB). Larger cache = fewer disk reads.  |
-| `mmap_size`      | `database.mmap_size`      | `0`     | Memory-mapped I/O in bytes. `0` = disabled. Enables the OS to page database data directly into memory. |
+| Setting              | Config Key                    | Default     | What It Does                                                                                                              |
+| -------------------- | ----------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `max_open_conns`     | `database.max_open_conns`     | `10`        | Number of connections in the pool. With WAL mode, readers don't block writers, so >1 is safe.                             |
+| `busy_timeout`       | `database.busy_timeout`       | `5000`      | Milliseconds to retry when the database is locked, before returning `SQLITE_BUSY`.                                        |
+| `cache_size`         | `database.cache_size`         | `-8000`     | Page cache size **per connection**. Negative = KB (`-8000` = ~8 MB). Larger cache = fewer disk reads.                     |
+| `mmap_size`          | `database.mmap_size`          | `268435456` | Memory-mapped I/O in bytes. `0` = disabled. Default is 256 MB. Enables the OS to page database data directly into memory. |
+| `journal_size_limit` | `database.journal_size_limit` | `67108864`  | Max WAL file size in bytes. Default is 64 MB. Caps WAL growth during heavy writes.                                        |
 
 ### When to Adjust
 
-- **More concurrent users**: Increase `max_open_conns` (4-8 is reasonable for most workloads). Each read query can run on its own connection without blocking writes. With the default of `2`, a single slow query (e.g., notification aggregation across many channels) can hold one connection while every other handler — auth validation, message sends, SSE event persistence — queues behind the remaining one.
+- **More concurrent users**: Increase `max_open_conns` beyond the default of 10 if you consistently see connection pool exhaustion under high load.
 - **Write contention errors**: Increase `busy_timeout`. If you see `SQLITE_BUSY` in logs, the default 5 seconds isn't enough for your write volume.
-- **Slow queries on large databases**: Increase `cache_size` (e.g., `-64000` for ~64 MB) and enable `mmap_size` (e.g., `268435456` for 256 MB). This keeps hot pages in memory.
-- **Small VPS with limited RAM**: Keep defaults. The ~2 MB per-connection cache is intentionally conservative.
+- **Slow queries on large databases**: Increase `cache_size` (e.g., `-64000` for ~64 MB) and `mmap_size` (e.g., `1073741824` for 1 GB). This keeps hot pages in memory.
+- **Small VPS with limited RAM**: Lower `cache_size` (e.g., `-2000` for ~2 MB) and `mmap_size` (e.g., `0` to disable). The defaults are tuned for moderate workloads.
 
-> **Note:** `cache_size` is per-connection. Total cache memory is roughly `cache_size × max_open_conns`. With the defaults (`-2000` and `2`), that's ~4 MB total.
+> **Note:** `cache_size` is per-connection. Total cache memory is roughly `cache_size × max_open_conns`. With the defaults (`-8000` and `10`), that's ~80 MB total.
 
 ---
 
@@ -267,6 +268,6 @@ Key metrics to watch when scaling:
 - **SSE connection count**: Monitor the number of active SSE clients. Each consumes memory proportional to `client_buffer_size`.
 - **Memory usage**: (`cache_size` x `max_open_conns`) + `mmap_size` + (SSE clients x buffer size x avg event size) gives a rough memory floor.
 - **File descriptors**: `ls /proc/$(pidof enzyme)/fd | wc -l` shows current usage. Compare to `LimitNOFILE`.
-- **Response latency**: If P99 response times degrade, check `max_open_conns` first. Expensive read queries (like notification aggregation) can hold connections for hundreds of milliseconds, starving other handlers. Increasing the pool size (e.g., to 4-8) gives handlers their own connections. If latency persists after that, the database may benefit from a larger cache or mmap. Use `EXPLAIN QUERY PLAN` on slow queries to verify they're using indexes.
+- **Response latency**: If P99 response times degrade, check whether `max_open_conns` is sufficient. Expensive read queries (like notification aggregation) can hold connections for hundreds of milliseconds, starving other handlers. If latency persists, the database may benefit from a larger cache or mmap. Use `EXPLAIN QUERY PLAN` on slow queries to verify they're using indexes.
 - **TCP memory**: During SSE broadcast bursts, check `cat /proc/net/sockstat | grep TCP` — if the `mem` value approaches the kernel's `tcp_mem` pressure threshold, connections will be dropped. See [TCP Memory](#tcp-memory) above.
 - **Trace export backpressure**: If the OTLP exporter queue fills up, you'll see dropped spans in logs. Lower `sample_rate` or scale your collector.

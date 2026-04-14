@@ -45,11 +45,12 @@ type AutoTLSConfig struct {
 }
 
 type DatabaseConfig struct {
-	Path         string `koanf:"path"`
-	MaxOpenConns int    `koanf:"max_open_conns"`
-	BusyTimeout  int    `koanf:"busy_timeout"`
-	CacheSize    int    `koanf:"cache_size"`
-	MmapSize     int64  `koanf:"mmap_size"`
+	Path             string `koanf:"path"`
+	MaxOpenConns     int    `koanf:"max_open_conns"`
+	BusyTimeout      int    `koanf:"busy_timeout"`
+	CacheSize        int    `koanf:"cache_size"`
+	MmapSize         int64  `koanf:"mmap_size"`
+	JournalSizeLimit int64  `koanf:"journal_size_limit"`
 }
 
 type AuthConfig struct {
@@ -153,10 +154,12 @@ func Defaults() *Config {
 			IdleTimeout:  120 * time.Second,
 		},
 		Database: DatabaseConfig{
-			Path:         "./data/enzyme.db",
-			MaxOpenConns: 10,
-			BusyTimeout:  5000,
-			CacheSize:    -2000,
+			Path:             "./data/enzyme.db",
+			MaxOpenConns:     10,
+			BusyTimeout:      5000,
+			CacheSize:        -8000,
+			MmapSize:         268435456, // 256MB
+			JournalSizeLimit: 67108864,  // 64MB
 		},
 		Auth: AuthConfig{
 			SessionDuration: 720 * time.Hour, // 30 days

@@ -65,10 +65,11 @@ type App struct {
 func New(cfg *config.Config) (*App, error) {
 	// Open database
 	db, err := database.Open(cfg.Database.Path, database.Options{
-		MaxOpenConns: cfg.Database.MaxOpenConns,
-		BusyTimeout:  cfg.Database.BusyTimeout,
-		CacheSize:    cfg.Database.CacheSize,
-		MmapSize:     cfg.Database.MmapSize,
+		MaxOpenConns:     cfg.Database.MaxOpenConns,
+		BusyTimeout:      cfg.Database.BusyTimeout,
+		CacheSize:        cfg.Database.CacheSize,
+		MmapSize:         cfg.Database.MmapSize,
+		JournalSizeLimit: cfg.Database.JournalSizeLimit,
 	})
 	if err != nil {
 		return nil, err

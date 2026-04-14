@@ -26,11 +26,20 @@ func (r *Repository) GetSubscription(ctx context.Context, threadParentID, userID
 		WHERE thread_parent_id = ? AND user_id = ?
 	`
 
+	sub, err := r.scanSubscription(r.db.QueryRowContext(ctx, query, threadParentID, userID))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return sub, err
+}
+
+// scanSubscription scans a single row into a Subscription.
+func (r *Repository) scanSubscription(row *sql.Row) (*Subscription, error) {
 	var sub Subscription
 	var lastReadReplyID sql.NullString
 	var createdAt, updatedAt string
 
-	err := r.db.QueryRowContext(ctx, query, threadParentID, userID).Scan(
+	err := row.Scan(
 		&sub.ID,
 		&sub.ThreadParentID,
 		&sub.UserID,
@@ -39,9 +48,6 @@ func (r *Repository) GetSubscription(ctx context.Context, threadParentID, userID
 		&createdAt,
 		&updatedAt,
 	)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
 	if err != nil {
 		return nil, err
 	}
@@ -85,22 +91,16 @@ func (r *Repository) Subscribe(ctx context.Context, threadParentID, userID strin
 	now := time.Now().UTC().Format(time.RFC3339)
 	id := ulid.Make().String()
 
-	// Use INSERT OR REPLACE to handle both new and existing subscriptions
 	query := `
 		INSERT INTO thread_subscriptions (id, thread_parent_id, user_id, status, created_at, updated_at)
 		VALUES (?, ?, ?, 'subscribed', ?, ?)
 		ON CONFLICT(thread_parent_id, user_id) DO UPDATE SET
 			status = 'subscribed',
 			updated_at = excluded.updated_at
+		RETURNING id, thread_parent_id, user_id, status, last_read_reply_id, created_at, updated_at
 	`
 
-	_, err := r.db.ExecContext(ctx, query, id, threadParentID, userID, now, now)
-	if err != nil {
-		return nil, err
-	}
-
-	// Fetch the updated/created subscription
-	return r.GetSubscription(ctx, threadParentID, userID)
+	return r.scanSubscription(r.db.QueryRowContext(ctx, query, id, threadParentID, userID, now, now))
 }
 
 // Unsubscribe creates or updates a subscription to "unsubscribed" status
@@ -108,22 +108,16 @@ func (r *Repository) Unsubscribe(ctx context.Context, threadParentID, userID str
 	now := time.Now().UTC().Format(time.RFC3339)
 	id := ulid.Make().String()
 
-	// Use INSERT OR REPLACE to handle both new and existing subscriptions
 	query := `
 		INSERT INTO thread_subscriptions (id, thread_parent_id, user_id, status, created_at, updated_at)
 		VALUES (?, ?, ?, 'unsubscribed', ?, ?)
 		ON CONFLICT(thread_parent_id, user_id) DO UPDATE SET
 			status = 'unsubscribed',
 			updated_at = excluded.updated_at
+		RETURNING id, thread_parent_id, user_id, status, last_read_reply_id, created_at, updated_at
 	`
 
-	_, err := r.db.ExecContext(ctx, query, id, threadParentID, userID, now, now)
-	if err != nil {
-		return nil, err
-	}
-
-	// Fetch the updated/created subscription
-	return r.GetSubscription(ctx, threadParentID, userID)
+	return r.scanSubscription(r.db.QueryRowContext(ctx, query, id, threadParentID, userID, now, now))
 }
 
 // AutoSubscribe subscribes a user to a thread ONLY if they have no existing subscription row.

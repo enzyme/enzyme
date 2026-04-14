@@ -76,13 +76,14 @@ Run `./enzyme --help` for all available flags.
 
 ## Database
 
-| Key                       | Env Var                          | CLI Flag          | Default            | Description                                                                                              |
-| ------------------------- | -------------------------------- | ----------------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
-| `database.path`           | `ENZYME_DATABASE_PATH`           | `--database.path` | `./data/enzyme.db` | Path to the SQLite database file. The directory must exist.                                              |
-| `database.max_open_conns` | `ENZYME_DATABASE_MAX_OPEN_CONNS` |                   | `2`                | Max open database connections. Allows concurrent reads with WAL mode. Minimum: 1.                        |
-| `database.busy_timeout`   | `ENZYME_DATABASE_BUSY_TIMEOUT`   |                   | `5000`             | Milliseconds to wait when the database is locked before returning SQLITE_BUSY. Minimum: 0.               |
-| `database.cache_size`     | `ENZYME_DATABASE_CACHE_SIZE`     |                   | `-2000`            | SQLite page cache size. Negative values = KB (e.g., `-2000` = ~2 MB). Positive values = number of pages. |
-| `database.mmap_size`      | `ENZYME_DATABASE_MMAP_SIZE`      |                   | `0`                | Memory-mapped I/O size in bytes. `0` disables mmap. Set higher for large databases on capable hardware.  |
+| Key                           | Env Var                              | CLI Flag          | Default            | Description                                                                                              |
+| ----------------------------- | ------------------------------------ | ----------------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `database.path`               | `ENZYME_DATABASE_PATH`               | `--database.path` | `./data/enzyme.db` | Path to the SQLite database file. The directory must exist.                                              |
+| `database.max_open_conns`     | `ENZYME_DATABASE_MAX_OPEN_CONNS`     |                   | `10`               | Max open database connections. Allows concurrent reads with WAL mode. Minimum: 1.                        |
+| `database.busy_timeout`       | `ENZYME_DATABASE_BUSY_TIMEOUT`       |                   | `5000`             | Milliseconds to wait when the database is locked before returning SQLITE_BUSY. Minimum: 0.               |
+| `database.cache_size`         | `ENZYME_DATABASE_CACHE_SIZE`         |                   | `-8000`            | SQLite page cache size. Negative values = KB (e.g., `-8000` = ~8 MB). Positive values = number of pages. |
+| `database.mmap_size`          | `ENZYME_DATABASE_MMAP_SIZE`          |                   | `268435456`        | Memory-mapped I/O size in bytes. `0` disables mmap. Default is 256 MB.                                   |
+| `database.journal_size_limit` | `ENZYME_DATABASE_JOURNAL_SIZE_LIMIT` |                   | `67108864`         | Max WAL file size in bytes. Caps WAL growth during heavy writes. Default is 64 MB.                       |
 
 Enzyme uses SQLite in WAL mode. No external database server is needed. See [Scaling Guide](/docs/scaling/) for tuning guidance.
 
@@ -236,10 +237,11 @@ server:
 
 database:
   path: '/var/lib/enzyme/enzyme.db'
-  max_open_conns: 2
+  max_open_conns: 10
   busy_timeout: 5000
-  cache_size: -2000
-  mmap_size: 0
+  cache_size: -8000
+  mmap_size: 268435456
+  journal_size_limit: 67108864
 
 auth:
   session_duration: '720h'
